@@ -106,7 +106,21 @@ function validateSemantics(graph: FlowGraph): ValidationError[] {
   for (const node of actionNodes) {
     if (node.type === 'action') {
       const service = node.data.service;
-      if (!service.includes('.')) {
+      
+      // Special action types that don't follow domain.service format
+      const specialActionTypes = [
+        'variables',
+        'delay', 
+        'wait',
+        'wait_template',
+        'wait_for_trigger',
+        'stop',
+        'repeat',
+        'choose',
+        'if'
+      ];
+      
+      if (!service.includes('.') && !specialActionTypes.includes(service)) {
         errors.push({
           code: 'INVALID_SERVICE',
           message: `Action node "${node.id}" has invalid service format: "${service}". Expected "domain.service"`,

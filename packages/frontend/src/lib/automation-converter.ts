@@ -224,12 +224,14 @@ export function convertAutomationConfigToNodes(config: any): {
 
       // Determine node type based on action
       let nodeType = 'action';
-      if (action.type === 'condition') {
+      if (action.type === 'condition' || action.condition) {
         nodeType = 'condition';
       } else if (action.delay) {
         nodeType = 'delay';
       } else if (action.wait_template || action.wait_for_trigger) {
         nodeType = 'wait';
+      } else if (action.variables) {
+        nodeType = 'action'; // Variables are treated as action nodes but with special handling
       }
 
       // Calculate Y position based on branch - only offset if both branches exist
@@ -259,13 +261,25 @@ export function convertAutomationConfigToNodes(config: any): {
         });
       } else {
         // For regular action nodes
+        // Determine service for different action types
+        let service = 'unknown';
+        if (action.action || action.service) {
+          service = action.action || action.service;
+        } else if (action.variables) {
+          service = 'variables';
+        } else if (action.delay) {
+          service = 'delay';
+        } else if (action.wait_template || action.wait_for_trigger) {
+          service = 'wait';
+        }
+        
         nodesToCreate.push({
           id: nodeId,
           type: nodeType,
           position: { x: xOffset, y: yPosition },
           data: {
             alias: action.alias || `Action ${index + 1}`,
-            service: action.action || action.service || 'unknown',
+            service: service,
             entity_id: action.target?.entity_id || action.entity_id,
             data: action.data || action.service_data || {},
             target: action.target,

@@ -79,6 +79,12 @@ describe('Roundtrip Import/Export Tests', () => {
       const transpiler = new FlowTranspiler();
       const result = transpiler.transpile(flowGraph);
 
+      if (!result.success) {
+        console.error('Transpilation failed for', filename);
+        console.error('Errors:', result.errors);
+        console.error('Warnings:', result.warnings);
+      }
+
       expect(result.success).toBe(true);
       expect(result.output?.automation).toBeDefined();
 

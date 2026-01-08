@@ -821,7 +821,7 @@ export function PropertyPanel() {
           'zone', 'topic', 'payload', 'hours', 'minutes', 'seconds',
           // Condition properties handled by specific UI
           'condition_type', 'state', 'attribute', 'above', 'below', 'value_template', 'after', 
-          'before', 'weekday', 'device_id', 'domain', 'type', 'entity_id',
+          'before', 'weekday', 'device_id', 'domain', 'type', 'entity_id', 'condition',
           // Action properties handled by specific UI
           'service', 'data', 'target',
           // Delay properties
