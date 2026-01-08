@@ -5,6 +5,98 @@ import { useFlowStore } from '@/store/flow-store';
 import { generateUUID } from '../utils';
 
 describe('automation-converter', () => {
+  it('should handle automation with multiple top-level conditions and choose structures', () => {
+    const automationWithMultipleConditions = {
+      id: '1761241902454',
+      alias: 'Chiudi tenda e tapparella quando parte un film',
+      description: 'Chiude tenda Velux e tapparella se Apple TV riproduce un film in app whitelisted e la luminosità è alta.',
+      triggers: [
+        {
+          entity_id: 'media_player.tv',
+          to: 'playing',
+          for: '00:00:05',
+          trigger: 'state'
+        }
+      ],
+      conditions: [
+        {
+          condition: 'numeric_state',
+          entity_id: 'sensor.sensore_di_luminosita_soggiorno',
+          above: 120
+        },
+        {
+          condition: 'template',
+          value_template: "{% set app = (state_attr('media_player.tv', 'app_name') or '') | string %} {% set ok_apps = ['TV','Apple TV','Prime Video','Infuse','Disney+','Netflix'] %} {{ app in ok_apps }}\n"
+        },
+        {
+          condition: 'template',
+          value_template: "{{ (state_attr('media_player.tv','media_content_type') or '') | lower == 'movie' }}\n"
+        }
+      ],
+      actions: [
+        {
+          choose: [
+            {
+              conditions: [
+                {
+                  condition: 'template',
+                  value_template: "{{ states('cover.tenda_velux_soggiorno') != 'closed' }}\n"
+                }
+              ],
+              sequence: [
+                {
+                  target: {
+                    entity_id: 'cover.tenda_velux_soggiorno'
+                  },
+                  action: 'cover.close_cover'
+                }
+              ]
+            }
+          ]
+        },
+        {
+          choose: [
+            {
+              conditions: [
+                {
+                  condition: 'template',
+                  value_template: "{{ states('cover.tapparella_soggiorno') != 'closed' }}\n"
+                }
+              ],
+              sequence: [
+                {
+                  target: {
+                    entity_id: 'cover.tapparella_soggiorno'
+                  },
+                  action: 'cover.close_cover'
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      mode: 'single'
+    };
+
+    const { nodes, edges } = convertAutomationConfigToNodes(automationWithMultipleConditions);
+    
+    // Should create correct number of nodes
+    expect(nodes.length).toBeGreaterThan(0);
+    
+    // All condition nodes should have proper edges with sourceHandle
+    const conditionNodes = nodes.filter(n => n.type === 'condition');
+    conditionNodes.forEach(node => {
+      const outgoingEdges = edges.filter(e => e.source === node.id);
+      outgoingEdges.forEach(edge => {
+        expect(edge.sourceHandle).toBeDefined();
+        expect(['true', 'false', null]).toContain(edge.sourceHandle);
+      });
+    });
+
+    console.log('Nodes:', nodes.map(n => ({ id: n.id, type: n.type, position: n.position })));
+    console.log('Edges:', edges);
+  });
+
   it('should preserve trigger properties during round-trip conversion', () => {
     const originalAutomation = {
       alias: 'Buona notte / Buongiorno da comodini',

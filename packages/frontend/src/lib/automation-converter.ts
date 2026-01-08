@@ -117,8 +117,9 @@ export function convertAutomationConfigToNodes(config: any): {
   const edgesToCreate: Array<{ source: string; target: string; sourceHandle: string | null }> = [];
 
   let xOffset = 100;
-  const yOffset = 100;
+  const baseYOffset = 100;
   const nodeSpacing = 300;
+  const branchYOffset = 150; // Vertical spacing between branches
   let previousNodeId: string | null = null;
 
   // Track condition nodes and their children for proper sourceHandle assignment
@@ -142,7 +143,7 @@ export function convertAutomationConfigToNodes(config: any): {
       nodesToCreate.push({
         id: nodeId,
         type: 'trigger',
-        position: { x: xOffset, y: yOffset },
+        position: { x: xOffset, y: baseYOffset },
         data: {
           ...trigger, // Spread all original properties first
           alias: trigger.alias || `Trigger ${index + 1}`, // Only override alias if not present
@@ -173,7 +174,7 @@ export function convertAutomationConfigToNodes(config: any): {
       nodesToCreate.push({
         id: nodeId,
         type: 'condition',
-        position: { x: xOffset, y: yOffset },
+        position: { x: xOffset, y: baseYOffset },
         data: {
           alias: condition.alias || `Condition ${index + 1}`,
           condition_type: condition.condition || condition.platform || 'unknown',
@@ -183,9 +184,10 @@ export function convertAutomationConfigToNodes(config: any): {
         },
       });
 
-      // Connect to previous node if exists
+      // Connect to previous node if exists - use 'true' for top-level conditions (AND logic)
       if (previousNodeId) {
-        createEdge(previousNodeId, nodeId);
+        const sourceHandle = nodesToCreate.find(n => n.id === previousNodeId)?.type === 'condition' ? 'true' : null;
+        createEdge(previousNodeId, nodeId, sourceHandle);
       }
       previousNodeId = nodeId;
 
@@ -203,6 +205,11 @@ export function convertAutomationConfigToNodes(config: any): {
 
     const processedActions = processActions(actions);
 
+    // Check if there are both 'then' and 'else' branches to determine if vertical offset should be applied
+    const hasThenBranch = processedActions.some(action => action.branch === 'then');
+    const hasElseBranch = processedActions.some(action => action.branch === 'else');
+    const shouldApplyVerticalOffset = hasThenBranch && hasElseBranch;
+
     for (const [index, processedAction] of processedActions.entries()) {
       const { action, branch, parentConditionId } = processedAction;
       const nodeId = action._conditionId || `action-${Date.now()}-${index}`;
@@ -217,12 +224,22 @@ export function convertAutomationConfigToNodes(config: any): {
         nodeType = 'wait';
       }
 
+      // Calculate Y position based on branch - only offset if both branches exist
+      let yPosition = baseYOffset;
+      if (shouldApplyVerticalOffset) {
+        if (branch === 'then') {
+          yPosition = baseYOffset - branchYOffset; // Shift up for "YES" branch
+        } else if (branch === 'else') {
+          yPosition = baseYOffset + branchYOffset; // Shift down for "NO" branch
+        }
+      }
+
       // For condition nodes from if/then/else
       if (nodeType === 'condition') {
         nodesToCreate.push({
           id: nodeId,
           type: 'condition',
-          position: { x: xOffset, y: yOffset },
+          position: { x: xOffset, y: yPosition },
           data: {
             alias: action.alias || `Condition ${index + 1}`,
             condition_type:
@@ -237,7 +254,7 @@ export function convertAutomationConfigToNodes(config: any): {
         nodesToCreate.push({
           id: nodeId,
           type: nodeType,
-          position: { x: xOffset, y: yOffset },
+          position: { x: xOffset, y: yPosition },
           data: {
             alias: action.alias || `Action ${index + 1}`,
             service: action.action || action.service || 'unknown',
@@ -268,7 +285,8 @@ export function convertAutomationConfigToNodes(config: any): {
       }
       // Connect to previous node sequentially (only if not already connected to a condition)
       else if (previousNodeId) {
-        createEdge(previousNodeId, nodeId);
+        const sourceHandle = nodesToCreate.find(n => n.id === previousNodeId)?.type === 'condition' ? 'true' : null;
+        createEdge(previousNodeId, nodeId, sourceHandle);
       }
 
       previousNodeId = nodeId;

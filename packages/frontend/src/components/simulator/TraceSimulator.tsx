@@ -200,7 +200,7 @@ export function TraceSimulator() {
                     }
                   }}
                 >
-                  <SelectTrigger className="h-6 w-20 text-xs">
+                  <SelectTrigger className="h-7 w-24 text-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

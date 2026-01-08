@@ -115,27 +115,29 @@ export function YamlPreview() {
         </div>
       )}
 
-      {warnings.length > 0 && (
-        <div className="space-y-1 px-3 py-2">
-          {warnings.map((w, i) => (
-            <Alert key={`warning-${i}-${w.slice(0, 20)}`}>
-              <AlertCircle className="h-3 w-3" />
-              <AlertDescription className="text-xs">{w}</AlertDescription>
-            </Alert>
-          ))}
-        </div>
-      )}
+      <div className="max-h-[80%] overflow-auto">
+        {warnings.length > 0 && (
+          <div className="space-y-1 px-3 py-2">
+            {warnings.map((w, i) => (
+              <Alert key={`warning-${i}-${w.slice(0, 20)}`}>
+                <AlertCircle className="h-3 w-3" />
+                <AlertDescription className="text-xs">{w}</AlertDescription>
+              </Alert>
+            ))}
+          </div>
+        )}
 
-      {errors.length > 0 && (
-        <div className="space-y-1 px-3 py-2">
-          {errors.map((e, i) => (
-            <Alert key={`error-${i}-${e.slice(0, 20)}`} variant="destructive">
-              <AlertCircle className="h-3 w-3" />
-              <AlertDescription className="text-xs">{e}</AlertDescription>
-            </Alert>
-          ))}
-        </div>
-      )}
+        {errors.length > 0 && (
+          <div className="space-y-1 px-3 py-2">
+            {errors.map((e, i) => (
+              <Alert key={`error-${i}-${e.slice(0, 20)}`} variant="destructive">
+                <AlertCircle className="h-3 w-3" />
+                <AlertDescription className="text-xs">{e}</AlertDescription>
+              </Alert>
+            ))}
+          </div>
+        )}
+      </div>
 
       <div className="flex-1 overflow-auto">
         <pre className="whitespace-pre-wrap p-3 font-mono text-foreground text-xs">
