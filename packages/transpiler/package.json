@@ -1,0 +1,36 @@
+{
+  "name": "@hflow/transpiler",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "hflow": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "cli": "npx tsx src/cli.ts"
+  },
+  "dependencies": {
+    "@hflow/shared": "workspace:*",
+    "commander": "^12.0.0",
+    "graphlib": "^2.1.8",
+    "js-yaml": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^22.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0"
+  }
+}

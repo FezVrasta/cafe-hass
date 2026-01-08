@@ -1,0 +1,36 @@
+{
+  "id": "550e8400-e29b-41d4-a716-446655440001",
+  "name": "Simple Tree Automation",
+  "description": "A simple tree-shaped automation for testing native strategy",
+  "nodes": [
+    {
+      "id": "trigger_1",
+      "type": "trigger",
+      "position": { "x": 100, "y": 100 },
+      "data": {
+        "alias": "Motion Detected",
+        "platform": "state",
+        "entity_id": "binary_sensor.motion",
+        "to": "on"
+      }
+    },
+    {
+      "id": "action_1",
+      "type": "action",
+      "position": { "x": 100, "y": 200 },
+      "data": {
+        "alias": "Turn on living room light",
+        "service": "light.turn_on",
+        "target": {
+          "entity_id": "light.living_room"
+        }
+      }
+    }
+  ],
+  "edges": [
+    { "id": "e1", "source": "trigger_1", "target": "action_1" }
+  ],
+  "metadata": {
+    "mode": "single"
+  }
+}

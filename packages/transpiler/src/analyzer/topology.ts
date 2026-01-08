@@ -1,0 +1,250 @@
+import graphlib from 'graphlib';
+import type { FlowGraph } from '@hflow/shared';
+
+const { Graph, alg } = graphlib;
+
+type GraphInstance = InstanceType<typeof Graph>;
+
+/**
+ * Result of topology analysis
+ */
+export interface TopologyAnalysis {
+  /**
+   * True if the graph is a simple tree (can use native HA YAML)
+   */
+  isTree: boolean;
+  /**
+   * True if the graph contains cycles (requires state machine)
+   */
+  hasCycles: boolean;
+  /**
+   * True if there are multiple entry points (multiple triggers)
+   */
+  hasMultipleEntryPoints: boolean;
+  /**
+   * True if there are cross-links that skip levels or go backward
+   */
+  hasCrossLinks: boolean;
+  /**
+   * True if paths merge back together (diamond patterns)
+   */
+  hasConvergingPaths: boolean;
+  /**
+   * Node IDs that serve as entry points (triggers)
+   */
+  entryNodes: string[];
+  /**
+   * Node IDs that have no outgoing edges (terminal nodes)
+   */
+  exitNodes: string[];
+  /**
+   * Topologically sorted node IDs (if acyclic)
+   */
+  topologicalOrder: string[] | null;
+  /**
+   * Recommended transpilation strategy
+   */
+  recommendedStrategy: 'native' | 'state-machine';
+}
+
+/**
+ * Analyze the topology of a flow graph
+ * Determines whether the graph can be transpiled to native HA YAML
+ * or requires the state machine approach
+ */
+export function analyzeTopology(flow: FlowGraph): TopologyAnalysis {
+  const g = new Graph({ directed: true });
+
+  // Build the graph
+  for (const node of flow.nodes) {
+    g.setNode(node.id, node);
+  }
+  for (const edge of flow.edges) {
+    g.setEdge(edge.source, edge.target, edge);
+  }
+
+  // Detect cycles using graphlib's isAcyclic
+  const hasCycles = !alg.isAcyclic(g);
+
+  // Find entry points (nodes with no incoming edges)
+  const entryNodes = flow.nodes
+    .filter((n) => g.predecessors(n.id)?.length === 0)
+    .map((n) => n.id);
+
+  // Find exit points (nodes with no outgoing edges)
+  const exitNodes = flow.nodes
+    .filter((n) => g.successors(n.id)?.length === 0)
+    .map((n) => n.id);
+
+  // Get topological order if acyclic
+  let topologicalOrder: string[] | null = null;
+  if (!hasCycles) {
+    try {
+      topologicalOrder = alg.topsort(g);
+    } catch {
+      // Should not happen if isAcyclic is true
+      topologicalOrder = null;
+    }
+  }
+
+  // Check for cross-links (edges that skip levels)
+  const hasCrossLinks = detectCrossLinks(g, flow, topologicalOrder);
+
+  // Check for converging paths (multiple edges pointing to same node)
+  const hasConvergingPaths = detectConvergingPaths(flow);
+
+  // A tree structure has:
+  // - No cycles
+  // - Single entry point
+  // - No cross-links
+  // - No converging paths (except for condition branches that merge)
+  const isTree = !hasCycles &&
+                 entryNodes.length === 1 &&
+                 !hasCrossLinks &&
+                 !hasConvergingPaths;
+
+  // Determine recommended strategy
+  const recommendedStrategy = isTree ? 'native' : 'state-machine';
+
+  return {
+    isTree,
+    hasCycles,
+    hasMultipleEntryPoints: entryNodes.length > 1,
+    hasCrossLinks,
+    hasConvergingPaths,
+    entryNodes,
+    exitNodes,
+    topologicalOrder,
+    recommendedStrategy,
+  };
+}
+
+/**
+ * Detect cross-links: edges that skip levels in the graph hierarchy
+ * or create backward references (but not full cycles)
+ */
+function detectCrossLinks(
+  g: GraphInstance,
+  flow: FlowGraph,
+  topologicalOrder: string[] | null
+): boolean {
+  if (!topologicalOrder || topologicalOrder.length === 0) {
+    return false; // Can't detect cross-links in cyclic graphs
+  }
+
+  // Create a level map based on topological order
+  const levelMap = new Map<string, number>();
+
+  // BFS from entry nodes to assign levels
+  const entryNodes = flow.nodes
+    .filter((n) => g.predecessors(n.id)?.length === 0)
+    .map((n) => n.id);
+
+  const queue: Array<{ nodeId: string; level: number }> =
+    entryNodes.map((id) => ({ nodeId: id, level: 0 }));
+
+  while (queue.length > 0) {
+    const { nodeId, level } = queue.shift()!;
+
+    if (levelMap.has(nodeId)) {
+      continue; // Already visited
+    }
+
+    levelMap.set(nodeId, level);
+
+    const successors = g.successors(nodeId) || [];
+    for (const succ of successors) {
+      if (!levelMap.has(succ)) {
+        queue.push({ nodeId: succ, level: level + 1 });
+      }
+    }
+  }
+
+  // Check for edges that skip more than one level
+  for (const edge of flow.edges) {
+    const sourceLevel = levelMap.get(edge.source);
+    const targetLevel = levelMap.get(edge.target);
+
+    if (sourceLevel !== undefined && targetLevel !== undefined) {
+      // Forward edge that skips a level
+      if (targetLevel > sourceLevel + 1) {
+        return true;
+      }
+      // Backward edge (not a full cycle, but goes to earlier level)
+      if (targetLevel < sourceLevel) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Detect converging paths: multiple edges pointing to the same node
+ * This creates a DAG pattern that can't be represented as a simple tree
+ */
+function detectConvergingPaths(flow: FlowGraph): boolean {
+  const incomingCount = new Map<string, number>();
+
+  for (const edge of flow.edges) {
+    const count = incomingCount.get(edge.target) || 0;
+    incomingCount.set(edge.target, count + 1);
+  }
+
+  // If any node has more than one incoming edge, we have converging paths
+  // Exception: condition nodes can have both true/false edges from same source
+  for (const [nodeId, count] of incomingCount) {
+    if (count > 1) {
+      // Check if all incoming edges are from the same condition node
+      const incomingEdges = flow.edges.filter((e) => e.target === nodeId);
+      const uniqueSources = new Set(incomingEdges.map((e) => e.source));
+
+      // If incoming edges are from different sources, it's a true convergence
+      if (uniqueSources.size > 1) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Get the depth of each node from entry points
+ */
+export function getNodeDepths(flow: FlowGraph): Map<string, number> {
+  const g = new Graph({ directed: true });
+
+  for (const node of flow.nodes) {
+    g.setNode(node.id, node);
+  }
+  for (const edge of flow.edges) {
+    g.setEdge(edge.source, edge.target);
+  }
+
+  const depths = new Map<string, number>();
+  const entryNodes = flow.nodes
+    .filter((n) => g.predecessors(n.id)?.length === 0)
+    .map((n) => n.id);
+
+  const queue: Array<{ nodeId: string; depth: number }> =
+    entryNodes.map((id) => ({ nodeId: id, depth: 0 }));
+
+  while (queue.length > 0) {
+    const { nodeId, depth } = queue.shift()!;
+
+    if (depths.has(nodeId) && depths.get(nodeId)! <= depth) {
+      continue;
+    }
+
+    depths.set(nodeId, depth);
+
+    const successors = g.successors(nodeId) || [];
+    for (const succ of successors) {
+      queue.push({ nodeId: succ, depth: depth + 1 });
+    }
+  }
+
+  return depths;
+}

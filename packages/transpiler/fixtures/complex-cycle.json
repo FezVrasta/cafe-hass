@@ -1,0 +1,71 @@
+{
+  "id": "550e8400-e29b-41d4-a716-446655440002",
+  "name": "Complex Cycle Automation",
+  "description": "A complex automation with cycles that requires state machine strategy",
+  "nodes": [
+    {
+      "id": "trigger_1",
+      "type": "trigger",
+      "position": { "x": 200, "y": 50 },
+      "data": {
+        "alias": "Button Pressed",
+        "platform": "event",
+        "event_type": "zha_event"
+      }
+    },
+    {
+      "id": "action_light_on",
+      "type": "action",
+      "position": { "x": 200, "y": 150 },
+      "data": {
+        "alias": "Turn on kitchen light",
+        "service": "light.turn_on",
+        "target": {
+          "entity_id": "light.kitchen"
+        }
+      }
+    },
+    {
+      "id": "condition_sun",
+      "type": "condition",
+      "position": { "x": 200, "y": 250 },
+      "data": {
+        "alias": "Is sun below horizon?",
+        "condition_type": "state",
+        "entity_id": "sun.sun",
+        "state": "below_horizon"
+      }
+    },
+    {
+      "id": "action_notify",
+      "type": "action",
+      "position": { "x": 100, "y": 350 },
+      "data": {
+        "alias": "Send notification",
+        "service": "notify.mobile_app",
+        "data": {
+          "message": "Light turned on at night"
+        }
+      }
+    },
+    {
+      "id": "delay_1",
+      "type": "delay",
+      "position": { "x": 300, "y": 350 },
+      "data": {
+        "alias": "Wait 5 minutes",
+        "delay": "00:05:00"
+      }
+    }
+  ],
+  "edges": [
+    { "id": "e1", "source": "trigger_1", "target": "action_light_on" },
+    { "id": "e2", "source": "action_light_on", "target": "condition_sun" },
+    { "id": "e3", "source": "condition_sun", "target": "action_notify", "sourceHandle": "true" },
+    { "id": "e4", "source": "condition_sun", "target": "delay_1", "sourceHandle": "false" },
+    { "id": "e5", "source": "delay_1", "target": "action_light_on" }
+  ],
+  "metadata": {
+    "mode": "restart"
+  }
+}
