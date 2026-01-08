@@ -137,7 +137,26 @@ export class NativeStrategy extends BaseStrategy {
 
     if (node.type === 'condition') {
       // Condition nodes are handled specially - they become choose blocks
-      // The choose is already part of buildNodeAction for conditions
+      // We need to fill in the then/else branches from the connected nodes
+      const chooseAction = action as Record<string, unknown>;
+      
+      // Find then and else paths
+      const truePath = outgoing.filter(edge => edge.sourceHandle === 'true');
+      const falsePath = outgoing.filter(edge => edge.sourceHandle === 'false');
+      
+      if (truePath.length > 0) {
+        const thenActions = truePath.flatMap(edge => 
+          this.buildSequenceFromNode(flow, edge.target, new Set(visited))
+        );
+        chooseAction.then = thenActions;
+      }
+      
+      if (falsePath.length > 0) {
+        const elseActions = falsePath.flatMap(edge => 
+          this.buildSequenceFromNode(flow, edge.target, new Set(visited))
+        );
+        chooseAction.else = elseActions;
+      }
     } else if (outgoing.length === 1) {
       // Single outgoing edge - continue the sequence
       const nextActions = this.buildSequenceFromNode(flow, outgoing[0].target, new Set(visited));

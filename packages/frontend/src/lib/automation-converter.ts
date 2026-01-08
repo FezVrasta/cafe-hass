@@ -63,9 +63,14 @@ export function processActions(
     }
     // If it's a choose structure
     else if (action.choose) {
+      // Process each choice as a separate condition
+      let lastConditionId: string | undefined;
+      
       for (const choice of action.choose) {
         if (choice.conditions) {
           const conditionId = `condition-${Date.now()}-${Math.random()}`;
+          lastConditionId = conditionId;
+          
           processed.push({
             action: {
               type: 'condition',
@@ -83,9 +88,9 @@ export function processActions(
         }
       }
 
-      // Process default branch
-      if (action.default) {
-        processed.push(...processActions(action.default, undefined, 'default'));
+      // Process default branch - connect to the last condition's else path
+      if (action.default && lastConditionId) {
+        processed.push(...processActions(action.default, lastConditionId, 'else'));
       }
     }
     // Otherwise it's a regular action
