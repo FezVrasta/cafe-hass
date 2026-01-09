@@ -61,7 +61,7 @@ class CafePanel extends HTMLElement {
       logger.warn('Invalid hass object provided, ignoring');
       return;
     }
-    
+
     logger.debug('Setting hass object in custom element', {
       hasHass: !!this._hass,
       statesCount: this._hass?.states ? Object.keys(this._hass.states).length : 0,
@@ -69,7 +69,7 @@ class CafePanel extends HTMLElement {
       hasConnection: !!this._hass?.connection,
       hasAuth: !!this._hass?.auth,
     });
-    
+
     if (this.root) this.render();
   }
 
@@ -94,7 +94,7 @@ class CafePanel extends HTMLElement {
       logger.warn('Invalid route object provided, ignoring');
       return;
     }
-    
+
     if (this.root) this.render();
   }
 
@@ -111,7 +111,7 @@ class CafePanel extends HTMLElement {
       logger.warn('Invalid panel object provided, ignoring');
       return;
     }
-    
+
     if (this.root) this.render();
   }
 
@@ -124,55 +124,18 @@ class CafePanel extends HTMLElement {
       // Ensure the custom element has proper styling context
       this.style.position = 'relative';
       this.style.isolation = 'isolate';
-
-      // Check if we're inside a shadow DOM and inject CSS accordingly
-      this.injectCSSForShadowDOM();
+      this.style.contain = 'layout style';
 
       this.root = ReactDOM.createRoot(this);
+
       this.render();
-    }
-  }
-
-  // Method to inject CSS into shadow DOM if needed
-  private injectCSSForShadowDOM() {
-    // Check if we're inside a shadow root
-    let currentNode: Node | null = this;
-    let shadowRoot: ShadowRoot | null = null;
-
-    while (currentNode) {
-      if (currentNode instanceof ShadowRoot) {
-        shadowRoot = currentNode;
-        break;
-      }
-      currentNode = currentNode.parentNode;
-    }
-
-    if (shadowRoot) {
-      // Check if CSS is already injected in shadow DOM
-      const existingStyle = shadowRoot.querySelector('style[data-cafe-shadow-styles]');
-      if (!existingStyle) {
-        // Get the CSS from the injected styles in document head
-        const documentStyles = Array.from(document.querySelectorAll('style'))
-          .map((s) => s.textContent || '')
-          .join('\n');
-
-        // Create style element for shadow DOM
-        const shadowStyle = document.createElement('style');
-        shadowStyle.setAttribute('data-cafe-shadow-styles', 'true');
-        shadowStyle.textContent = documentStyles;
-
-        // Inject into shadow root
-        shadowRoot.appendChild(shadowStyle);
-      } else {
-        // No shadow root to inject into
-      }
-    } else {
-      // No style element to inject
     }
   }
 
   disconnectedCallback() {
     logger.debug('CafePanel custom element disconnected from DOM');
+
+    // Clean up React root
     if (this.root) {
       this.root.unmount();
       this.root = null;
@@ -199,30 +162,11 @@ class CafePanel extends HTMLElement {
         panelTitle: this._panel?.title,
       });
 
-      // Force CSS injection check - check all style elements
-      const allStylesText = Array.from(document.querySelectorAll('style'))
-        .map((s) => s.textContent || '')
-        .join('');
-      const hasTailwindCSS = allStylesText.includes('--tw-border-spacing-x');
-      const hasReactFlowCSS = allStylesText.includes('react-flow');
-      logger.debug('CSS availability check', {
-        hasTailwindCSS,
-        hasReactFlowCSS,
-      });
-
       this.root.render(
         <React.StrictMode>
           <App hass={this._hass} narrow={this._narrow} route={this._route} panel={this._panel} />
         </React.StrictMode>
       );
-
-      // Debug computed styles after render
-      setTimeout(() => {
-        const testElement = this.querySelector('div');
-        if (testElement) {
-          logger.debug('Render completed, DOM updated');
-        }
-      }, 100);
     }
   }
 }

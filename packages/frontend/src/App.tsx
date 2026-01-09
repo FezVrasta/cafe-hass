@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { createContext, useContext, useEffect, useState } from 'react';
 import { Toaster } from 'sonner';
+import { CSSInjector } from '@/components/CSSInjector';
 import { FlowCanvas } from '@/components/canvas/FlowCanvas';
 import { AutomationImportDialog } from '@/components/panels/AutomationImportDialog';
 import { AutomationSaveDialog } from '@/components/panels/AutomationSaveDialog';
@@ -209,6 +210,7 @@ function App({ hass: externalHass, narrow = false, route, panel }: AppProps = {}
 
   return (
     <HassContext.Provider value={{ hass: effectiveHass, narrow, route, panel }}>
+      <CSSInjector />
       <ReactFlowProvider>
         <div className="flex h-screen flex-col bg-slate-100">
           {/* Header */}
