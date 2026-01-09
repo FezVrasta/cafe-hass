@@ -34,6 +34,7 @@ jobs:
 
       - name: Copy frontend to custom_components
         run: |
+          mkdir -p custom_components/cafe/www
           rm -rf custom_components/cafe/www/*
           cp -r packages/frontend/dist/* custom_components/cafe/www/
 
