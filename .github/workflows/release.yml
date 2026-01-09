@@ -51,7 +51,7 @@ jobs:
           zip -r ../cafe-${VERSION}.zip cafe -x "*.DS_Store" "*/.DS_Store"
           
           # Create alternative tar.gz 
-          tar -czf ../cafe-${VERSION}.tar.gz cafe --exclude="*.DS_Store"
+          tar -czf ../cafe-${VERSION}.tar.gz --exclude="*.DS_Store" cafe
           
           # Create a "hacs.zip" that HACS can use (same as versioned zip but with standard name)
           cp ../cafe-${VERSION}.zip ../hacs.zip
