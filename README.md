@@ -1,3 +1,6 @@
+> [!WARNING]
+> The project is still in beta, features may be broken so please make sure to backup your automations before editing them with CAFE!
+
 # ☕ C.A.F.E.
 
 ### **C**omplex **A**utomation **F**low **E**ditor
