@@ -1,0 +1,17 @@
+// @vitest-environment node
+import { readFileSync } from 'fs';
+import { yamlParser } from '../parser/YamlParser';
+import path from 'path';
+
+describe('YamlParser (failure check)', () => {
+  it('fails if too many nodes are generated', () => {
+    const yamlPath = path.resolve(
+      __dirname,
+      '../../../frontend/src/lib/__tests__/fixtures/09-templates.yaml'
+    );
+    const yamlString = readFileSync(yamlPath, 'utf8');
+    const result = yamlParser.parse(yamlString);
+    // This test should fail if more than 10 nodes are generated (simulate stricter expectation)
+    expect(result.graph!.nodes.length).toBeLessThanOrEqual(10);
+  });
+});

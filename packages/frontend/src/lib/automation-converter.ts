@@ -374,10 +374,32 @@ export function convertAutomationConfigToNodes(config: AutomationConfig): {
       // For condition nodes from if/then/else
       if (nodeType === 'condition') {
         let conditionType = 'template';
-        if (Array.isArray(action.condition) && action.condition[0]) {
-          const firstCondition = action.condition[0];
-          if (typeof firstCondition === 'object' && firstCondition !== null && 'condition' in firstCondition) {
-            conditionType = typeof firstCondition.condition === 'string' ? firstCondition.condition : 'template';
+        let conditionProps: Record<string, unknown> = {};
+
+        if (Array.isArray(action.condition)) {
+          if (action.condition.length === 1 && action.condition[0]) {
+            // Single condition - extract its properties directly
+            const firstCondition = action.condition[0];
+            if (typeof firstCondition === 'object' && firstCondition !== null) {
+              // Extract condition type
+              if ('condition' in firstCondition) {
+                conditionType = typeof firstCondition.condition === 'string' ? firstCondition.condition : 'template';
+              }
+              // Extract specific properties from the condition (value_template, entity_id, etc.)
+              // but not the nested 'condition' or 'conditions' fields as those would conflict
+              const { condition: _, conditions: __, ...restProps } = firstCondition as Record<string, unknown>;
+              conditionProps = restProps;
+            }
+          } else if (action.condition.length > 1) {
+            // Multiple conditions - treat as AND with nested conditions
+            conditionType = 'and';
+            // Store the full conditions array for the UI to display/edit
+            conditionProps = {
+              conditions: action.condition.map((cond: Record<string, unknown>) => ({
+                ...cond,
+                condition_type: cond.condition, // Map 'condition' to 'condition_type' for schema compatibility
+              })),
+            };
           }
         }
 
@@ -388,6 +410,7 @@ export function convertAutomationConfigToNodes(config: AutomationConfig): {
           data: {
             alias: typeof action.alias === 'string' ? action.alias : `Condition ${index + 1}`,
             condition_type: conditionType,
+            ...conditionProps,
             ...action,
           },
         });

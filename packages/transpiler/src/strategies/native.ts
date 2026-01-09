@@ -219,21 +219,25 @@ export class NativeStrategy extends BaseStrategy {
    * Build condition configuration
    */
   private buildCondition(node: ConditionNode): Record<string, unknown> {
-    const condition: Record<string, unknown> = {
-      condition: node.data.condition_type,
-    };
-
-    const { alias, condition_type, conditions, ...rest } = node.data;
-    Object.assign(condition, rest);
-
-    // Handle nested conditions
-    if (conditions && conditions.length > 0) {
-      condition.conditions = conditions;
+    // Helper to recursively map condition_type to condition
+    function mapCondition(data: any): any {
+      if (!data || typeof data !== 'object') return data;
+      const { condition_type, conditions, alias, ...rest } = data;
+      const out: Record<string, unknown> = {
+        condition: condition_type,
+        ...rest,
+      };
+      // Recursively map nested group conditions
+      if (Array.isArray(conditions) && conditions.length > 0) {
+        out.conditions = conditions
+          .map(mapCondition)
+          .filter((c) => c && (!Array.isArray(c.conditions) || c.conditions.length > 0));
+      }
+      return Object.fromEntries(
+        Object.entries(out).filter(([, v]) => v !== undefined && v !== '')
+      );
     }
-
-    return Object.fromEntries(
-      Object.entries(condition).filter(([, v]) => v !== undefined && v !== '')
-    );
+    return mapCondition(node.data);
   }
 
   /**
