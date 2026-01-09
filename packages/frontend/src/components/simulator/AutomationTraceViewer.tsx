@@ -1,4 +1,4 @@
-import { History, RotateCcw, Clock, Play, Square } from 'lucide-react';
+import { Clock, History, Play, RotateCcw, Square } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -9,11 +9,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { useHass } from '@/hooks/useHass';
+import { getHomeAssistantAPI, type TraceListItem } from '@/lib/ha-api';
+import { logger } from '@/lib/logger';
 import { cn } from '@/lib/utils';
 import { useFlowStore } from '@/store/flow-store';
-import { getHomeAssistantAPI, type TraceListItem } from '@/lib/ha-api';
-import { useHass } from '@/hooks/useHass';
-import { logger } from '@/lib/logger';
 
 export function AutomationTraceViewer() {
   const { hass } = useHass();
@@ -35,13 +35,6 @@ export function AutomationTraceViewer() {
   const [isLoading, setIsLoading] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
 
-  // Load trace list when component mounts or automation ID changes
-  useEffect(() => {
-    if (automationId && hass) {
-      loadTraceList();
-    }
-  }, [automationId, hass]);
-
   const loadTraceList = useCallback(async () => {
     if (!automationId || !hass) return;
 
@@ -51,7 +44,7 @@ export function AutomationTraceViewer() {
       const traceList = await api.getAutomationTraces(automationId);
       logger.info('Loaded automation traces:', traceList);
       setTraces(traceList || []);
-      
+
       // Auto-select the most recent trace
       if (traceList && traceList.length > 0) {
         setSelectedTraceRunId(traceList[0].run_id);
@@ -63,28 +56,41 @@ export function AutomationTraceViewer() {
     setIsLoading(false);
   }, [automationId, hass]);
 
-  const loadTraceDetails = useCallback(async (runId: string) => {
-    if (!automationId || !hass || !runId) return;
-
-    setIsLoading(true);
-    try {
-      const api = getHomeAssistantAPI(hass);
-      const traceDetails = await api.getAutomationTraceDetails(automationId, runId);
-      logger.info('Loaded trace details:', traceDetails);
-      
-      if (traceDetails) {
-        showTrace(traceDetails);
-      }
-    } catch (error) {
-      logger.error('Failed to load trace details:', error);
+  // Load trace list when component mounts or automation ID changes
+  useEffect(() => {
+    if (automationId && hass) {
+      loadTraceList();
     }
-    setIsLoading(false);
-  }, [automationId, hass, showTrace]);
+  }, [automationId, hass, loadTraceList]);
 
-  const handleTraceSelection = useCallback((runId: string) => {
-    setSelectedTraceRunId(runId);
-    loadTraceDetails(runId);
-  }, [loadTraceDetails]);
+  const loadTraceDetails = useCallback(
+    async (runId: string) => {
+      if (!automationId || !hass || !runId) return;
+
+      setIsLoading(true);
+      try {
+        const api = getHomeAssistantAPI(hass);
+        const traceDetails = await api.getAutomationTraceDetails(automationId, runId);
+        logger.info('Loaded trace details:', traceDetails);
+
+        if (traceDetails) {
+          showTrace(traceDetails);
+        }
+      } catch (error) {
+        logger.error('Failed to load trace details:', error);
+      }
+      setIsLoading(false);
+    },
+    [automationId, hass, showTrace]
+  );
+
+  const handleTraceSelection = useCallback(
+    (runId: string) => {
+      setSelectedTraceRunId(runId);
+      loadTraceDetails(runId);
+    },
+    [loadTraceDetails]
+  );
 
   const handleStopTrace = useCallback(() => {
     hideTrace();
@@ -96,26 +102,25 @@ export function AutomationTraceViewer() {
     if (!traceExecutionPath.length || isSimulating) return;
 
     setIsAnimating(true);
-    
+
     try {
       // Animate through each step in the trace
-      for (let i = 0; i < traceExecutionPath.length; i++) {
-        const nodeId = traceExecutionPath[i];
+      for (const nodeId of traceExecutionPath) {
         setActiveNode(nodeId);
-        
+
         // Wait for the animation speed
         await new Promise((resolve) => setTimeout(resolve, simulationSpeed));
-        
+
         // Check if animation was stopped
         if (!isShowingTrace) break;
       }
-      
+
       // Clear active node when done
       setActiveNode(null);
     } catch (error) {
       logger.error('Trace animation error:', error);
     }
-    
+
     setIsAnimating(false);
   }, [traceExecutionPath, simulationSpeed, setActiveNode, isShowingTrace, isSimulating]);
 
@@ -123,8 +128,6 @@ export function AutomationTraceViewer() {
     setIsAnimating(false);
     setActiveNode(null);
   }, [setActiveNode]);
-
-
 
   const formatTimestamp = (timestamp: string) => {
     try {
@@ -217,12 +220,8 @@ export function AutomationTraceViewer() {
         </div>
       </div>
 
-
-
       {traces.length === 0 && !isLoading && (
-        <div className="text-center text-muted-foreground text-sm">
-          No automation traces found
-        </div>
+        <div className="text-center text-muted-foreground text-sm">No automation traces found</div>
       )}
 
       {traces.length > 0 && (
@@ -237,18 +236,18 @@ export function AutomationTraceViewer() {
                 <SelectItem key={trace.run_id} value={trace.run_id}>
                   <div className="flex items-center gap-2">
                     <Clock className="h-3 w-3" />
-                    <span className="text-xs">
-                      {formatTimestamp(trace.timestamp.start)}
-                    </span>
+                    <span className="text-xs">{formatTimestamp(trace.timestamp.start)}</span>
                     <span className="text-muted-foreground text-xs">
                       ({formatDuration(trace.timestamp.start, trace.timestamp.finish)})
                     </span>
-                    <span className={cn(
-                      "rounded px-1 text-xs",
-                      trace.state === 'stopped' && trace.script_execution === 'finished'
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-yellow-100 text-yellow-700'
-                    )}>
+                    <span
+                      className={cn(
+                        'rounded px-1 text-xs',
+                        trace.state === 'stopped' && trace.script_execution === 'finished'
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-yellow-100 text-yellow-700'
+                      )}
+                    >
                       {trace.state}
                     </span>
                   </div>
@@ -285,7 +284,7 @@ export function AutomationTraceViewer() {
               <div className="mt-1 space-y-1">
                 {traceExecutionPath.map((nodeId, index) => (
                   <div
-                    key={`${nodeId}-${index}`}
+                    key={`step-${nodeId}-${traceExecutionPath.indexOf(nodeId)}`}
                     className="flex items-center gap-2 rounded bg-blue-50 p-1 text-blue-700 text-xs"
                   >
                     <div className="flex h-4 w-4 items-center justify-center rounded-full bg-blue-200 text-xs">
@@ -306,9 +305,7 @@ export function AutomationTraceViewer() {
       )}
 
       {isLoading && (
-        <div className="text-center text-muted-foreground text-sm">
-          Loading traces...
-        </div>
+        <div className="text-center text-muted-foreground text-sm">Loading traces...</div>
       )}
     </div>
   );

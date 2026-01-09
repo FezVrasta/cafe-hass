@@ -65,13 +65,13 @@ export const HANDLED_PROPERTIES = {
 
   // Action properties handled by ActionFields component
   action: [
-    'service', 
-    'data', 
+    'service',
+    'data',
     'target',
     // Legacy/alternative action formats
-    'entity_id',    // Legacy: often shows up instead of target.entity_id
-    'action',       // Alternative field name for service
-    'metadata',     // HA metadata field
+    'entity_id', // Legacy: often shows up instead of target.entity_id
+    'action', // Alternative field name for service
+    'metadata', // HA metadata field
   ],
 
   // Delay properties handled by DelayFields component

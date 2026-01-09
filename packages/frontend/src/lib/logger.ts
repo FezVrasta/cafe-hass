@@ -4,10 +4,9 @@
  */
 
 // Enable debugging by setting this to true or via localStorage
-const DEBUG_ENABLED = 
-  typeof window !== 'undefined' && 
-  (localStorage.getItem('cafe_debug') === 'true' || 
-   window.location.search.includes('debug=true'));
+const DEBUG_ENABLED =
+  typeof window !== 'undefined' &&
+  (localStorage.getItem('cafe_debug') === 'true' || window.location.search.includes('debug=true'));
 
 // Console styling for better visibility
 const styles = {
@@ -116,7 +115,7 @@ export const logger = new Logger();
 
 // Helper to enable debugging from browser console
 if (typeof window !== 'undefined') {
-  (window as any).cafeLogger = logger;
+  (window as unknown as Record<string, unknown>).cafeLogger = logger;
 }
 
 export default logger;

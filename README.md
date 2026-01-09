@@ -89,7 +89,7 @@ This means you can draw "spaghetti" logic on the canvas, and Home Assistant sees
 
 1. **Install HACS**: First, ensure you have [HACS](https://hacs.xyz/) installed in your Home Assistant instance.
 
-2. **Add Custom Repository**: 
+2. **Add Custom Repository**:
    - Go to **HACS** in your Home Assistant sidebar
    - Click the **⋮** (three dots) menu in the top right
    - Select **Custom repositories**
@@ -104,16 +104,17 @@ This means you can draw "spaghetti" logic on the canvas, and Home Assistant sees
 
 4. **Restart Home Assistant**: After installation, restart your Home Assistant instance.
 
-5. **Add the Panel**: 
-   - Go to **Settings** → **Dashboards**
-   - Click **Add Dashboard**
-   - Select **C.A.F.E.** from the available panels
-   - The C.A.F.E. panel will now appear in your sidebar
+5. **Enable the Integration**:
+   - Go to **Settings** → **Devices & Services**
+   - Click **Add Integration**
+   - Search for **C.A.F.E.**
+   - Click on it to add the integration
+   - The C.A.F.E. panel will automatically appear in your sidebar
 
 ### Manual Installation
 
 1. Download the latest release from the [Releases page](https://github.com/FezVrasta/cafe-hass/releases)
-2. Extract the `cafe-{version}.zip` file  
+2. Extract the `cafe-{version}.zip` file
 3. Copy the `cafe` folder to your `custom_components` directory
 4. Restart Home Assistant
 5. Add the panel as described above

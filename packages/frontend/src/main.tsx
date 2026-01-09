@@ -6,13 +6,41 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import { logger } from './lib/logger';
 
+// Define proper types for Home Assistant panel integration
+interface HassRoute {
+  path: string;
+  prefix?: string;
+  [key: string]: unknown;
+}
+
+interface HassPanel {
+  component_name?: string;
+  config?: Record<string, unknown>;
+  icon?: string;
+  title?: string;
+  url_path?: string;
+  [key: string]: unknown;
+}
+
+// Import HassInstance type from our API module
+type HassInstance = {
+  states: Record<string, { entity_id: string; state: string; attributes: Record<string, unknown> }>;
+  services: Record<string, Record<string, unknown>>;
+  callService?: (domain: string, service: string, data?: Record<string, unknown>) => Promise<void>;
+  connection?: unknown;
+  callApi?: (method: string, path: string, data?: Record<string, unknown>) => Promise<unknown>;
+  auth?: unknown;
+  user?: unknown;
+  [key: string]: unknown;
+};
+
 // Create a web component for Home Assistant panel integration
 class CafePanel extends HTMLElement {
   private root: ReactDOM.Root | null = null;
-  private _hass: any = null;
+  private _hass: HassInstance | null = null;
   private _narrow: boolean = false;
-  private _route: any = null;
-  private _panel: any = null;
+  private _route: HassRoute | null = null;
+  private _panel: HassPanel | null = null;
 
   constructor() {
     super();
@@ -23,17 +51,25 @@ class CafePanel extends HTMLElement {
   get hass() {
     return this._hass;
   }
-  set hass(value: any) {
+  set hass(value: unknown) {
+    // Type guard to ensure value conforms to HassInstance
+    if (value === null || value === undefined) {
+      this._hass = null;
+    } else if (typeof value === 'object' && value !== null && 'states' in value) {
+      this._hass = value as HassInstance;
+    } else {
+      logger.warn('Invalid hass object provided, ignoring');
+      return;
+    }
+
     logger.debug('Setting hass object in custom element', {
-      hasHass: !!value,
-      hassKeys: value ? Object.keys(value) : [],
-      statesCount: value?.states ? Object.keys(value.states).length : 0,
-      servicesCount: value?.services ? Object.keys(value.services).length : 0,
-      connection: !!value?.connection,
-      user: value?.user,
-      auth: !!value?.auth
+      hasHass: !!this._hass,
+      statesCount: this._hass?.states ? Object.keys(this._hass.states).length : 0,
+      servicesCount: this._hass?.services ? Object.keys(this._hass.services).length : 0,
+      hasConnection: !!this._hass?.connection,
+      hasAuth: !!this._hass?.auth,
     });
-    this._hass = value;
+
     if (this.root) this.render();
   }
 
@@ -48,16 +84,34 @@ class CafePanel extends HTMLElement {
   get route() {
     return this._route;
   }
-  set route(value: any) {
-    this._route = value;
+  set route(value: unknown) {
+    // Type guard to ensure value conforms to HassRoute
+    if (value === null || value === undefined) {
+      this._route = null;
+    } else if (typeof value === 'object' && value !== null && 'path' in value) {
+      this._route = value as HassRoute;
+    } else {
+      logger.warn('Invalid route object provided, ignoring');
+      return;
+    }
+
     if (this.root) this.render();
   }
 
   get panel() {
     return this._panel;
   }
-  set panel(value: any) {
-    this._panel = value;
+  set panel(value: unknown) {
+    // Type guard to ensure value conforms to HassPanel
+    if (value === null || value === undefined) {
+      this._panel = null;
+    } else if (typeof value === 'object' && value !== null) {
+      this._panel = value as HassPanel;
+    } else {
+      logger.warn('Invalid panel object provided, ignoring');
+      return;
+    }
+
     if (this.root) this.render();
   }
 
@@ -70,53 +124,18 @@ class CafePanel extends HTMLElement {
       // Ensure the custom element has proper styling context
       this.style.position = 'relative';
       this.style.isolation = 'isolate';
-
-      // Check if we're inside a shadow DOM and inject CSS accordingly
-      this.injectCSSForShadowDOM();
+      this.style.contain = 'layout style';
 
       this.root = ReactDOM.createRoot(this);
+
       this.render();
-    }
-  }
-  
-  // Method to inject CSS into shadow DOM if needed
-  private injectCSSForShadowDOM() {
-    // Check if we're inside a shadow root
-    let currentNode: Node | null = this;
-    let shadowRoot: ShadowRoot | null = null;
-
-    while (currentNode) {
-      if (currentNode instanceof ShadowRoot) {
-        shadowRoot = currentNode;
-        break;
-      }
-      currentNode = currentNode.parentNode;
-    }
-
-    if (shadowRoot) {
-      // Check if CSS is already injected in shadow DOM
-      const existingStyle = shadowRoot.querySelector('style[data-cafe-shadow-styles]');
-      if (!existingStyle) {
-        // Get the CSS from the injected styles in document head
-        const documentStyles = Array.from(document.querySelectorAll('style'))
-          .map((s) => s.textContent || '')
-          .join('\n');
-
-        // Create style element for shadow DOM
-        const shadowStyle = document.createElement('style');
-        shadowStyle.setAttribute('data-cafe-shadow-styles', 'true');
-        shadowStyle.textContent = documentStyles;
-
-        // Inject into shadow root
-        shadowRoot.appendChild(shadowStyle);
-      } else {
-      }
-    } else {
     }
   }
 
   disconnectedCallback() {
     logger.debug('CafePanel custom element disconnected from DOM');
+
+    // Clean up React root
     if (this.root) {
       this.root.unmount();
       this.root = null;
@@ -137,21 +156,10 @@ class CafePanel extends HTMLElement {
     if (this.root) {
       logger.debug('Rendering CafePanel', {
         hasHass: !!this._hass,
-        hassStatesCount: this._hass?.states ? Object.keys(this._hass.states).length : 0,
+        statesCount: this._hass?.states ? Object.keys(this._hass.states).length : 0,
         narrow: this._narrow,
-        route: this._route,
-        panel: this._panel
-      });
-
-      // Force CSS injection check - check all style elements
-      const allStylesText = Array.from(document.querySelectorAll('style'))
-        .map((s) => s.textContent || '')
-        .join('');
-      const hasTailwindCSS = allStylesText.includes('--tw-border-spacing-x');
-      const hasReactFlowCSS = allStylesText.includes('react-flow');
-      logger.debug('CSS availability check', {
-        hasTailwindCSS,
-        hasReactFlowCSS
+        routePath: this._route?.path,
+        panelTitle: this._panel?.title,
       });
 
       this.root.render(
@@ -159,14 +167,6 @@ class CafePanel extends HTMLElement {
           <App hass={this._hass} narrow={this._narrow} route={this._route} panel={this._panel} />
         </React.StrictMode>
       );
-
-      // Debug computed styles after render
-      setTimeout(() => {
-        const testElement = this.querySelector('div');
-        if (testElement) {
-          logger.debug('Render completed, DOM updated');
-        }
-      }, 100);
     }
   }
 }

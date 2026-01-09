@@ -11,6 +11,15 @@ export default defineConfig({
       jsAssetsFilterFunction: function customJsAssetsfilterFunction(outputChunk) {
         return outputChunk.isEntry;
       },
+      injectCode: (cssCode: string, options) => {
+        return `try{
+          if(typeof window != 'undefined'){
+            window.__CAFE_CSS__ = ${cssCode};
+          }
+        }catch(e){
+          console.error('[C.A.F.E.] CSS setup failed:', e);
+        }`;
+      },
     }),
   ],
   base: '/cafe_static/',

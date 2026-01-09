@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { createContext, useContext, useEffect, useState } from 'react';
 import { Toaster } from 'sonner';
+import { CSSInjector } from '@/components/CSSInjector';
 import { FlowCanvas } from '@/components/canvas/FlowCanvas';
 import { AutomationImportDialog } from '@/components/panels/AutomationImportDialog';
 import { AutomationSaveDialog } from '@/components/panels/AutomationSaveDialog';
@@ -22,9 +23,9 @@ import { ImportYamlDialog } from '@/components/panels/ImportYamlDialog';
 import { NodePalette } from '@/components/panels/NodePalette';
 import { PropertyPanel } from '@/components/panels/PropertyPanel';
 import { YamlPreview } from '@/components/panels/YamlPreview';
-import { TraceSimulator } from '@/components/simulator/TraceSimulator';
 import { AutomationTraceViewer } from '@/components/simulator/AutomationTraceViewer';
 import { SpeedControl } from '@/components/simulator/SpeedControl';
+import { TraceSimulator } from '@/components/simulator/TraceSimulator';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -36,7 +37,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useHass, type HassAPI } from '@/hooks/useHass';
+import { type HassAPI, useHass } from '@/hooks/useHass';
 // import { getHomeAssistantAPI } from '@/lib/ha-api';
 import { logger } from '@/lib/logger';
 import { cn } from '@/lib/utils';
@@ -66,7 +67,7 @@ type RightPanelTab = 'properties' | 'yaml' | 'simulator';
 function App({ hass: externalHass, narrow = false, route, panel }: AppProps = {}) {
   // Determine if we're in standalone context (no external hass = opening HTML directly)
   const isStandaloneContext = !externalHass;
-  
+
   // Only use the useHass hook if no external hass is provided
   const {
     hass: hookHass,
@@ -80,15 +81,17 @@ function App({ hass: externalHass, narrow = false, route, panel }: AppProps = {}
   // Determine mode based on hass source
   const isExternalHass = !!externalHass;
   const effectiveHass = externalHass || hookHass;
-  
+
   logger.debug('Hass object determination', {
     isExternalHass,
     hasHookHass: !!hookHass,
     hasEffectiveHass: !!effectiveHass,
-    effectiveHassStatesCount: (effectiveHass as HassAPI)?.states ? Object.keys((effectiveHass as HassAPI).states).length : 0,
-    hookHassMode: { isRemote, isLoading, hasError: !!connectionError }
+    effectiveHassStatesCount: (effectiveHass as HassAPI)?.states
+      ? Object.keys((effectiveHass as HassAPI).states).length
+      : 0,
+    hookHassMode: { isRemote, isLoading, hasError: !!connectionError },
   });
-  
+
   // Override mode detection when external hass is provided (custom panel mode)
   const actualIsRemote = isExternalHass ? false : isRemote;
   const actualIsLoading = isExternalHass ? false : isLoading;
@@ -97,15 +100,16 @@ function App({ hass: externalHass, narrow = false, route, panel }: AppProps = {}
   // Initialize or update the API instance with current hass
   useEffect(() => {
     if (effectiveHass) {
+      const hassApi = effectiveHass as HassAPI;
       logger.debug('Setting global hass instance', {
         source: isExternalHass ? 'external' : 'hook',
-        statesCount: (effectiveHass as HassAPI | undefined)?.states ? Object.keys((effectiveHass as HassAPI).states).length : 0,
-        servicesCount: (effectiveHass as HassAPI | undefined)?.services ? Object.keys((effectiveHass as HassAPI).services).length : 0,
-        hasConnection: !!(effectiveHass as HassAPI | undefined)?.connection,
-        hasCallApi: !!(effectiveHass as HassAPI | undefined)?.callApi,
-        hasCallService: !!(effectiveHass as HassAPI | undefined)?.callService
+        statesCount: hassApi?.states ? Object.keys(hassApi.states).length : 0,
+        servicesCount: hassApi?.services ? Object.keys(hassApi.services).length : 0,
+        hasConnection: !!hassApi?.connection,
+        hasCallApi: !!hassApi?.callApi,
+        hasCallService: !!hassApi?.callService,
       });
-      
+
       // Set the global hass instance for use by the store
       import('@/hooks/useHass').then(({ setGlobalHass }) => {
         setGlobalHass(effectiveHass);
@@ -206,6 +210,7 @@ function App({ hass: externalHass, narrow = false, route, panel }: AppProps = {}
 
   return (
     <HassContext.Provider value={{ hass: effectiveHass, narrow, route, panel }}>
+      <CSSInjector />
       <ReactFlowProvider>
         <div className="flex h-screen flex-col bg-slate-100">
           {/* Header */}
@@ -364,18 +369,17 @@ function App({ hass: externalHass, narrow = false, route, panel }: AppProps = {}
                     <div className="flex h-full flex-col">
                       {/* Shared Speed Control */}
                       <div className="border-b p-4">
-                        <h4 className="mb-2 font-medium text-muted-foreground text-xs">Debug Controls</h4>
-                        <SpeedControl 
-                          speed={simulationSpeed}
-                          onSpeedChange={setSimulationSpeed}
-                        />
+                        <h4 className="mb-2 font-medium text-muted-foreground text-xs">
+                          Debug Controls
+                        </h4>
+                        <SpeedControl speed={simulationSpeed} onSpeedChange={setSimulationSpeed} />
                       </div>
-                      
+
                       {/* Simulation Section */}
                       <div className="flex-1 border-b">
                         <TraceSimulator />
                       </div>
-                      
+
                       {/* Trace Section */}
                       <div className="flex-1">
                         <AutomationTraceViewer />
@@ -397,7 +401,9 @@ function App({ hass: externalHass, narrow = false, route, panel }: AppProps = {}
               {isExternalHass && (
                 <span className="text-green-600">Connected via Home Assistant panel</span>
               )}
-              {actualConnectionError && <span className="text-red-600">{actualConnectionError}</span>}
+              {actualConnectionError && (
+                <span className="text-red-600">{actualConnectionError}</span>
+              )}
             </div>
             <div className="flex items-center gap-2">
               <Info className="h-3 w-3" />
@@ -430,7 +436,9 @@ function App({ hass: externalHass, narrow = false, route, panel }: AppProps = {}
         <AutomationSaveDialog
           isOpen={saveDialogOpen}
           onClose={() => setSaveDialogOpen(false)}
-          onSaved={() => {/* TODO: Handle automation save */}}
+          onSaved={() => {
+            /* TODO: Handle automation save */
+          }}
         />
 
         <Toaster />

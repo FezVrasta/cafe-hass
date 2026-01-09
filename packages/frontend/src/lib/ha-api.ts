@@ -3,13 +3,13 @@ import type { Connection } from 'home-assistant-js-websocket';
 export interface HassEntity {
   entity_id: string;
   state: string;
-  attributes: Record<string, any>;
+  attributes: Record<string, unknown>;
   last_changed?: string;
   last_updated?: string;
 }
 
 export interface HassConnection {
-  sendMessagePromise: (message: any) => Promise<any>;
+  sendMessagePromise: (message: Record<string, unknown>) => Promise<unknown>;
 }
 
 // Type union to handle both HA API types
@@ -17,10 +17,10 @@ type HassInstance =
   | HassConfig
   | {
       states: Record<string, HassEntity>;
-      services: Record<string, Record<string, any>>;
-      callService: (domain: string, service: string, data?: any) => Promise<void>;
+      services: Record<string, Record<string, unknown>>;
+      callService: (domain: string, service: string, data?: Record<string, unknown>) => Promise<void>;
       connection?: Connection | null;
-      callApi?: (method: string, path: string, data?: any) => Promise<any>;
+      callApi?: (method: string, path: string, data?: Record<string, unknown>) => Promise<unknown>;
     };
 
 export interface HassConfig {
@@ -202,12 +202,14 @@ export class HomeAssistantAPI {
   async callService(
     domain: string,
     service: string,
-    serviceData?: any,
-    target?: any
-  ): Promise<any> {
+    serviceData?: Record<string, unknown>,
+    target?: Record<string, unknown>
+  ): Promise<void> {
     if (this.hass?.callService) {
       // Use built-in service calling (custom panel mode)
-      return await this.hass.callService(domain, service, serviceData, target);
+      // Combine serviceData and target into data object for the interface
+      const data = { ...serviceData, ...(target && { target }) };
+      return await this.hass.callService(domain, service, data);
     } else if (this.connection) {
       // Use websocket message (standalone mode)
       return await this.sendMessage({
@@ -299,8 +301,8 @@ export class HomeAssistantAPI {
       const automations = this.getAutomations();
       return automations.map((entity) => ({
         id: entity.entity_id.replace('automation.', ''),
-        alias: entity.attributes.friendly_name || entity.entity_id,
-        description: entity.attributes.description || '',
+        alias: (typeof entity.attributes.friendly_name === 'string' ? entity.attributes.friendly_name : entity.entity_id),
+        description: (typeof entity.attributes.description === 'string' ? entity.attributes.description : ''),
       }));
     } catch (error) {
       console.error('Failed to get automation configs:', error);
@@ -683,7 +685,10 @@ export class HomeAssistantAPI {
   /**
    * Get specific automation trace details
    */
-  async getAutomationTraceDetails(automationId: string, runId: string): Promise<AutomationTrace | null> {
+  async getAutomationTraceDetails(
+    automationId: string,
+    runId: string
+  ): Promise<AutomationTrace | null> {
     try {
       return await this.sendMessage({
         type: 'trace/get',

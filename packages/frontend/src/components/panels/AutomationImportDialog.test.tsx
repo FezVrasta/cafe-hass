@@ -25,6 +25,11 @@ type Trigger = {
 };
 
 describe('automation-converter', () => {
+  // Type guard helper for tests
+  const getActionProperty = (action: Record<string, unknown>, property: string): string => {
+    return typeof action[property] === 'string' ? action[property] : '';
+  };
+
   describe('processActions helper', () => {
     it('should handle simple action list', () => {
       const actions = [
@@ -35,8 +40,8 @@ describe('automation-converter', () => {
       const result = processActions(actions);
 
       expect(result).toHaveLength(2);
-      expect(result[0].action.action).toBe('light.turn_on');
-      expect(result[1].action.action).toBe('light.turn_off');
+      expect(getActionProperty(result[0].action, 'action')).toBe('light.turn_on');
+      expect(getActionProperty(result[1].action, 'action')).toBe('light.turn_off');
     });
 
     it('should process if/then/else structure with branch tracking', () => {
@@ -61,11 +66,11 @@ describe('automation-converter', () => {
       const result = processActions(actions);
 
       expect(result).toHaveLength(3);
-      expect(result[0].action.type).toBe('condition');
-      expect(result[0].action.alias).toBe('If condition');
-      expect(result[1].action.action).toBe('light.turn_on');
+      expect(getActionProperty(result[0].action, 'type')).toBe('condition');
+      expect(getActionProperty(result[0].action, 'alias')).toBe('If condition');
+      expect(getActionProperty(result[1].action, 'action')).toBe('light.turn_on');
       expect(result[1].branch).toBe('then');
-      expect(result[2].action.action).toBe('light.turn_off');
+      expect(getActionProperty(result[2].action, 'action')).toBe('light.turn_off');
       expect(result[2].branch).toBe('else');
     });
 
@@ -86,13 +91,13 @@ describe('automation-converter', () => {
       const result = processActions(actions);
 
       expect(result).toHaveLength(4);
-      expect(result[0].action.type).toBe('condition');
-      expect(result[0].action.alias).toBe('If condition');
-      expect(result[1].action.type).toBe('condition');
+      expect(getActionProperty(result[0].action, 'type')).toBe('condition');
+      expect(getActionProperty(result[0].action, 'alias')).toBe('If condition');
+      expect(getActionProperty(result[1].action, 'type')).toBe('condition');
       expect(result[1].branch).toBe('then');
-      expect(result[2].action.action).toBe('light.turn_on');
+      expect(getActionProperty(result[2].action, 'action')).toBe('light.turn_on');
       expect(result[2].branch).toBe('then');
-      expect(result[3].action.action).toBe('light.turn_off');
+      expect(getActionProperty(result[3].action, 'action')).toBe('light.turn_off');
       expect(result[3].branch).toBe('else');
     });
 
@@ -116,14 +121,14 @@ describe('automation-converter', () => {
       const result = processActions(actions);
 
       expect(result).toHaveLength(5);
-      expect(result[0].action.type).toBe('condition');
-      expect(result[0].action.alias).toBe('Choose condition');
-      expect(result[1].action.action).toBe('light.turn_on');
+      expect(getActionProperty(result[0].action, 'type')).toBe('condition');
+      expect(getActionProperty(result[0].action, 'alias')).toBe('Choose condition');
+      expect(getActionProperty(result[1].action, 'action')).toBe('light.turn_on');
       expect(result[1].branch).toBe('then');
-      expect(result[2].action.type).toBe('condition');
-      expect(result[3].action.action).toBe('light.turn_off');
-      expect(result[3].branch).toBe('then');
-      expect(result[4].action.action).toBe('light.turn_on');
+      expect(getActionProperty(result[2].action, 'type')).toBe('condition');
+      expect(getActionProperty(result[3].action, 'action')).toBe('light.turn_off');
+      expect(result[3].branch).toBe('else');
+      expect(getActionProperty(result[4].action, 'action')).toBe('light.turn_on');
       expect(result[4].branch).toBe('else');
     });
 
@@ -138,8 +143,8 @@ describe('automation-converter', () => {
       const result = processActions(actions);
 
       expect(result).toHaveLength(2);
-      expect(result[0].action.type).toBe('condition');
-      expect(result[1].action.action).toBe('light.turn_on');
+      expect(getActionProperty(result[0].action, 'type')).toBe('condition');
+      expect(getActionProperty(result[1].action, 'action')).toBe('light.turn_on');
       expect(result[1].branch).toBe('then');
     });
 
@@ -279,8 +284,11 @@ describe('automation-converter', () => {
 
       const nodeData = {
         alias: 'Trigger 1',
-        platform: trigger.platform || trigger.trigger || trigger.domain || 'device',
-        entity_id: trigger.entity_id,
+        platform:
+          ('platform' in trigger ? trigger.platform : null) || 
+          ('trigger' in trigger ? (trigger as { trigger: string }).trigger : null) || 
+          trigger.domain || 'device',
+        entity_id: 'entity_id' in trigger ? (trigger as { entity_id: string }).entity_id : undefined,
         ...trigger,
       };
 
@@ -301,9 +309,9 @@ describe('automation-converter', () => {
 
       const nodeData = {
         alias: 'Action 1',
-        service: action.action || (action as any).service || 'unknown',
-        entity_id: action.target?.entity_id || (action as any).entity_id,
-        data: (action as any).data || {},
+        service: action.action || ('service' in action ? (action as { service: string }).service : null) || 'unknown',
+        entity_id: action.target?.entity_id || ('entity_id' in action ? (action as { entity_id: unknown }).entity_id : undefined),
+        data: ('data' in action ? action.data : {}) || {},
         target: action.target,
       };
 
@@ -323,9 +331,9 @@ describe('automation-converter', () => {
 
       const nodeData = {
         alias: 'Action 1',
-        service: (action as any).action || action.service || 'unknown',
-        entity_id: (action as any).target?.entity_id || action.entity_id,
-        data: (action as any).data || action.service_data || {},
+        service: ('action' in action ? (action as { action: string }).action : null) || action.service || 'unknown',
+        entity_id: ('target' in action ? (action as { target?: { entity_id: unknown } }).target?.entity_id : null) || action.entity_id,
+        data: ('data' in action ? (action as { data: unknown }).data : null) || action.service_data || {},
       };
 
       expect(nodeData.service).toBe('light.turn_on');
@@ -359,9 +367,9 @@ describe('automation-converter', () => {
 
       // Should not throw, just not create any nodes
       expect(() => {
-        const triggers = (config as any).triggers || (config as any).trigger;
-        const conditions = (config as any).conditions || (config as any).condition;
-        const actions = (config as any).actions || (config as any).action;
+        const triggers = 'triggers' in config ? config.triggers : 'trigger' in config ? config.trigger : undefined;
+        const conditions = 'conditions' in config ? config.conditions : 'condition' in config ? config.condition : undefined;
+        const actions = 'actions' in config ? config.actions : 'action' in config ? config.action : undefined;
 
         expect(triggers).toBeUndefined();
         expect(conditions).toBeUndefined();
@@ -375,7 +383,7 @@ describe('automation-converter', () => {
         target: { entity_id: 'light.test' },
       };
 
-      const service = (action as any).action || (action as any).service || 'unknown';
+      const service = 'action' in action ? action.action : 'service' in action ? action.service : 'unknown';
 
       expect(service).toBe('unknown');
     });

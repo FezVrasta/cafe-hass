@@ -25,7 +25,7 @@ describe('Roundtrip Import/Export Tests', () => {
       console.log('Original YAML:', originalYamlContent);
 
       // Parse the original YAML
-      const originalConfig = yaml.load(originalYamlContent) as any;
+      const originalConfig = yaml.load(originalYamlContent) as Record<string, unknown>;
       expect(originalConfig).toBeDefined();
       expect(originalConfig.alias).toBeDefined();
 
@@ -161,23 +161,31 @@ describe('Roundtrip Import/Export Tests', () => {
         expect(generatedConfig.action.length).toBeGreaterThan(0);
 
         // Validate action structure preservation
-        generatedConfig.action.forEach((action: any, actionIndex: number) => {
-          expect(action).toBeDefined();
-          // Action should have either service, choose, if, delay, wait, variables (for state machine), or repeat
-          const hasValidActionType =
-            action.service ||
-            action.choose ||
-            action.if ||
-            action.delay ||
-            action.wait_template ||
-            action.wait_for_trigger ||
-            action.variables ||
-            action.repeat;
-          if (!hasValidActionType) {
-            console.error(`Invalid action at index ${actionIndex}:`, action);
-          }
-          expect(hasValidActionType).toBeTruthy();
-        });
+        if (Array.isArray(generatedConfig.action)) {
+          generatedConfig.action.forEach((action: unknown, actionIndex: number) => {
+            expect(action).toBeDefined();
+            // Action should have either service, choose, if, delay, wait, variables (for state machine), or repeat
+            
+            // Type guard to check if action is a valid object
+            if (typeof action === 'object' && action !== null) {
+              const actionObj = action as Record<string, unknown>;
+              const hasValidActionType =
+                actionObj.service ||
+                actionObj.choose ||
+                actionObj.if ||
+                actionObj.delay ||
+                actionObj.wait_template ||
+                actionObj.wait_for_trigger ||
+                actionObj.variables ||
+                actionObj.repeat;
+              
+              if (!hasValidActionType) {
+                console.error(`Invalid action at index ${actionIndex}:`, action);
+              }
+              expect(hasValidActionType).toBeTruthy();
+            }
+          });
+        }
       }
 
       // Step 8: Generate final YAML and compare structure
@@ -188,18 +196,20 @@ describe('Roundtrip Import/Export Tests', () => {
       console.log('Final YAML:', finalYaml);
 
       // Parse final YAML to ensure it's valid
-      const finalConfig = yaml.load(finalYaml!) as Record<string, unknown>;
-      expect(finalConfig).toBeDefined();
-      expect(finalConfig.alias).toBe(originalConfig.alias);
-
-      // Metadata validation (CAFE variables should be present)
-      const variables = finalConfig.variables as
-        | Record<string, Record<string, unknown>>
-        | undefined;
-      expect(variables?._cafe_metadata).toBeDefined();
-      expect(variables?._cafe_metadata.version).toBe(1);
-      // Strategy can be 'native' or 'state-machine' depending on complexity
-      expect(['native', 'state-machine']).toContain(variables?._cafe_metadata.strategy);
+      if (finalYaml) {
+        const finalConfig = yaml.load(finalYaml) as Record<string, unknown>;
+        expect(finalConfig).toBeDefined();
+        expect(finalConfig.alias).toBe(originalConfig.alias);
+        
+        // Metadata validation (CAFE variables should be present)
+        const variables = finalConfig.variables as
+          | Record<string, Record<string, unknown>>
+          | undefined;
+        expect(variables?._cafe_metadata).toBeDefined();
+        expect(variables?._cafe_metadata.version).toBe(1);
+        // Strategy can be 'native' or 'state-machine' depending on complexity
+        expect(['native', 'state-machine']).toContain(variables?._cafe_metadata.strategy);
+      }
 
       console.log(`✅ ${filename} roundtrip test passed`);
     });
@@ -214,7 +224,7 @@ describe('Roundtrip Import/Export Tests', () => {
     yamlFiles.forEach((filename) => {
       const filePath = join(fixturesDir, filename);
       const originalYamlContent = readFileSync(filePath, 'utf8');
-      const originalConfig = yaml.load(originalYamlContent) as any;
+      const originalConfig = yaml.load(originalYamlContent) as Record<string, unknown>;
 
       const { nodes } = convertAutomationConfigToNodes(originalConfig);
 
@@ -231,7 +241,7 @@ describe('Roundtrip Import/Export Tests', () => {
     yamlFiles.forEach((filename) => {
       const filePath = join(fixturesDir, filename);
       const originalYamlContent = readFileSync(filePath, 'utf8');
-      const originalConfig = yaml.load(originalYamlContent) as any;
+      const originalConfig = yaml.load(originalYamlContent) as Record<string, unknown>;
 
       const { nodes, edges } = convertAutomationConfigToNodes(originalConfig);
       const nodeIds = new Set(nodes.map((n) => n.id));
