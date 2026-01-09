@@ -5,8 +5,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build && npm run copy-to-ha",
-    "copy-to-ha": "npm run clean-ha && cp -r dist/* ../../custom_components/cafe/www/",
-    "clean-ha": "rm -rf ../../custom_components/cafe/www/assets/* && rm -f ../../custom_components/cafe/www/index.html",
+    "copy-to-ha": "npm run clean-ha && mkdir -p ../../custom_components/cafe/www && cp -r dist/* ../../custom_components/cafe/www/",
+    "clean-ha": "mkdir -p ../../custom_components/cafe/www && rm -rf ../../custom_components/cafe/www/assets/* && rm -f ../../custom_components/cafe/www/index.html",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
