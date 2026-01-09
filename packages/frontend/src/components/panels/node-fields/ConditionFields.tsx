@@ -14,7 +14,9 @@ import { NumericStateConditionFields } from './NumericStateConditionFields';
 import { StateConditionFields } from './StateConditionFields';
 import { TemplateConditionFields } from './TemplateConditionFields';
 import { TimeConditionFields } from './TimeConditionFields';
+import { TriggerConditionFields } from './TriggerConditionFields';
 import { ZoneConditionFields } from './ZoneConditionFields';
+import { ConditionGroupEditor } from '@/components/nodes/ConditionGroupEditor';
 
 interface ConditionFieldsProps {
   node: FlowNode;
@@ -44,12 +46,29 @@ export function ConditionFields({ node, onChange, entities }: ConditionFieldsPro
         return <ZoneConditionFields node={node} onChange={onChange} entities={entities} />;
       case 'device':
         return <DeviceConditionFields node={node} onChange={onChange} />;
+      case 'trigger':
+        return <TriggerConditionFields node={node} onChange={onChange} />;
       case 'and':
       case 'or':
       case 'not':
-        // These logical conditions would need additional implementation
-        // For now, they don't have specific fields
-        return null;
+        // Render the group editor for logical group conditions
+        // Only pass conditions if node.data is a group condition
+        // Type guard for condition node
+        const isConditionNode =
+          node.type === 'condition' &&
+          typeof (node.data as any).condition_type === 'string';
+        const groupConditions =
+          isConditionNode && ['and', 'or', 'not'].includes((node.data as any).condition_type) &&
+          Array.isArray((node.data as any).conditions)
+            ? (node.data as any).conditions
+            : [];
+        return (
+          <ConditionGroupEditor
+            conditions={groupConditions}
+            onChange={conds => onChange('conditions', conds)}
+            parentType={conditionType as 'and' | 'or' | 'not'}
+          />
+        );
       default:
         return null;
     }
@@ -70,6 +89,7 @@ export function ConditionFields({ node, onChange, entities }: ConditionFieldsPro
             <SelectItem value="sun">Sun</SelectItem>
             <SelectItem value="zone">Zone</SelectItem>
             <SelectItem value="device">Device</SelectItem>
+            <SelectItem value="trigger">Trigger</SelectItem>
             <SelectItem value="and">AND</SelectItem>
             <SelectItem value="or">OR</SelectItem>
             <SelectItem value="not">NOT</SelectItem>

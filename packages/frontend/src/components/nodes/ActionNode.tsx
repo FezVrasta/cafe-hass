@@ -15,8 +15,12 @@ export const ActionNode = memo(function ActionNode({ id, data, selected }: Actio
   const isActive = activeNodeId === id;
   const stepNumber = getExecutionStepNumber(id);
 
-  // Parse service into domain and service name
-  const [domain, serviceName] = data.service.split('.');
+  // Parse service into domain and service name, handle undefined
+  let domain: string | undefined = undefined;
+  let serviceName: string | undefined = undefined;
+  if (typeof data.service === 'string' && data.service.includes('.')) {
+    [domain, serviceName] = data.service.split('.');
+  }
 
   // Get target entity display
   const targetDisplay = (() => {

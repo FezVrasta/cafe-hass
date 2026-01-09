@@ -157,8 +157,8 @@ export type ConditionNode = z.infer<typeof ConditionNodeSchema>;
  */
 export const ActionDataSchema = z.object({
   alias: z.string().optional(),
-  service: z.string().min(1), // e.g., "light.turn_on"
-  target: OptionalTargetSchema,
+  service: z.string().min(1).optional(), // e.g., "light.turn_on"
+  target: OptionalTargetSchema.optional(),
   data: ServiceDataSchema.optional(),
   data_template: ServiceDataTemplateSchema.optional(),
   // Response variable for service calls that return data
@@ -167,6 +167,10 @@ export const ActionDataSchema = z.object({
   continue_on_error: z.boolean().optional(),
   // Enabled flag
   enabled: z.boolean().optional(),
+  // Conditional actions (if/then/else)
+  if: z.any().optional(),
+  then: z.any().optional(),
+  else: z.any().optional(),
 });
 export type ActionData = z.infer<typeof ActionDataSchema>;
 

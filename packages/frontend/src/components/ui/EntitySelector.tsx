@@ -271,7 +271,7 @@ export function EntitySelector({
           </Button>
         </PopoverTrigger>
         <PopoverContent
-          className="w-[--radix-popover-trigger-width] p-0"
+          className="w-[--radix-popover-trigger-width] p-0 min-w-[360px]"
           align="start"
           container={portalContainer}
         >

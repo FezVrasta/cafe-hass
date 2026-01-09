@@ -424,6 +424,18 @@ export class YamlParser {
           nodes.push(...chooseResult.nodes);
           edges.push(...chooseResult.edges);
           currentNodeIds = chooseResult.outputNodeIds;
+        } else if (action.if) {
+          // Handle if/then/else blocks
+          const ifResult = this.parseIfBlock(
+            action,
+            warnings,
+            currentNodeIds,
+            getNextNodeId,
+            conditionNodeIds
+          );
+          nodes.push(...ifResult.nodes);
+          edges.push(...ifResult.edges);
+          currentNodeIds = ifResult.outputNodeIds;
         } else if (action.service || action.action) {
           // Regular service call action (support both 'service' and 'action' fields)
           const nodeId = getNextNodeId('action');
@@ -568,17 +580,158 @@ export class YamlParser {
   }
 
   /**
+   * Parse if/then/else block
+   */
+  private parseIfBlock(
+    ifAction: { if: unknown[]; then: unknown[]; else?: unknown[]; alias?: string },
+    warnings: string[],
+    previousNodeIds: string[],
+    getNextNodeId: (type: string) => string,
+    conditionNodeIds: Set<string> = new Set()
+  ): { nodes: FlowNode[]; edges: FlowEdge[]; outputNodeIds: string[] } {
+    const nodes: FlowNode[] = [];
+    const edges: FlowEdge[] = [];
+    const outputNodeIds: string[] = [];
+    const localConditionIds = new Set(conditionNodeIds);
+
+    // Create condition node from the 'if' conditions
+    const conditionId = getNextNodeId('condition');
+    const ifConditions = Array.isArray(ifAction.if) ? ifAction.if : [ifAction.if];
+
+    // Use the first condition's type or default to 'template'
+    const firstCondition = ifConditions[0] as Record<string, unknown> | undefined;
+    const rawConditionType = (firstCondition?.condition as string) || 'numeric_state';
+    // Validate condition type against known types
+    const validConditionTypes = [
+      'state',
+      'numeric_state',
+      'template',
+      'time',
+      'sun',
+      'zone',
+      'and',
+      'or',
+      'not',
+      'device',
+      'trigger',
+    ] as const;
+    const conditionType = validConditionTypes.includes(
+      rawConditionType as (typeof validConditionTypes)[number]
+    )
+      ? (rawConditionType as (typeof validConditionTypes)[number])
+      : 'template';
+
+    const conditionNode: ConditionNode = {
+      id: conditionId,
+      type: 'condition',
+      position: { x: 0, y: 0 },
+      data: {
+        alias: ifAction.alias,
+        condition_type: conditionType,
+        entity_id: firstCondition?.entity_id as string | undefined,
+        state: firstCondition?.state as string | undefined,
+        above: firstCondition?.above as number | undefined,
+        below: firstCondition?.below as number | undefined,
+        attribute: firstCondition?.attribute as string | undefined,
+      },
+    };
+
+    nodes.push(conditionNode);
+    localConditionIds.add(conditionId);
+
+    // Connect from previous nodes
+    for (const prevId of previousNodeIds) {
+      const sourceHandle = conditionNodeIds.has(prevId) ? 'true' : undefined;
+      edges.push(this.createEdge(prevId, conditionId, sourceHandle));
+    }
+
+    // Parse 'then' sequence (true branch)
+    if (ifAction.then) {
+      const thenSequence = Array.isArray(ifAction.then) ? ifAction.then : [ifAction.then];
+      const thenResult = this.parseActions(
+        thenSequence,
+        warnings,
+        [conditionId],
+        getNextNodeId,
+        localConditionIds
+      );
+      nodes.push(...thenResult.nodes);
+      edges.push(...thenResult.edges);
+
+      // The edges from condition to first action should use 'true' handle
+      if (thenResult.nodes.length > 0) {
+        const firstActionId = thenResult.nodes[0].id;
+        const trueEdge = edges.find(
+          (e) => e.source === conditionId && e.target === firstActionId
+        );
+        if (trueEdge) {
+          trueEdge.sourceHandle = 'true';
+        }
+      }
+
+      // Track output nodes from then branch
+      if (thenResult.nodes.length > 0) {
+        outputNodeIds.push(thenResult.nodes[thenResult.nodes.length - 1].id);
+      }
+    }
+
+    // Parse 'else' sequence (false branch)
+    if (ifAction.else) {
+      const elseSequence = Array.isArray(ifAction.else) ? ifAction.else : [ifAction.else];
+      // For else branch, we need to connect from condition with 'false' handle
+      const elseResult = this.parseActions(
+        elseSequence,
+        warnings,
+        [conditionId],
+        getNextNodeId,
+        new Set() // Don't use localConditionIds for else - we handle the edge manually
+      );
+      nodes.push(...elseResult.nodes);
+
+      // Add edges manually with 'false' handle for first connection
+      if (elseResult.nodes.length > 0) {
+        const firstElseNodeId = elseResult.nodes[0].id;
+        // Remove any auto-generated edges from condition to first else node
+        const existingEdgeIndex = elseResult.edges.findIndex(
+          (e) => e.source === conditionId && e.target === firstElseNodeId
+        );
+        if (existingEdgeIndex >= 0) {
+          elseResult.edges.splice(existingEdgeIndex, 1);
+        }
+        // Add edge with 'false' handle
+        edges.push(this.createEdge(conditionId, firstElseNodeId, 'false'));
+      }
+
+      // Add remaining edges from else result
+      edges.push(...elseResult.edges);
+
+      // Track output nodes from else branch
+      if (elseResult.nodes.length > 0) {
+        outputNodeIds.push(elseResult.nodes[elseResult.nodes.length - 1].id);
+      }
+    }
+
+    // If no outputs were added, the condition itself is the output
+    if (outputNodeIds.length === 0) {
+      outputNodeIds.push(conditionId);
+    }
+
+    return { nodes, edges, outputNodeIds };
+  }
+
+  /**
    * Create an unknown node for unparseable content
    */
-  private createUnknownNode(nodeId: string, originalData: any): ActionNode {
+  private createUnknownNode(nodeId: string, originalData: unknown): ActionNode {
+    const data = originalData as Record<string, unknown> | null | undefined;
     return {
       id: nodeId,
       type: 'action',
       position: { x: 0, y: 0 },
       data: {
-        alias: `Unknown: ${originalData.service || originalData.platform || 'Node'}`,
-        service: originalData.service || 'unknown.unknown',
-        data: originalData,
+        alias: `Unknown: ${data?.service || data?.platform || 'Node'}`,
+        service: (data?.service as string) || 'unknown.unknown',
+        data: data as Record<string, unknown> | undefined,
       },
     };
   }
