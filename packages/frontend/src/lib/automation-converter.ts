@@ -121,10 +121,12 @@ export function convertAutomationConfigToNodes(config: any): {
   const transpilerMetadata = config.variables?._cafe_metadata;
   const savedPositions = cafeMetadata?.node_positions || transpilerMetadata?.nodes || {};
   const nodeMapping = cafeMetadata?.node_mapping || {};
+  const strategy = cafeMetadata?.strategy || transpilerMetadata?.strategy || 'native';
 
   console.log('C.A.F.E.: Loading automation with metadata:', {
     hasCafeMetadata: !!cafeMetadata,
     hasTranspilerMetadata: !!transpilerMetadata,
+    strategy: strategy,
     savedPositionsCount: Object.keys(savedPositions).length,
     nodeMappingCount: Object.keys(nodeMapping).length,
     savedPositions,
@@ -180,14 +182,14 @@ export function convertAutomationConfigToNodes(config: any): {
     for (const [index, trigger] of triggers.entries()) {
       // Try to get node ID from CAFE metadata node mapping first
       let nodeId;
-      const mappingKey = `trigger-${globalNodeIndex}`; // Use global index, not trigger index
+      const mappingKey = `trigger_${globalNodeIndex}`; // Use global index, not trigger index
       if (nodeMapping[mappingKey]) {
         nodeId = nodeMapping[mappingKey];
         console.log(`C.A.F.E.: Found trigger mapping ${mappingKey} -> ${nodeId}`);
       } else if (transpilerMetadata?.nodes) {
         // Fallback to transpiler metadata
         const triggerKeys = Object.keys(transpilerMetadata.nodes).filter((key) =>
-          key.startsWith('trigger-')
+          key.startsWith('trigger_')
         );
         nodeId = triggerKeys[index];
         console.log(`C.A.F.E.: Using transpiler metadata for trigger ${index} -> ${nodeId}`);
@@ -285,14 +287,14 @@ export function convertAutomationConfigToNodes(config: any): {
       let nodeId = action._conditionId;
       if (!nodeId) {
         // Try to get node ID from CAFE metadata node mapping first
-        const mappingKey = `action-${globalNodeIndex}`; // Use global index
+        const mappingKey = `action_${globalNodeIndex}`; // Use global index
         if (nodeMapping[mappingKey]) {
           nodeId = nodeMapping[mappingKey];
           console.log(`C.A.F.E.: Found action mapping ${mappingKey} -> ${nodeId}`);
         } else if (transpilerMetadata?.nodes) {
           // Fallback to transpiler metadata
           const actionKeys = Object.keys(transpilerMetadata.nodes).filter((key) =>
-            key.startsWith('action-')
+            key.startsWith('action_')
           );
           nodeId = actionKeys[index];
           console.log(`C.A.F.E.: Using transpiler metadata for action ${index} -> ${nodeId}`);
@@ -301,6 +303,13 @@ export function convertAutomationConfigToNodes(config: any): {
           nodeId = `action_${Date.now()}_${index}`;
           console.log(`C.A.F.E.: Generated new action ID: ${nodeId}`);
         }
+      }
+
+      // Skip actions without valid node IDs when using state machine strategy
+      // This happens with state machine wrappers that aren't actual flow nodes
+      if (strategy === 'state-machine' && !nodeId) {
+        console.log(`C.A.F.E.: Skipping action ${index} - no valid node ID for state machine strategy`);
+        continue;
       }
 
       // Determine node type based on action
