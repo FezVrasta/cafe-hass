@@ -6,7 +6,7 @@ import logger from '@/lib/logger';
  */
 export function CSSInjector() {
   // Get the CSS from the window object set by vite-plugin-css-injected-by-js
-  const cssCode = typeof window !== 'undefined' ? (window as any).__CAFE_CSS__ : '';
+  const cssCode = typeof window !== 'undefined' ? (window as Window & { __CAFE_CSS__?: string }).__CAFE_CSS__ : '';
 
   if (!cssCode) {
     logger.warn('[C.A.F.E.] No CSS code found on window.__CAFE_CSS__');

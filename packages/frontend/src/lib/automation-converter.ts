@@ -79,8 +79,8 @@ export function processActions(
     else if (action.choose) {
       // Process each choice as a separate condition
       let lastConditionId: string | undefined;
-
       if (Array.isArray(action.choose)) {
+        
         for (const choice of action.choose) {
           if (typeof choice === 'object' && choice !== null) {
             const choiceObj = choice as Record<string, unknown>;
@@ -98,7 +98,6 @@ export function processActions(
                 branch,
                 parentConditionId,
               });
-
               if (choiceObj.sequence && Array.isArray(choiceObj.sequence)) {
                 processed.push(...processActions(choiceObj.sequence as AutomationAction[], conditionId, 'then'));
               }
@@ -125,6 +124,7 @@ export function processActions(
   return processed;
 }
 
+
 /**
  * Convert Home Assistant automation config to nodes with proper connections
  */
@@ -136,11 +136,12 @@ export function convertAutomationConfigToNodes(config: AutomationConfig): {
   const edgesToCreate: Array<{ source: string; target: string; sourceHandle: string | null }> = [];
 
   // Check for CAFE metadata for node positions - use existing transpiler metadata
-  const cafeMetadata = config.variables?.cafe_metadata;
-  const transpilerMetadata = config.variables?._cafe_metadata;
-  const savedPositions = cafeMetadata?.node_positions || transpilerMetadata?.nodes || {};
-  const nodeMapping = cafeMetadata?.node_mapping || {};
-  const strategy = cafeMetadata?.strategy || transpilerMetadata?.strategy || 'native';
+  const cafeMetadata = config.variables?.cafe_metadata as Record<string, unknown> | undefined;
+  const transpilerMetadata = config.variables?._cafe_metadata as Record<string, unknown> | undefined;
+  const savedPositions = (cafeMetadata?.node_positions as Record<string, unknown>) || (transpilerMetadata?.nodes as Record<string, unknown>) || {};
+  const nodeMapping = (cafeMetadata?.node_mapping as Record<string, unknown>) || {};
+  const strategy = (cafeMetadata?.strategy as string) || (transpilerMetadata?.strategy as string) || 'native';
+
 
   console.log('C.A.F.E.: Loading automation with metadata:', {
     hasCafeMetadata: !!cafeMetadata,
@@ -199,15 +200,17 @@ export function convertAutomationConfigToNodes(config: AutomationConfig): {
         : [config.trigger];
 
     for (const [index, trigger] of triggers.entries()) {
+      if (!trigger) continue; // Skip undefined triggers
       // Try to get node ID from CAFE metadata node mapping first
       let nodeId: string;
       const mappingKey = `trigger_${globalNodeIndex}`; // Use global index, not trigger index
       if (nodeMapping[mappingKey]) {
-        nodeId = nodeMapping[mappingKey];
+        nodeId = nodeMapping[mappingKey] as string;
         console.log(`C.A.F.E.: Found trigger mapping ${mappingKey} -> ${nodeId}`);
-      } else if (transpilerMetadata?.nodes) {
+      } else if (transpilerMetadata && 'nodes' in transpilerMetadata) {
         // Fallback to transpiler metadata
-        const triggerKeys = Object.keys(transpilerMetadata.nodes).filter((key) =>
+        const nodes = transpilerMetadata.nodes as Record<string, unknown>;
+        const triggerKeys = Object.keys(nodes).filter((key) =>
           key.startsWith('trigger_')
         );
         nodeId = triggerKeys[index];
@@ -254,8 +257,9 @@ export function convertAutomationConfigToNodes(config: AutomationConfig): {
         : [config.condition];
 
     for (const [index, condition] of conditions.entries()) {
+      if (!condition) continue; // Skip undefined conditions
       const mappingKey = `condition-${index}`;
-      const originalId = nodeMapping[mappingKey];
+      const originalId = nodeMapping[mappingKey] as string | undefined;
       const nodeId = originalId || `condition-${Date.now()}-${index}`;
 
       nodesToCreate.push({
@@ -293,7 +297,8 @@ export function convertAutomationConfigToNodes(config: AutomationConfig): {
         ? config.action
         : [config.action];
 
-    const processedActions = processActions(actions);
+    const validActions = (actions.filter((a) => a !== undefined) as Record<string, unknown>[]);
+    const processedActions = processActions(validActions);
 
     // Check if there are both 'then' and 'else' branches to determine if vertical offset should be applied
     const hasThenBranch = processedActions.some((action) => action.branch === 'then');
