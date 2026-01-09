@@ -34,8 +34,9 @@ import {
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useHass } from '@/hooks/useHass';
+import { useHass, type HassAPI } from '@/hooks/useHass';
 // import { getHomeAssistantAPI } from '@/lib/ha-api';
+import { logger } from '@/lib/logger';
 import { cn } from '@/lib/utils';
 import { useFlowStore } from '@/store/flow-store';
 
@@ -61,30 +62,59 @@ interface AppProps {
 type RightPanelTab = 'properties' | 'yaml' | 'simulator';
 
 function App({ hass: externalHass, narrow = false, route, panel }: AppProps = {}) {
+  // Determine if we're in standalone context (no external hass = opening HTML directly)
+  const isStandaloneContext = !externalHass;
+  
+  // Only use the useHass hook if no external hass is provided
   const {
     hass: hookHass,
-    isStandalone,
     isRemote,
     isLoading,
     connectionError,
     config,
     setConfig,
-  } = useHass();
+  } = useHass(isStandaloneContext ? 'remote' : undefined);
 
-  // Use external hass if provided (from HA), otherwise use hook
+  // Determine mode based on hass source
+  const isExternalHass = !!externalHass;
   const effectiveHass = externalHass || hookHass;
+  
+  logger.debug('Hass object determination', {
+    isExternalHass,
+    hasHookHass: !!hookHass,
+    hasEffectiveHass: !!effectiveHass,
+    effectiveHassStatesCount: (effectiveHass as HassAPI)?.states ? Object.keys((effectiveHass as HassAPI).states).length : 0,
+    hookHassMode: { isRemote, isLoading, hasError: !!connectionError }
+  });
+  
+  // Override mode detection when external hass is provided (custom panel mode)
+  const actualIsRemote = isExternalHass ? false : isRemote;
+  const actualIsLoading = isExternalHass ? false : isLoading;
+  const actualConnectionError = isExternalHass ? null : connectionError;
 
   // Initialize or update the API instance with current hass
   useEffect(() => {
     if (effectiveHass) {
+      logger.debug('Setting global hass instance', {
+        source: isExternalHass ? 'external' : 'hook',
+        statesCount: (effectiveHass as any)?.states ? Object.keys((effectiveHass as any).states).length : 0,
+        servicesCount: (effectiveHass as any)?.services ? Object.keys((effectiveHass as any).services).length : 0,
+        hasConnection: !!(effectiveHass as any)?.connection,
+        hasCallApi: !!(effectiveHass as any)?.callApi,
+        hasCallService: !!(effectiveHass as any)?.callService
+      });
+      
       // Set the global hass instance for use by the store
       import('@/hooks/useHass').then(({ setGlobalHass }) => {
         setGlobalHass(effectiveHass);
+        logger.success('Global hass instance set successfully');
       });
 
       // const api = getHomeAssistantAPI(effectiveHass);
+    } else {
+      logger.warn('No effective hass available to set globally');
     }
-  }, [effectiveHass]);
+  }, [effectiveHass, isExternalHass]);
 
   const {
     flowName,
@@ -137,32 +167,32 @@ function App({ hass: externalHass, narrow = false, route, panel }: AppProps = {}
 
   // Determine connection status display
   const getConnectionStatus = () => {
-    if (isLoading) {
+    if (actualIsLoading) {
       return {
         label: 'Connecting...',
         className: 'bg-blue-100 text-blue-700',
         icon: <Loader2 className="h-3 w-3 animate-spin" />,
       };
     }
-    if (connectionError) {
+    if (actualConnectionError) {
       return {
         label: 'Connection Error',
         className: 'bg-red-100 text-red-700',
         icon: <AlertCircle className="h-3 w-3" />,
       };
     }
-    if (isRemote) {
+    if (actualIsRemote) {
       return {
         label: 'Connected',
         className: 'bg-green-100 text-green-700',
         icon: <Wifi className="h-3 w-3" />,
       };
     }
-    if (isStandalone) {
+    if (isExternalHass) {
       return {
-        label: 'Mock Data',
-        className: 'bg-amber-100 text-amber-700',
-        icon: null,
+        label: 'Panel Mode',
+        className: 'bg-green-100 text-green-700',
+        icon: <Wifi className="h-3 w-3" />,
       };
     }
     return null;
@@ -338,15 +368,13 @@ function App({ hass: externalHass, narrow = false, route, panel }: AppProps = {}
           <footer className="flex h-8 items-center justify-between border-t bg-white px-4 text-slate-500 text-xs">
             <div className="flex items-center gap-4">
               <span>C.A.F.E. v0.1.0</span>
-              {isStandalone && (
-                <span className="text-amber-600">
-                  Click the settings icon to connect to a real Home Assistant instance
-                </span>
-              )}
-              {isRemote && config.url && (
+              {actualIsRemote && config.url && (
                 <span className="text-green-600">Connected to {new URL(config.url).hostname}</span>
               )}
-              {connectionError && <span className="text-red-600">{connectionError}</span>}
+              {isExternalHass && (
+                <span className="text-green-600">Connected via Home Assistant panel</span>
+              )}
+              {actualConnectionError && <span className="text-red-600">{actualConnectionError}</span>}
             </div>
             <div className="flex items-center gap-2">
               <Info className="h-3 w-3" />
@@ -355,13 +383,15 @@ function App({ hass: externalHass, narrow = false, route, panel }: AppProps = {}
           </footer>
         </div>
 
-        {/* Settings modal */}
-        <HassSettings
-          isOpen={settingsOpen}
-          onClose={() => setSettingsOpen(false)}
-          config={config}
-          onSave={setConfig}
-        />
+        {/* Settings modal - Only show when not in panel mode */}
+        {!isExternalHass && (
+          <HassSettings
+            isOpen={settingsOpen}
+            onClose={() => setSettingsOpen(false)}
+            config={config}
+            onSave={setConfig}
+          />
+        )}
 
         {/* Import YAML dialog */}
         <ImportYamlDialog isOpen={importYamlOpen} onClose={() => setImportYamlOpen(false)} />

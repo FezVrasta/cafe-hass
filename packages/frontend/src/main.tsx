@@ -4,6 +4,7 @@ import './index.css';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import { logger } from './lib/logger';
 
 // Create a web component for Home Assistant panel integration
 class CafePanel extends HTMLElement {
@@ -13,16 +14,25 @@ class CafePanel extends HTMLElement {
   private _route: any = null;
   private _panel: any = null;
 
+  constructor() {
+    super();
+    logger.debug('CafePanel custom element constructed');
+  }
+
   // Properties that HA will set
   get hass() {
     return this._hass;
   }
   set hass(value: any) {
-    console.log(
-      'C.A.F.E.: hass property set:',
-      !!value,
-      value?.states ? Object.keys(value.states).length : 0
-    );
+    logger.debug('Setting hass object in custom element', {
+      hasHass: !!value,
+      hassKeys: value ? Object.keys(value) : [],
+      statesCount: value?.states ? Object.keys(value.states).length : 0,
+      servicesCount: value?.services ? Object.keys(value.services).length : 0,
+      connection: !!value?.connection,
+      user: value?.user,
+      auth: !!value?.auth
+    });
     this._hass = value;
     if (this.root) this.render();
   }
@@ -52,6 +62,7 @@ class CafePanel extends HTMLElement {
   }
 
   connectedCallback() {
+    logger.debug('CafePanel custom element connected to DOM');
     if (!this.root) {
       this.style.display = 'block';
       this.style.width = '100%';
@@ -67,7 +78,7 @@ class CafePanel extends HTMLElement {
       this.render();
     }
   }
-
+  
   // Method to inject CSS into shadow DOM if needed
   private injectCSSForShadowDOM() {
     // Check if we're inside a shadow root
@@ -105,6 +116,7 @@ class CafePanel extends HTMLElement {
   }
 
   disconnectedCallback() {
+    logger.debug('CafePanel custom element disconnected from DOM');
     if (this.root) {
       this.root.unmount();
       this.root = null;
@@ -123,10 +135,13 @@ class CafePanel extends HTMLElement {
 
   render() {
     if (this.root) {
-      console.log(
-        'C.A.F.E.: HASS entities count:',
-        this._hass?.states ? Object.keys(this._hass.states).length : 0
-      );
+      logger.debug('Rendering CafePanel', {
+        hasHass: !!this._hass,
+        hassStatesCount: this._hass?.states ? Object.keys(this._hass.states).length : 0,
+        narrow: this._narrow,
+        route: this._route,
+        panel: this._panel
+      });
 
       // Force CSS injection check - check all style elements
       const allStylesText = Array.from(document.querySelectorAll('style'))
@@ -134,12 +149,10 @@ class CafePanel extends HTMLElement {
         .join('');
       const hasTailwindCSS = allStylesText.includes('--tw-border-spacing-x');
       const hasReactFlowCSS = allStylesText.includes('react-flow');
-      console.log(
-        'C.A.F.E.: Has Tailwind CSS:',
+      logger.debug('CSS availability check', {
         hasTailwindCSS,
-        'Has React Flow CSS:',
         hasReactFlowCSS
-      );
+      });
 
       this.root.render(
         <React.StrictMode>
@@ -151,7 +164,7 @@ class CafePanel extends HTMLElement {
       setTimeout(() => {
         const testElement = this.querySelector('div');
         if (testElement) {
-          // const computedStyles = window.getComputedStyle(testElement);
+          logger.debug('Render completed, DOM updated');
         }
       }, 100);
     }
@@ -159,13 +172,19 @@ class CafePanel extends HTMLElement {
 }
 
 // Always define the custom element - HA will use it when needed
-customElements.define('cafe-panel', CafePanel);
+if (!customElements.get('cafe-panel')) {
+  customElements.define('cafe-panel', CafePanel);
+  logger.info('CafePanel custom element registered successfully');
+} else {
+  logger.warn('CafePanel custom element already registered');
+}
 
 // For standalone development (when there's a root element)
 if (typeof document !== 'undefined') {
   const rootElement = document.getElementById('root');
 
   if (rootElement) {
+    logger.debug('Rendering in standalone mode');
     try {
       ReactDOM.createRoot(rootElement).render(
         <React.StrictMode>
@@ -173,8 +192,9 @@ if (typeof document !== 'undefined') {
         </React.StrictMode>
       );
     } catch (error) {
-      console.error('C.A.F.E.: Error creating standalone React root:', error);
+      logger.error('Error creating standalone React root:', error);
     }
   } else {
+    logger.debug('No #root element found, assuming custom element mode');
   }
 }

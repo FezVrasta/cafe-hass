@@ -40,7 +40,8 @@
         },
         "useForOf": "warn",
         "useFragmentSyntax": "warn",
-        "useShorthandFunctionType": "warn"
+        "useShorthandFunctionType": "warn",
+        "noCommonJs": "error"
       },
       "suspicious": {
         "noArrayIndexKey": "warn",
@@ -57,7 +58,7 @@
         "noDuplicateObjectKeys": "error",
         "noDuplicateParameters": "error",
         "noEmptyBlockStatements": "error",
-        "noExplicitAny": "warn",
+        "noExplicitAny": "error",
         "noFallthroughSwitchClause": "error",
         "noFunctionAssign": "error",
         "noGlobalAssign": "error",
@@ -66,7 +67,7 @@
         "noPrototypeBuiltins": "error",
         "noRedeclare": "error",
         "noShadowRestrictedNames": "error",
-        "noThenProperty": "warn",
+        "noThenProperty": "off",
         "noUnsafeNegation": "error",
         "useGetterReturn": "error"
       },

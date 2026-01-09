@@ -6,6 +6,7 @@ import {
   subscribeServices,
 } from 'home-assistant-js-websocket';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { logger } from '../lib/logger';
 
 /**
  * Home Assistant entity state
@@ -95,12 +96,10 @@ export interface HassConfig {
 
 /**
  * Hook to access Home Assistant API
- * Supports three modes:
- * 1. Embedded in HA (uses window.hass)
- * 2. Standalone with token (uses REST API)
- * 3. Standalone without token (empty data)
+ * Supports remote connection with token (uses REST API + WebSocket)
+ * When external hass is available, defers to global external hass
  */
-export function useHass() {
+export function useHass(forceMode?: 'remote') {
   const [config, setConfigState] = useState<HassConfig>(loadConfig);
   const [remoteEntities, setRemoteEntities] = useState<HassEntity[]>([]);
   const [remoteServices, setRemoteServices] = useState<Record<string, Record<string, HassService>>>(
@@ -109,77 +108,30 @@ export function useHass() {
   const [isLoading, setIsLoading] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [wsConnection, setWsConnection] = useState<Connection | null>(null);
+  
+  // Check if global external hass is available (set from custom element)
+  const hasGlobalExternalHass = globalHassInstance && (globalHassInstance as any)?.states && 
+    Object.keys((globalHassInstance as any).states).length > 0;
+  
+  logger.debug('useHass hook called with config', { 
+    configUrl: config.url, 
+    hasToken: !!config.token,
+    remoteEntitiesCount: remoteEntities.length,
+    isLoading,
+    connectionError,
+    hasGlobalExternalHass
+  });
 
-  // Check if running inside HA's iframe or panel
-  const isInHomeAssistant = useMemo(() => {
-    if (typeof window === 'undefined') return false;
-
-    // Check for window.hass
-    const hassWindow = window as unknown as {
-      hass?: unknown;
-      __HA_ADDON__?: boolean;
-      hassConnection?: unknown;
-      customCards?: unknown;
-    };
-    if (hassWindow.hass) {
-      return true;
-    }
-
-    // Check if we're in an iframe with HA context
-    try {
-      if (window.parent && window.parent !== window) {
-        const parentHass = (window.parent as unknown as { hass?: unknown }).hass;
-        if (parentHass) {
-          return true;
-        }
-      }
-    } catch {
-      // Cross-origin iframe access blocked, but we might still be in HA
-    }
-
-    // Check URL patterns that indicate we're running in HA
-    const pathname = window.location.pathname;
-    const hostname = window.location.hostname;
-
-    // If served from /cafe_static/ path, we're likely in HA (but not on localhost dev)
-    if (
-      pathname.includes('/cafe_static/') &&
-      !hostname.includes('localhost') &&
-      !hostname.includes('127.0.0.1')
-    ) {
-      return true;
-    }
-
-    // Check for Home Assistant specific URLs
-    if (pathname.startsWith('/api/hassio_ingress/')) {
-      return true;
-    }
-
-    // Check for HA local path (only if it's specifically HA related)
-    if (
-      pathname.includes('/local/') &&
-      (pathname.includes('/hacs/') || pathname.includes('/community/'))
-    ) {
-      return true;
-    }
-
-    // Check if we have specific HA window context
-    if (hassWindow.__HA_ADDON__ || hassWindow.hassConnection || hassWindow.customCards) {
-      return true;
-    }
-
-    // Check for Home Assistant specific headers or document properties
-    const documentElement = document.documentElement;
-    if (
-      documentElement.classList.contains('home-assistant') ||
-      document.querySelector('home-assistant') ||
-      document.querySelector('ha-panel-iframe')
-    ) {
-      return true;
-    }
-
-    return false;
-  }, []);
+  // Mode detection - remote connection or defer to external hass
+  const hasRemoteConfig = !!(config.url && config.token);
+  const shouldUseRemote = forceMode === 'remote' || (!hasGlobalExternalHass && hasRemoteConfig);
+  
+  logger.debug('useHass mode detection', {
+    forceMode,
+    hasRemoteConfig,
+    hasGlobalExternalHass,
+    shouldUseRemote
+  });
 
   // Save config handler
   const setConfig = useCallback((newConfig: HassConfig) => {
@@ -191,95 +143,9 @@ export function useHass() {
     setConnectionError(null);
   }, []);
 
-  // Auto-configure for HA when detected
-  useEffect(() => {
-    if (isInHomeAssistant && !config.url && !config.token) {
-      // Auto-configure for current HA instance
-      const baseUrl = `${window.location.protocol}//${window.location.host}`;
-
-      // Try to get auth token from HA context
-      try {
-        const hassWindow = window as unknown as {
-          hass?: {
-            auth?: { accessToken?: string };
-            connection?: { accessToken?: string };
-            user?: { access_token?: string };
-          };
-        };
-
-        let token = hassWindow.hass?.auth?.accessToken;
-
-        // Try alternative token locations
-        if (!token) {
-          token = hassWindow.hass?.connection?.accessToken;
-        }
-        if (!token) {
-          token = hassWindow.hass?.user?.access_token;
-        }
-
-        // If no direct access, try parent window
-        if (!token && window.parent && window.parent !== window) {
-          try {
-            const parentHass = (
-              window.parent as unknown as {
-                hass?: {
-                  auth?: { accessToken?: string };
-                  connection?: { accessToken?: string };
-                  user?: { access_token?: string };
-                };
-              }
-            ).hass;
-
-            token =
-              parentHass?.auth?.accessToken ||
-              parentHass?.connection?.accessToken ||
-              parentHass?.user?.access_token;
-          } catch (_e) {}
-        }
-
-        // Try accessing via top window
-        if (!token && window.top && window.top !== window) {
-          try {
-            const topHass = (
-              window.top as unknown as {
-                hass?: {
-                  auth?: { accessToken?: string };
-                  connection?: { accessToken?: string };
-                };
-              }
-            ).hass;
-
-            token = topHass?.auth?.accessToken || topHass?.connection?.accessToken;
-          } catch (_e) {}
-        }
-
-        if (token) {
-          setConfig({ url: baseUrl, token });
-          return;
-        } else {
-          console.warn('C.A.F.E.: Could not extract auth token from HA context');
-        }
-      } catch (error) {
-        console.warn('C.A.F.E.: Error during auth token extraction:', error);
-      }
-
-      // Fallback: Set URL and prompt user for token
-      setConfig({ url: baseUrl, token: '' });
-    }
-  }, [isInHomeAssistant, config.url, config.token, setConfig]);
-
-  const hasWindowHass =
-    typeof window !== 'undefined' && !!(window as unknown as { hass?: unknown }).hass;
-
-  // Determine the mode
-  const isEmbedded = hasWindowHass || isInHomeAssistant;
-  const hasRemoteConfig = !!(config.url && config.token);
-  const isStandalone = !isEmbedded && !hasRemoteConfig;
-  const isRemote = !isEmbedded && hasRemoteConfig;
-
   // Fetch data from remote HA instance using WebSocket
   useEffect(() => {
-    if (!isRemote) return;
+    if (!shouldUseRemote) return;
 
     const establishConnection = async () => {
       setIsLoading(true);
@@ -350,18 +216,13 @@ export function useHass() {
         cleanup.then((cleanupFn) => cleanupFn?.());
       }
     };
-  }, [isRemote, config.url, config.token]);
+  }, [shouldUseRemote, config.url, config.token]);
 
   // Build the hass API object
   const hass = useMemo<HassAPI>(() => {
-    // Mode 1: Embedded in HA
-    if (isEmbedded) {
-      const hassWindow = window as unknown as { hass: HassAPI };
-      return hassWindow.hass;
-    }
-
-    // Mode 2: Remote connection - use WebSocket API
-    if (isRemote) {
+    // Use remote connection if configured
+    if (shouldUseRemote) {
+      logger.debug('Using remote WebSocket connection for hass');
       return {
         states: Object.fromEntries(remoteEntities.map((e) => [e.entity_id, e])),
         services: remoteServices,
@@ -401,23 +262,39 @@ export function useHass() {
         },
       } as HassAPI;
     }
-
-    // Mode 3: No config yet - return empty hass object
+    
+    // Use global external hass if available
+    if (hasGlobalExternalHass && globalHassInstance) {
+      logger.debug('Using global external hass data');
+      const globalHass = globalHassInstance as any;
+      return {
+        states: globalHass.states || {},
+        services: globalHass.services || {},
+        connection: globalHass.connection,
+        callApi: globalHass.callApi,
+        callService: globalHass.callService || (async () => {
+          logger.warn('No callService method available in global hass');
+        }),
+      } as HassAPI;
+    }
+    
+    // No connection available
+    logger.warn('No Home Assistant connection available');
     return {
       states: {},
       services: {},
       callService: async () => {
-        console.warn('No Home Assistant connection configured');
+        logger.warn('No Home Assistant connection configured');
       },
     };
   }, [
-    isEmbedded,
-    isRemote,
+    shouldUseRemote,
     remoteEntities,
     remoteServices,
     wsConnection,
     config.url,
     config.token,
+    hasGlobalExternalHass,
   ]);
 
   const entities = useMemo(() => Object.values(hass?.states ?? {}), [hass?.states]);
@@ -459,27 +336,16 @@ export function useHass() {
         return wsConnection.sendMessagePromise(message) as Promise<T>;
       }
 
-      // If embedded in HA, try to use the parent connection
-      if (isEmbedded) {
-        const hassWindow = window as unknown as { hass?: { connection?: Connection } };
-        const connection = hassWindow.hass?.connection;
-        if (connection) {
-          return connection.sendMessagePromise(message) as Promise<T>;
-        }
-      }
-
       throw new Error('No WebSocket connection available');
     },
-    [wsConnection, isEmbedded]
+    [wsConnection]
   );
 
   return {
     hass,
-    isStandalone,
-    isEmbedded,
-    isRemote,
-    isLoading,
-    connectionError,
+    isRemote: shouldUseRemote,
+    isLoading: shouldUseRemote ? isLoading : false,
+    connectionError: shouldUseRemote ? connectionError : null,
     entities,
     services,
     config,
@@ -495,19 +361,35 @@ export function useHass() {
 let globalHassInstance: any = null;
 
 export function setGlobalHass(hass: any) {
+  logger.debug('Setting global hass instance', {
+    hasStates: !!hass?.states,
+    statesCount: hass?.states ? Object.keys(hass.states).length : 0,
+    hasServices: !!hass?.services,
+    servicesCount: hass?.services ? Object.keys(hass.services).length : 0,
+    hasConnection: !!hass?.connection,
+    hasCallApi: !!hass?.callApi,
+    hasCallService: !!hass?.callService,
+    hasAuth: !!hass?.auth,
+    hasUser: !!hass?.user
+  });
   globalHassInstance = hass;
 }
 
 export function getGlobalHass() {
   // Try to get from our global instance first
   if (globalHassInstance) {
+    logger.debug('Retrieved global hass instance', {
+      statesCount: globalHassInstance?.states ? Object.keys(globalHassInstance.states).length : 0
+    });
     return globalHassInstance;
   }
 
   // Fallback: try to get from window.hass if available
   if (typeof window !== 'undefined' && (window as any).hass) {
+    logger.debug('Retrieved hass from window.hass fallback');
     return (window as any).hass;
   }
 
+  logger.warn('No global hass instance available');
   return null;
 }
