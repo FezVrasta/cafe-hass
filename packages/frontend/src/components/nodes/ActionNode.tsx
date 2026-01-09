@@ -51,7 +51,7 @@ export const ActionNode = memo(function ActionNode({ id, data, selected }: Actio
           {data.alias || serviceName || 'Action'}
         </span>
         {stepNumber && (
-          <div className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-green-600 text-white text-xs font-bold">
+          <div className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-green-600 font-bold text-white text-xs">
             {stepNumber}
           </div>
         )}

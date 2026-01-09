@@ -7,6 +7,23 @@
 import { describe, expect, it } from 'vitest';
 import { convertAutomationConfigToNodes, processActions } from '@/lib/automation-converter';
 
+// Minimal Trigger shape used in tests — document expected fields and avoid `any`
+type Trigger = {
+  platform?: string;
+  trigger?: string;
+  domain?: string;
+  device_id?: string;
+  type?: string;
+  entity_id?: string | string[];
+  group_value_write?: boolean;
+  group_value_response?: boolean;
+  group_value_read?: boolean;
+  incoming?: boolean;
+  outgoing?: boolean;
+  destination?: string[];
+  [key: string]: unknown;
+};
+
 describe('automation-converter', () => {
   describe('processActions helper', () => {
     it('should handle simple action list', () => {
@@ -251,7 +268,7 @@ describe('automation-converter', () => {
 
   describe('node data extraction', () => {
     it('should extract trigger data correctly', () => {
-      const trigger = {
+      const trigger: Trigger = {
         domain: 'knx',
         device_id: 'ee504a40b987814032d9ec9c29b1a43f',
         type: 'telegram',
@@ -262,9 +279,8 @@ describe('automation-converter', () => {
 
       const nodeData = {
         alias: 'Trigger 1',
-        platform:
-          (trigger as any).platform || (trigger as any).trigger || trigger.domain || 'device',
-        entity_id: (trigger as any).entity_id,
+        platform: trigger.platform || trigger.trigger || trigger.domain || 'device',
+        entity_id: trigger.entity_id,
         ...trigger,
       };
 

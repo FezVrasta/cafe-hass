@@ -55,7 +55,7 @@ export const ConditionNode = memo(function ConditionNode({
           {data.alias || conditionLabels[data.condition_type] || 'Condition'}
         </span>
         {stepNumber && (
-          <div className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-white text-xs font-bold">
+          <div className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 font-bold text-white text-xs">
             {stepNumber}
           </div>
         )}

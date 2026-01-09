@@ -240,11 +240,11 @@ export function AutomationTraceViewer() {
                     <span className="text-xs">
                       {formatTimestamp(trace.timestamp.start)}
                     </span>
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-muted-foreground text-xs">
                       ({formatDuration(trace.timestamp.start, trace.timestamp.finish)})
                     </span>
                     <span className={cn(
-                      "text-xs px-1 rounded",
+                      "rounded px-1 text-xs",
                       trace.state === 'stopped' && trace.script_execution === 'finished'
                         ? 'bg-green-100 text-green-700'
                         : 'bg-yellow-100 text-yellow-700'
@@ -266,7 +266,7 @@ export function AutomationTraceViewer() {
             <div className="mt-1 space-y-1 text-xs">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Trigger:</span>
-                <span className="truncate ml-2">{traceData.trigger}</span>
+                <span className="ml-2 truncate">{traceData.trigger}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Duration:</span>
@@ -286,14 +286,14 @@ export function AutomationTraceViewer() {
                 {traceExecutionPath.map((nodeId, index) => (
                   <div
                     key={`${nodeId}-${index}`}
-                    className="flex items-center gap-2 text-xs p-1 rounded bg-blue-50 text-blue-700"
+                    className="flex items-center gap-2 rounded bg-blue-50 p-1 text-blue-700 text-xs"
                   >
-                    <div className="w-4 h-4 rounded-full bg-blue-200 flex items-center justify-center text-xs">
+                    <div className="flex h-4 w-4 items-center justify-center rounded-full bg-blue-200 text-xs">
                       {index + 1}
                     </div>
                     <span className="font-medium">{nodeId}</span>
                     {traceTimestamps[nodeId] && (
-                      <span className="text-muted-foreground ml-auto">
+                      <span className="ml-auto text-muted-foreground">
                         {formatTimestamp(traceTimestamps[nodeId])}
                       </span>
                     )}

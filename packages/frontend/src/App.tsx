@@ -99,11 +99,11 @@ function App({ hass: externalHass, narrow = false, route, panel }: AppProps = {}
     if (effectiveHass) {
       logger.debug('Setting global hass instance', {
         source: isExternalHass ? 'external' : 'hook',
-        statesCount: (effectiveHass as any)?.states ? Object.keys((effectiveHass as any).states).length : 0,
-        servicesCount: (effectiveHass as any)?.services ? Object.keys((effectiveHass as any).services).length : 0,
-        hasConnection: !!(effectiveHass as any)?.connection,
-        hasCallApi: !!(effectiveHass as any)?.callApi,
-        hasCallService: !!(effectiveHass as any)?.callService
+        statesCount: (effectiveHass as HassAPI | undefined)?.states ? Object.keys((effectiveHass as HassAPI).states).length : 0,
+        servicesCount: (effectiveHass as HassAPI | undefined)?.services ? Object.keys((effectiveHass as HassAPI).services).length : 0,
+        hasConnection: !!(effectiveHass as HassAPI | undefined)?.connection,
+        hasCallApi: !!(effectiveHass as HassAPI | undefined)?.callApi,
+        hasCallService: !!(effectiveHass as HassAPI | undefined)?.callService
       });
       
       // Set the global hass instance for use by the store
