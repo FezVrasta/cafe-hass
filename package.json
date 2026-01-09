@@ -11,7 +11,7 @@
     "build:ha": "npm run build && echo '✓ Built and copied to custom_components/cafe/www/'",
     "test": "vitest",
     "test:cli": "yarn workspace @cafe/transpiler cli",
-    "lint": "biome lint .",
+    "lint": "biome lint . --diagnostic-level=error",
     "lint:fix": "biome lint --write --unsafe .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
