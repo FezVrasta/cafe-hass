@@ -13,7 +13,7 @@ export function CSSInjector({ children }: { children?: React.ReactNode }) {
     <div className={isDarkMode ? 'dark contents' : 'contents'}>
       <style
         data-cafe-injected="true"
-        dangerouslySetInnerHTML={{ __html: cssCode?.replace(':root', ':host') }}
+        dangerouslySetInnerHTML={{ __html: cssCode?.replace(':root', ':host') || '' }}
       />
       {children}
     </div>
