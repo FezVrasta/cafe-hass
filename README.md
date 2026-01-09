@@ -18,6 +18,8 @@ For years, Home Assistant users had to choose: the **stability** of native YAML 
 - **Complex Logic:** Cross-branching, loops, and state-based logic are made possible through our proprietary **State-Machine Transpiler**.
 - **Trace-Integrated:** Debug your visual flows using the official Home Assistant **Trace View**. CAFE maps execution paths back to your canvas.
 
+![side by side image of CAFE editor and Home Assistant trace view](./docs/images/side-by-side.png)
+
 ## 📁 Where is the logic stored?
 
 Unlike other tools that use proprietary JSON files, **C.A.F.E.** is a pure interface for the **Home Assistant Automation Engine**.
