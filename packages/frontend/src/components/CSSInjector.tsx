@@ -1,22 +1,21 @@
-import logger from '@/lib/logger';
+import { useDarkMode } from '@/hooks/useDarkMode';
 
 /**
  * Component that injects CSS using React's dangerouslySetInnerHTML
  * This ensures CSS is properly scoped and managed by React
  */
-export function CSSInjector() {
+export function CSSInjector({ children }: { children?: React.ReactNode }) {
   // Get the CSS from the window object set by vite-plugin-css-injected-by-js
   const cssCode = typeof window !== 'undefined' ? (window as Window & { __CAFE_CSS__?: string }).__CAFE_CSS__ : '';
-
-  if (!cssCode) {
-    logger.warn('[C.A.F.E.] No CSS code found on window.__CAFE_CSS__');
-    return null;
-  }
+  const isDarkMode = useDarkMode();
 
   return (
-    <style
-      data-cafe-injected="true"
-      dangerouslySetInnerHTML={{ __html: cssCode.replace(':root', ':host') }}
-    />
+    <div className={isDarkMode ? 'dark contents' : 'contents'}>
+      <style
+        data-cafe-injected="true"
+        dangerouslySetInnerHTML={{ __html: cssCode?.replace(':root', ':host') }}
+      />
+      {children}
+    </div>
   );
 }

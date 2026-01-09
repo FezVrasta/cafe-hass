@@ -12,6 +12,7 @@ import {
 } from '@xyflow/react';
 import { type DragEvent, useCallback, useEffect, useMemo, useRef } from 'react';
 import { ActionNode, ConditionNode, DelayNode, TriggerNode, WaitNode } from '@/components/nodes';
+import { useDarkMode } from '@/hooks/useDarkMode';
 import { useFlowStore } from '@/store/flow-store';
 
 const nodeTypes: NodeTypes = {
@@ -23,6 +24,7 @@ const nodeTypes: NodeTypes = {
 };
 
 export function FlowCanvas() {
+  const isDarkMode = useDarkMode();
   const {
     nodes,
     edges,
@@ -132,8 +134,8 @@ export function FlowCanvas() {
         selectedNodeId && (edge.source === selectedNodeId || edge.target === selectedNodeId);
 
       // Determine edge styling based on state (priority: simulation > trace > selection)
-      let edgeStyle = { strokeWidth: 2, stroke: '#64748b' };
-      let markerEnd = { type: MarkerType.ArrowClosed, color: '#64748b' };
+      let edgeStyle = { strokeWidth: 2, stroke: isDarkMode ? '#94a3b8' : '#64748b' };
+      let markerEnd = { type: MarkerType.ArrowClosed, color: isDarkMode ? '#94a3b8' : '#64748b' };
 
       if (isActiveInSimulation) {
         // Simulation takes precedence - green for active path
@@ -161,6 +163,7 @@ export function FlowCanvas() {
   return (
     <div className="h-full w-full" ref={reactFlowWrapper}>
       <ReactFlow
+        colorMode={isDarkMode ? 'dark' : 'light'}
         nodes={nodes}
         edges={styledEdges}
         onNodesChange={onNodesChange}
@@ -172,10 +175,10 @@ export function FlowCanvas() {
         nodeTypes={nodeTypes}
         defaultEdgeOptions={{
           type: 'smoothstep',
-          style: { strokeWidth: 2, stroke: '#64748b' },
+          style: { strokeWidth: 2, stroke: isDarkMode ? '#94a3b8' : '#64748b' },
           markerEnd: {
             type: MarkerType.ArrowClosed,
-            color: '#64748b',
+            color: isDarkMode ? '#94a3b8' : '#64748b',
           },
         }}
         defaultViewport={{ x: 0, y: 0, zoom: 0.75 }}
@@ -186,24 +189,28 @@ export function FlowCanvas() {
         snapToGrid
         snapGrid={[15, 15]}
         deleteKeyCode={['Backspace', 'Delete']}
-        className="bg-slate-50"
+        className={isDarkMode ? 'dark bg-background' : 'bg-muted/30'}
         proOptions={{ hideAttribution: true }}
       >
-        <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#cbd5e1" />
+        <Background 
+          variant={BackgroundVariant.Dots} 
+          gap={20} 
+          size={1} 
+          color={isDarkMode ? '#475569' : '#cbd5e1'} 
+        />
         <Controls />
         <MiniMap
           nodeStrokeWidth={3}
           zoomable
           pannable
-          className="!bg-white !border !border-slate-200"
         />
 
         {isSimulating && (
           <Panel
             position="top-center"
-            className="rounded-lg border border-green-300 bg-green-100 px-4 py-2"
+            className="rounded-lg border border-green-300 dark:border-green-700 bg-green-100 dark:bg-green-950 px-4 py-2"
           >
-            <div className="flex items-center gap-2 font-medium text-green-800 text-sm">
+            <div className="flex items-center gap-2 font-medium text-green-800 dark:text-green-200 text-sm">
               <div className="h-2 w-2 animate-pulse rounded-full bg-green-500" />
               Simulating execution...
             </div>
@@ -213,9 +220,9 @@ export function FlowCanvas() {
         {isShowingTrace && !isSimulating && (
           <Panel
             position="top-center"
-            className="rounded-lg border border-orange-300 bg-orange-100 px-4 py-2"
+            className="rounded-lg border border-orange-300 dark:border-orange-700 bg-orange-100 dark:bg-orange-950 px-4 py-2"
           >
-            <div className="flex items-center gap-2 font-medium text-orange-800 text-sm">
+            <div className="flex items-center gap-2 font-medium text-orange-800 dark:text-orange-200 text-sm">
               <div className="h-2 w-2 rounded-full bg-orange-500" />
               Showing trace execution ({traceExecutionPath.length} steps)
             </div>
