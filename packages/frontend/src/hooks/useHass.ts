@@ -48,6 +48,9 @@ export interface HassService {
 export interface HassAPI {
   states: Record<string, HassEntity>;
   services: Record<string, Record<string, HassService>>;
+  themes?: {
+    darkMode?: boolean;
+  };
   callService: (domain: string, service: string, data?: Record<string, unknown>) => Promise<void>;
   connection?: Connection | null;
   callApi?: (method: string, path: string, data?: unknown) => Promise<unknown>;
@@ -274,6 +277,7 @@ export function useHass(forceMode?: 'remote') {
       return {
         states: (globalHass.states as Record<string, unknown>) || {},
         services: (globalHass.services as Record<string, unknown>) || {},
+        themes: (globalHass.themes as { darkMode?: boolean }) || undefined,
         connection: globalHass.connection || null,
         callApi: globalHass.callApi as ((method: string, path: string, data?: unknown) => Promise<unknown>) || undefined,
         callService:
