@@ -43,8 +43,8 @@ export const TriggerDataSchema = z
     // Event trigger
     event_type: z.string().optional(),
     event_data: z.record(z.unknown()).optional(),
-    // Sun trigger
-    event: z.enum(['sunrise', 'sunset']).optional(),
+    // Sun trigger (sunrise/sunset) or Zone trigger (enter/leave)
+    event: z.enum(['sunrise', 'sunset', 'enter', 'leave']).optional(),
     offset: z.string().optional(),
     // Numeric state trigger
     above: z.union([z.number(), z.string()]).optional(),
