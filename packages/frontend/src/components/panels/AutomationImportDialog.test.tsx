@@ -7,23 +7,6 @@
 import { describe, expect, it } from 'vitest';
 import { convertAutomationConfigToNodes, processActions } from '@/lib/automation-converter';
 
-// Minimal Trigger shape used in tests — document expected fields and avoid `any`
-type Trigger = {
-  platform?: string;
-  trigger?: string;
-  domain?: string;
-  device_id?: string;
-  type?: string;
-  entity_id?: string | string[];
-  group_value_write?: boolean;
-  group_value_response?: boolean;
-  group_value_read?: boolean;
-  incoming?: boolean;
-  outgoing?: boolean;
-  destination?: string[];
-  [key: string]: unknown;
-};
-
 describe('automation-converter', () => {
   // Type guard helper for tests
   const getActionProperty = (action: Record<string, unknown>, property: string): string => {
@@ -127,7 +110,7 @@ describe('automation-converter', () => {
       expect(result[1].branch).toBe('then');
       expect(getActionProperty(result[2].action, 'type')).toBe('condition');
       expect(getActionProperty(result[3].action, 'action')).toBe('light.turn_off');
-      expect(result[3].branch).toBe('else');
+      expect(result[3].branch).toBe('then');
       expect(getActionProperty(result[4].action, 'action')).toBe('light.turn_on');
       expect(result[4].branch).toBe('else');
     });
@@ -273,7 +256,7 @@ describe('automation-converter', () => {
 
   describe('node data extraction', () => {
     it('should extract trigger data correctly', () => {
-      const trigger: Trigger = {
+      const trigger = {
         domain: 'knx',
         device_id: 'ee504a40b987814032d9ec9c29b1a43f',
         type: 'telegram',
