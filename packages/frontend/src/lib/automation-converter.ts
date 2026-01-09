@@ -164,11 +164,22 @@ export function convertAutomationConfigToNodes(config: AutomationConfig): {
 
   // Helper to get position for a node (use saved position if available, otherwise calculate)
   const getNodePosition = (nodeId: string, defaultX: number, defaultY: number) => {
-    if (savedPositions[nodeId]) {
-      const pos = savedPositions[nodeId];
-      const x = pos.x !== undefined ? pos.x : pos;
-      const y = pos.y !== undefined ? pos.y : pos;
-      return { x: Number(x), y: Number(y) };
+    const posRaw = savedPositions[nodeId];
+    if (posRaw !== undefined && posRaw !== null) {
+      if (typeof posRaw === 'object') {
+        const pos = posRaw as Record<string, unknown>;
+        const xVal = pos.x ?? pos.left ?? pos[0];
+        const yVal = pos.y ?? pos.top ?? pos[1];
+        const x = typeof xVal !== 'undefined' ? Number(xVal) : defaultX;
+        const y = typeof yVal !== 'undefined' ? Number(yVal) : defaultY;
+        return { x, y };
+      }
+
+      // If saved position is a primitive (number or numeric string), treat it as x
+      if (typeof posRaw === 'number' || typeof posRaw === 'string') {
+        const x = Number(posRaw);
+        return { x: Number.isFinite(x) ? x : defaultX, y: defaultY };
+      }
     }
     return { x: defaultX, y: defaultY };
   };
@@ -323,7 +334,7 @@ export function convertAutomationConfigToNodes(config: AutomationConfig): {
         // Try to get node ID from CAFE metadata node mapping first
         const mappingKey = `action_${globalNodeIndex}`; // Use global index
         if (nodeMapping[mappingKey]) {
-          nodeId = nodeMapping[mappingKey];
+          nodeId = nodeMapping[mappingKey] as string;
           console.log(`C.A.F.E.: Found action mapping ${mappingKey} -> ${nodeId}`);
         } else if (transpilerMetadata?.nodes) {
           // Fallback to transpiler metadata
