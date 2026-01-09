@@ -39,6 +39,18 @@ C.A.F.E. isn't just for new automations—it's the best way to visualize your en
 - **Heuristic Auto-Layout:** If an automation wasn't created in C.A.F.E. (and thus lacks coordinate metadata), our engine automatically calculates an optimal tree-layout so you can see your logic clearly from the moment you open it.
 - **Safe Editing:** Edit manual automations visually and save them back to HASS storage. C.A.F.E. respects the native structure while adding the metadata needed to remember your node positions for next time.
 
+## 🔒 No Vendor Lock-In: Your Automations, Your Way
+
+**C.A.F.E. gives you freedom, not dependency.**
+
+- **100% Home Assistant Native:** Every automation created in C.A.F.E. is a standard Home Assistant automation. No proprietary formats, no external dependencies.
+- **Built-in Editor Compatible:** Your C.A.F.E. automations work perfectly in Home Assistant's built-in automation editor. You can switch between visual and YAML editing anytime.
+- **Export & Share:** Export your automations as standard YAML files. Share them in the Home Assistant community, version control them, or migrate to different instances.
+- **Stop Using C.A.F.E. Anytime:** If you ever decide to uninstall C.A.F.E., your automations continue working exactly as before. The only thing you lose is the visual layout—the logic remains 100% intact.
+- **No Data Loss:** All automation logic is stored in Home Assistant's core system. Visual metadata is stored as harmless variables that don't affect execution.
+
+**Your automations belong to you and Home Assistant, not to C.A.F.E.**
+
 ## 🛠 How it Works: The "State-Machine" Transpiler
 
 The most common question from power users is: _"How do you handle loops in native HASS?"_
