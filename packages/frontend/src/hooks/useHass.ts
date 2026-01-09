@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { Connection, HassEntities, HassServices } from 'home-assistant-js-websocket';
 import {
   createConnection,
   createLongLivedTokenAuth,
   subscribeEntities,
   subscribeServices,
 } from 'home-assistant-js-websocket';
-import type { Connection, HassEntities, HassServices } from 'home-assistant-js-websocket';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 /**
  * Home Assistant entity state
@@ -122,7 +122,6 @@ export function useHass() {
       customCards?: unknown;
     };
     if (hassWindow.hass) {
-      
       return true;
     }
 
@@ -131,7 +130,6 @@ export function useHass() {
       if (window.parent && window.parent !== window) {
         const parentHass = (window.parent as unknown as { hass?: unknown }).hass;
         if (parentHass) {
-          
           return true;
         }
       }
@@ -149,13 +147,11 @@ export function useHass() {
       !hostname.includes('localhost') &&
       !hostname.includes('127.0.0.1')
     ) {
-      
       return true;
     }
 
     // Check for Home Assistant specific URLs
     if (pathname.startsWith('/api/hassio_ingress/')) {
-      
       return true;
     }
 
@@ -164,13 +160,11 @@ export function useHass() {
       pathname.includes('/local/') &&
       (pathname.includes('/hacs/') || pathname.includes('/community/'))
     ) {
-      
       return true;
     }
 
     // Check if we have specific HA window context
     if (hassWindow.__HA_ADDON__ || hassWindow.hassConnection || hassWindow.customCards) {
-      
       return true;
     }
 
@@ -181,11 +175,9 @@ export function useHass() {
       document.querySelector('home-assistant') ||
       document.querySelector('ha-panel-iframe')
     ) {
-      
       return true;
     }
 
-    
     return false;
   }, []);
 
@@ -204,8 +196,6 @@ export function useHass() {
     if (isInHomeAssistant && !config.url && !config.token) {
       // Auto-configure for current HA instance
       const baseUrl = `${window.location.protocol}//${window.location.host}`;
-
-      
 
       // Try to get auth token from HA context
       try {
@@ -244,9 +234,7 @@ export function useHass() {
               parentHass?.auth?.accessToken ||
               parentHass?.connection?.accessToken ||
               parentHass?.user?.access_token;
-          } catch (e) {
-            
-          }
+          } catch (_e) {}
         }
 
         // Try accessing via top window
@@ -262,13 +250,10 @@ export function useHass() {
             ).hass;
 
             token = topHass?.auth?.accessToken || topHass?.connection?.accessToken;
-          } catch (e) {
-            
-          }
+          } catch (_e) {}
         }
 
         if (token) {
-          
           setConfig({ url: baseUrl, token });
           return;
         } else {
@@ -309,13 +294,11 @@ export function useHass() {
 
         // Handle connection events (set these up before subscribing)
         connection.addEventListener('ready', () => {
-          
           setConnectionError(null);
           setIsLoading(false);
         });
 
         connection.addEventListener('disconnected', () => {
-          
           setConnectionError('Connection lost');
         });
 
@@ -470,7 +453,7 @@ export function useHass() {
 
   // Send raw WebSocket message
   const sendMessage = useCallback(
-    async <T = any>(message: Record<string, unknown>): Promise<T> => {
+    async <T = any>(message: Record<string, unknown> & { type: string }): Promise<T> => {
       // Try WebSocket connection first
       if (wsConnection) {
         return wsConnection.sendMessagePromise(message) as Promise<T>;

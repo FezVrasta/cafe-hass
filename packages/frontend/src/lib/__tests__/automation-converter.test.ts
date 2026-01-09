@@ -1,7 +1,7 @@
-import { describe, it, expect } from 'vitest';
-import { convertAutomationConfigToNodes } from '../automation-converter';
 import { FlowTranspiler } from '@hflow/transpiler';
+import { describe, expect, it } from 'vitest';
 import { useFlowStore } from '@/store/flow-store';
+import { convertAutomationConfigToNodes } from '../automation-converter';
 
 describe('automation-converter', () => {
   it('should handle automation with multiple top-level conditions and choose structures', () => {
@@ -257,7 +257,7 @@ describe('automation-converter', () => {
       expect(automation.trigger).toBeDefined();
       expect(Array.isArray(automation.trigger)).toBe(true);
 
-      if (automation.trigger && automation.trigger[0]) {
+      if (automation.trigger?.[0]) {
         const trigger = automation.trigger[0];
         console.log('Generated trigger:', trigger);
 

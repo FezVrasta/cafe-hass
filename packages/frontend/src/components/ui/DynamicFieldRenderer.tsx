@@ -1,3 +1,4 @@
+import { EntitySelector } from '@/components/ui/EntitySelector';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -9,10 +10,9 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
-import { EntitySelector } from '@/components/ui/EntitySelector';
-import type { HassEntity } from '@/hooks/useHass';
 import type { FieldConfig } from '@/config/triggerFields';
 import type { TriggerField } from '@/hooks/useDeviceAutomation';
+import type { HassEntity } from '@/hooks/useHass';
 
 interface DynamicFieldRendererProps {
   /**
@@ -79,10 +79,12 @@ export function DynamicFieldRenderer({
       const labelKey = `component.${domain}.device_automation.extra_fields.${name}`;
       const descKey = `component.${domain}.device_automation.extra_fields_descriptions.${name}`;
 
-      label = translations[labelKey] || name
-        .split('_')
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(' ');
+      label =
+        translations[labelKey] ||
+        name
+          .split('_')
+          .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(' ');
 
       description = translations[descKey] || '';
 
@@ -95,7 +97,7 @@ export function DynamicFieldRenderer({
       // Fallback: format the name nicely
       label = name
         .split('_')
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
         .join(' ');
       console.log(`Field "${name}" with no domain - using formatted name: ${label}`);
     }
@@ -153,11 +155,8 @@ export function DynamicFieldRenderer({
       case 'boolean':
         return (
           <div className="flex items-center space-x-2">
-            <Switch
-              checked={booleanValue}
-              onCheckedChange={onChange}
-            />
-            <span className="text-sm text-muted-foreground">
+            <Switch checked={booleanValue} onCheckedChange={onChange} />
+            <span className="text-muted-foreground text-sm">
               {booleanValue ? 'Enabled' : 'Disabled'}
             </span>
           </div>
@@ -198,7 +197,9 @@ export function DynamicFieldRenderer({
                 <SelectTrigger className="w-full">
                   <SelectValue>
                     {values.length === 0 ? (
-                      <span className="text-muted-foreground">{placeholder || 'Select items...'}</span>
+                      <span className="text-muted-foreground">
+                        {placeholder || 'Select items...'}
+                      </span>
                     ) : values.length === 1 ? (
                       options.find((o) => o.value === values[0])?.label || values[0]
                     ) : (
@@ -368,12 +369,10 @@ export function DynamicFieldRenderer({
     <div className="space-y-2">
       <Label className="font-medium text-muted-foreground text-xs">
         {label}
-        {required && <span className="text-destructive ml-1">*</span>}
+        {required && <span className="ml-1 text-destructive">*</span>}
       </Label>
       {renderField()}
-      {description && (
-        <p className="text-xs text-muted-foreground">{description}</p>
-      )}
+      {description && <p className="text-muted-foreground text-xs">{description}</p>}
     </div>
   );
 }

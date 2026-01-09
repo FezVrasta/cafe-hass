@@ -321,10 +321,10 @@ mode: single
       const nodes = parsed.graph?.nodes;
       expect(nodes).toHaveLength(2);
       expect(nodes).toBeDefined();
-      expect(nodes![0].position.x).toBeGreaterThanOrEqual(0);
-      expect(nodes![0].position.y).toBeGreaterThanOrEqual(0);
-      expect(nodes![1].position.x).toBeGreaterThanOrEqual(0);
-      expect(nodes![1].position.y).toBeGreaterThanOrEqual(0);
+      expect(nodes?.[0].position.x).toBeGreaterThanOrEqual(0);
+      expect(nodes?.[0].position.y).toBeGreaterThanOrEqual(0);
+      expect(nodes?.[1].position.x).toBeGreaterThanOrEqual(0);
+      expect(nodes?.[1].position.y).toBeGreaterThanOrEqual(0);
     });
 
     it('should handle Home Assistant 2024+ format (triggers/actions)', () => {

@@ -13,13 +13,15 @@ export interface HassConnection {
 }
 
 // Type union to handle both HA API types
-type HassInstance = HassConfig | {
-  states: Record<string, HassEntity>;
-  services: Record<string, Record<string, any>>;
-  callService: (domain: string, service: string, data?: any) => Promise<void>;
-  connection?: Connection | null;
-  callApi?: (method: string, path: string, data?: any) => Promise<any>;
-};
+type HassInstance =
+  | HassConfig
+  | {
+      states: Record<string, HassEntity>;
+      services: Record<string, Record<string, any>>;
+      callService: (domain: string, service: string, data?: any) => Promise<void>;
+      connection?: Connection | null;
+      callApi?: (method: string, path: string, data?: any) => Promise<any>;
+    };
 
 export interface HassConfig {
   entities?: Record<string, HassEntity>;
@@ -55,8 +57,6 @@ export class HomeAssistantAPI {
   private token?: string;
 
   constructor(hass?: HassInstance, config?: { url?: string; token?: string }) {
-    
-    
     this.hass = hass || null;
     this.connection = hass?.connection || null;
 
@@ -74,8 +74,6 @@ export class HomeAssistantAPI {
    * Update the hass reference (for when it changes)
    */
   updateHass(hass: HassInstance | null, config?: { url?: string; token?: string }) {
-    
-    
     this.hass = hass;
     this.connection = hass?.connection || null;
 
@@ -94,11 +92,11 @@ export class HomeAssistantAPI {
    */
   isConnected(): boolean {
     if (!this.hass) return false;
-    
+
     // Check for different possible API structures
     return !!(
-      this.hass.connection || 
-      this.hass.callApi || 
+      this.hass.connection ||
+      this.hass.callApi ||
       this.hass.callService ||
       (this.hass.states && Object.keys(this.hass.states).length > 0)
     );
@@ -109,7 +107,7 @@ export class HomeAssistantAPI {
    */
   getStates(): Record<string, HassEntity> | null {
     if (!this.hass) return null;
-    
+
     // Handle both HassConfig and HassAPI types
     if ('states' in this.hass && this.hass.states) {
       return this.hass.states;
@@ -117,7 +115,7 @@ export class HomeAssistantAPI {
     if ('entities' in this.hass && this.hass.entities) {
       return this.hass.entities;
     }
-    
+
     return null;
   }
 
@@ -195,10 +193,9 @@ export class HomeAssistantAPI {
    * Uses built-in callApi in embedded mode, or direct fetch in remote mode
    */
   private async fetchRestAPI(path: string, method = 'GET', body?: any): Promise<any> {
-
     if (this.hass?.callApi) {
       // Embedded mode - use built-in callApi
-      
+
       return await this.hass.callApi(method, path, body);
     }
 
@@ -206,24 +203,21 @@ export class HomeAssistantAPI {
     if (!this.baseUrl || !this.token) {
       console.error('C.A.F.E.: No authentication configured', {
         baseUrl: this.baseUrl,
-        hasToken: !!this.token
+        hasToken: !!this.token,
       });
       throw new Error('No authentication configured for REST API');
     }
 
     const url = `${this.baseUrl}/api/${path}`;
-    
 
     const response = await fetch(url, {
       method,
       headers: {
-        'Authorization': `Bearer ${this.token}`,
+        Authorization: `Bearer ${this.token}`,
         'Content-Type': 'application/json',
       },
       body: body ? JSON.stringify(body) : undefined,
     });
-
-    
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -240,10 +234,10 @@ export class HomeAssistantAPI {
   async getAutomationConfigs(): Promise<AutomationConfig[]> {
     try {
       // First try websocket approach
-      if (this.hass?.callWS) {
+      if ((this.hass as any)?.callWS) {
         try {
-          const result = await this.hass.callWS({
-            type: 'config/automation/list'
+          const result = await (this.hass as any).callWS({
+            type: 'config/automation/list',
           });
           if (Array.isArray(result)) {
             return result;
@@ -255,10 +249,10 @@ export class HomeAssistantAPI {
 
       // Alternative: Use automation entity states to get basic info
       const automations = this.getAutomations();
-      return automations.map(entity => ({
+      return automations.map((entity) => ({
         id: entity.entity_id.replace('automation.', ''),
         alias: entity.attributes.friendly_name || entity.entity_id,
-        description: entity.attributes.description || ''
+        description: entity.attributes.description || '',
       }));
     } catch (error) {
       console.error('Failed to get automation configs:', error);
@@ -272,11 +266,11 @@ export class HomeAssistantAPI {
   async getAutomationConfig(automationId: string): Promise<AutomationConfig | null> {
     try {
       // Try websocket approach first
-      if (this.hass?.callWS) {
+      if ((this.hass as any)?.callWS) {
         try {
-          const config = await this.hass.callWS({
+          const config = await (this.hass as any).callWS({
             type: 'config/automation/get',
-            automation_id: automationId
+            automation_id: automationId,
           });
           if (config) {
             return config;
@@ -287,7 +281,7 @@ export class HomeAssistantAPI {
       }
 
       // Try numeric ID with REST API (for automations created via UI)
-      if (!automationId.startsWith('automation.') && !isNaN(Number(automationId))) {
+      if (!automationId.startsWith('automation.') && !Number.isNaN(Number(automationId))) {
         try {
           const config = await this.fetchRestAPI(`config/automation/config/${automationId}`);
           if (config) {
@@ -301,10 +295,11 @@ export class HomeAssistantAPI {
       // Fallback: get all configs and find the matching one
       const configs = await this.getAutomationConfigs();
       return (
-        configs.find((config) => 
-          config.id === automationId || 
-          config.alias === automationId ||
-          `automation.${config.alias}` === automationId
+        configs.find(
+          (config) =>
+            config.id === automationId ||
+            config.alias === automationId ||
+            `automation.${config.alias}` === automationId
         ) || null
       );
     } catch (error) {
@@ -318,20 +313,15 @@ export class HomeAssistantAPI {
    */
   async getAutomationTrace(automationId: string): Promise<any> {
     try {
-      
       const result = await this.sendMessage({
         type: 'automation/trace/get',
         automation_id: automationId,
       });
 
-      
-
       if (Array.isArray(result) && result.length > 0) {
-        
         return result[0].config;
       }
 
-      
       return null;
     } catch (error) {
       console.error('C.A.F.E.: Failed to get automation trace:', error);
@@ -347,34 +337,28 @@ export class HomeAssistantAPI {
     alias?: string
   ): Promise<AutomationConfig | null> {
     try {
-      
       // Method 1: Try to get from automation trace (most reliable WebSocket method)
       if (this.connection) {
-        
         const config = await this.getAutomationTrace(automationId);
         if (config) {
-          
           return config;
         }
       }
 
       // Method 2: Try to get from automation config list (REST API)
       // Note: This may not work if /api/config/automation/config doesn't exist
-      
+
       let config = await this.getAutomationConfig(automationId);
 
       if (config) {
-        
         return config;
       }
 
       // Method 3: Try to find by alias if provided
       if (alias) {
-        
         const configs = await this.getAutomationConfigs();
         config = configs.find((cfg) => cfg.alias === alias) || null;
         if (config) {
-          
           return config;
         }
       }
@@ -394,7 +378,7 @@ export class HomeAssistantAPI {
     try {
       // Generate a numeric ID like Home Assistant uses
       const automationId = config.id || Date.now().toString();
-      
+
       // Ensure the config has the required fields for Home Assistant (plural forms)
       const configWithId = {
         id: automationId,
@@ -403,17 +387,19 @@ export class HomeAssistantAPI {
         triggers: config.trigger || config.triggers || [],
         actions: config.action || config.actions || [],
         mode: config.mode || 'single',
-        variables: config.variables || {}
+        variables: config.variables || {},
       };
-      
+
       // Step 1: Create/save the automation configuration using REST API
       try {
         await this.fetchRestAPI(`config/automation/config/${automationId}`, 'POST', configWithId);
       } catch (saveError) {
         console.error('C.A.F.E.: Failed to save automation config:', saveError);
-        throw new Error(`Failed to save automation config: ${saveError instanceof Error ? saveError.message : 'Unknown error'}`);
+        throw new Error(
+          `Failed to save automation config: ${saveError instanceof Error ? saveError.message : 'Unknown error'}`
+        );
       }
-      
+
       // Step 2: Reload automations to make it active
       // Try different available methods
       if (this.hass?.callService) {
@@ -424,38 +410,39 @@ export class HomeAssistantAPI {
           console.error('C.A.F.E.: callService failed:', serviceError);
         }
       }
-      
-      if (this.hass?.callWS) {
+
+      if ((this.hass as any)?.callWS) {
         try {
-          await this.hass.callWS({
+          await (this.hass as any).callWS({
             type: 'call_service',
             domain: 'automation',
-            service: 'reload'
+            service: 'reload',
           });
           return automationId;
         } catch (wsError) {
           console.error('C.A.F.E.: callWS failed:', wsError);
         }
       }
-      
+
       if (this.connection) {
         try {
           await this.sendMessage({
             type: 'call_service',
             domain: 'automation',
-            service: 'reload'
+            service: 'reload',
           });
           return automationId;
         } catch (connError) {
           console.error('C.A.F.E.: connection sendMessage failed:', connError);
         }
       }
-      
+
       throw new Error('No working Home Assistant connection method found');
-      
     } catch (error) {
       console.error('C.A.F.E.: Failed to create automation:', error);
-      throw new Error(`Failed to create automation: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to create automation: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -466,7 +453,7 @@ export class HomeAssistantAPI {
     try {
       console.log('C.A.F.E.: Updating automation with ID:', automationId);
       console.log('C.A.F.E.: Update config:', config);
-      
+
       // Ensure the config has the correct structure that HA expects (plural forms)
       const configWithId = {
         id: automationId,
@@ -475,19 +462,20 @@ export class HomeAssistantAPI {
         triggers: config.trigger || config.triggers || [],
         actions: config.action || config.actions || [],
         mode: config.mode || 'single',
-        variables: config.variables || {}
+        variables: config.variables || {},
       };
-      
+
       console.log('C.A.F.E.: Final update payload:', configWithId);
-      
+
       // Use POST method for updates (HA doesn't support PUT for automation config updates)
       await this.fetchRestAPI(`config/automation/config/${automationId}`, 'POST', configWithId);
-      
+
       console.log('C.A.F.E.: Successfully updated automation:', automationId);
-      
     } catch (error) {
       console.error('C.A.F.E.: Failed to update automation:', error);
-      throw new Error(`Failed to update automation: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to update automation: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -496,15 +484,13 @@ export class HomeAssistantAPI {
    */
   async deleteAutomation(automationId: string): Promise<void> {
     try {
-      
-      
       // Use the automation config DELETE endpoint
       await this.fetchRestAPI(`config/automation/config/${automationId}`, 'DELETE');
-      
-      
     } catch (error) {
       console.error('C.A.F.E.: Failed to delete automation:', error);
-      throw new Error(`Failed to delete automation: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to delete automation: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -513,12 +499,9 @@ export class HomeAssistantAPI {
    */
   async automationExistsByAlias(alias: string): Promise<boolean> {
     try {
-      
-      
       const configs = await this.getAutomationConfigs();
-      const exists = configs.some(config => config.alias === alias);
-      
-      
+      const exists = configs.some((config) => config.alias === alias);
+
       return exists;
     } catch (error) {
       console.error('C.A.F.E.: Failed to check automation existence:', error);
@@ -533,12 +516,12 @@ export class HomeAssistantAPI {
     try {
       let alias = baseAlias;
       let counter = 1;
-      
+
       while (await this.automationExistsByAlias(alias)) {
         alias = `${baseAlias} (${counter})`;
         counter++;
       }
-      
+
       return alias;
     } catch (error) {
       console.error('C.A.F.E.: Failed to get unique automation alias:', error);
@@ -640,24 +623,22 @@ let haAPI: HomeAssistantAPI | null = null;
 /**
  * Get the global Home Assistant API instance
  */
-export function getHomeAssistantAPI(hass?: HassInstance, config?: { url?: string; token?: string }): HomeAssistantAPI {
+export function getHomeAssistantAPI(
+  hass?: HassInstance,
+  config?: { url?: string; token?: string }
+): HomeAssistantAPI {
   if (!haAPI) {
     haAPI = new HomeAssistantAPI(hass, config);
   } else {
     // Only update if we have a valid hass object or if the current one is null/empty
-    const shouldUpdate = hass && (
-      !haAPI.hass || 
-      !haAPI.isConnected() ||
-      (hass.states && Object.keys(hass.states).length > 0)
-    );
-    
+    const shouldUpdate =
+      hass &&
+      (!haAPI.hass || !haAPI.isConnected() || (hass.states && Object.keys(hass.states).length > 0));
+
     if (shouldUpdate) {
-      
       haAPI.updateHass(hass ?? null, config);
     } else if (hass) {
-      
     } else {
-      
     }
   }
   return haAPI;

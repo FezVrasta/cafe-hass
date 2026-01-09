@@ -1,7 +1,7 @@
 import { FlowTranspiler } from '@hflow/transpiler';
+import type { Edge } from '@xyflow/react';
 import { Play, RotateCcw, Square } from 'lucide-react';
 import { useCallback, useState } from 'react';
-import type { Edge } from '@xyflow/react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import {

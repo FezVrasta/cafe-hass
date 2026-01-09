@@ -1,12 +1,12 @@
-import { describe, it, expect } from 'vitest';
-import { readFileSync, readdirSync } from 'fs';
-import { join } from 'path';
-import * as yaml from 'js-yaml';
-import { convertAutomationConfigToNodes } from '../automation-converter';
-import { FlowTranspiler } from '@hflow/transpiler';
-import { useFlowStore } from '@/store/flow-store';
-import { generateUUID } from '../utils';
+import { readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import type { FlowGraph } from '@hflow/shared';
+import { FlowTranspiler } from '@hflow/transpiler';
+import * as yaml from 'js-yaml';
+import { describe, expect, it } from 'vitest';
+import { useFlowStore } from '@/store/flow-store';
+import { convertAutomationConfigToNodes } from '../automation-converter';
+import { generateUUID } from '../utils';
 
 describe('Roundtrip Import/Export Tests', () => {
   const fixturesDir = join(__dirname, 'fixtures');
@@ -102,7 +102,7 @@ describe('Roundtrip Import/Export Tests', () => {
         [key: string]: unknown;
       }
 
-      const generatedConfig = result.output!.automation as GeneratedAutomationConfig;
+      const generatedConfig = result.output?.automation as GeneratedAutomationConfig;
       console.log('Generated config:', JSON.stringify(generatedConfig, null, 2));
 
       // Step 4: Core property validation
@@ -197,9 +197,9 @@ describe('Roundtrip Import/Export Tests', () => {
         | Record<string, Record<string, unknown>>
         | undefined;
       expect(variables?._cafe_metadata).toBeDefined();
-      expect(variables!._cafe_metadata.version).toBe(1);
+      expect(variables?._cafe_metadata.version).toBe(1);
       // Strategy can be 'native' or 'state-machine' depending on complexity
-      expect(['native', 'state-machine']).toContain(variables!._cafe_metadata.strategy);
+      expect(['native', 'state-machine']).toContain(variables?._cafe_metadata.strategy);
 
       console.log(`✅ ${filename} roundtrip test passed`);
     });

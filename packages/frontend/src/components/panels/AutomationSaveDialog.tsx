@@ -1,19 +1,19 @@
-import { useState, useEffect } from 'react';
-import { Check, Loader2, Save, AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Check, Loader2, Save } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { useFlowStore } from '@/store/flow-store';
 import { getHomeAssistantAPI } from '@/lib/ha-api';
+import { useFlowStore } from '@/store/flow-store';
 
 interface AutomationSaveDialogProps {
   isOpen: boolean;
@@ -85,7 +85,7 @@ export function AutomationSaveDialog({ isOpen, onClose, onSaved }: AutomationSav
       let resultId: string;
       if (isUpdate) {
         await updateAutomation();
-        resultId = automationId!;
+        resultId = automationId || '';
       } else {
         resultId = await saveAutomation();
       }

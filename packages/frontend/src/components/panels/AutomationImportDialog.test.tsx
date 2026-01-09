@@ -4,8 +4,8 @@
  *
  * @vitest-environment node
  */
-import { describe, it, expect } from 'vitest';
-import { processActions, convertAutomationConfigToNodes } from '@/lib/automation-converter';
+import { describe, expect, it } from 'vitest';
+import { convertAutomationConfigToNodes, processActions } from '@/lib/automation-converter';
 
 describe('automation-converter', () => {
   describe('processActions helper', () => {
@@ -262,8 +262,9 @@ describe('automation-converter', () => {
 
       const nodeData = {
         alias: 'Trigger 1',
-        platform: trigger.platform || trigger.trigger || trigger.domain || 'device',
-        entity_id: trigger.entity_id,
+        platform:
+          (trigger as any).platform || (trigger as any).trigger || trigger.domain || 'device',
+        entity_id: (trigger as any).entity_id,
         ...trigger,
       };
 
@@ -284,9 +285,9 @@ describe('automation-converter', () => {
 
       const nodeData = {
         alias: 'Action 1',
-        service: action.action || action.service || 'unknown',
-        entity_id: action.target?.entity_id || action.entity_id,
-        data: action.data || {},
+        service: action.action || (action as any).service || 'unknown',
+        entity_id: action.target?.entity_id || (action as any).entity_id,
+        data: (action as any).data || {},
         target: action.target,
       };
 
@@ -306,9 +307,9 @@ describe('automation-converter', () => {
 
       const nodeData = {
         alias: 'Action 1',
-        service: action.action || action.service || 'unknown',
-        entity_id: action.target?.entity_id || action.entity_id,
-        data: action.data || action.service_data || {},
+        service: (action as any).action || action.service || 'unknown',
+        entity_id: (action as any).target?.entity_id || action.entity_id,
+        data: (action as any).data || action.service_data || {},
       };
 
       expect(nodeData.service).toBe('light.turn_on');
@@ -342,9 +343,9 @@ describe('automation-converter', () => {
 
       // Should not throw, just not create any nodes
       expect(() => {
-        const triggers = config.triggers || config.trigger;
-        const conditions = config.conditions || config.condition;
-        const actions = config.actions || config.action;
+        const triggers = (config as any).triggers || (config as any).trigger;
+        const conditions = (config as any).conditions || (config as any).condition;
+        const actions = (config as any).actions || (config as any).action;
 
         expect(triggers).toBeUndefined();
         expect(conditions).toBeUndefined();
@@ -358,7 +359,7 @@ describe('automation-converter', () => {
         target: { entity_id: 'light.test' },
       };
 
-      const service = action.action || action.service || 'unknown';
+      const service = (action as any).action || (action as any).service || 'unknown';
 
       expect(service).toBe('unknown');
     });

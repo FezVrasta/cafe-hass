@@ -12,8 +12,8 @@ import {
   Settings,
   Wifi,
 } from 'lucide-react';
-import { Toaster } from 'sonner';
 import { createContext, useContext, useEffect, useState } from 'react';
+import { Toaster } from 'sonner';
 import { FlowCanvas } from '@/components/canvas/FlowCanvas';
 import { AutomationImportDialog } from '@/components/panels/AutomationImportDialog';
 import { AutomationSaveDialog } from '@/components/panels/AutomationSaveDialog';
@@ -35,7 +35,7 @@ import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useHass } from '@/hooks/useHass';
-import { getHomeAssistantAPI } from '@/lib/ha-api';
+// import { getHomeAssistantAPI } from '@/lib/ha-api';
 import { cn } from '@/lib/utils';
 import { useFlowStore } from '@/store/flow-store';
 
@@ -82,7 +82,7 @@ function App({ hass: externalHass, narrow = false, route, panel }: AppProps = {}
         setGlobalHass(effectiveHass);
       });
 
-      const api = getHomeAssistantAPI(effectiveHass);
+      // const api = getHomeAssistantAPI(effectiveHass);
     }
   }, [effectiveHass]);
 
@@ -311,7 +311,7 @@ function App({ hass: externalHass, narrow = false, route, panel }: AppProps = {}
               <Tabs
                 value={rightTab}
                 onValueChange={(value) => setRightTab(value as RightPanelTab)}
-                className="flex flex-1 flex-col min-h-0"
+                className="flex min-h-0 flex-1 flex-col"
               >
                 <TabsList className="grid w-full grid-cols-3 rounded-none border-b">
                   <TabsTrigger value="properties">Properties</TabsTrigger>
@@ -377,9 +377,7 @@ function App({ hass: externalHass, narrow = false, route, panel }: AppProps = {}
         <AutomationSaveDialog
           isOpen={saveDialogOpen}
           onClose={() => setSaveDialogOpen(false)}
-          onSaved={(automationId) => {
-
-          }}
+          onSaved={() => {/* TODO: Handle automation save */}}
         />
 
         <Toaster />

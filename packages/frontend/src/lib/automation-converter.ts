@@ -1,5 +1,5 @@
-import type { Node, Edge } from '@xyflow/react';
-import type { FlowNodeData } from '@/store/flow-store';
+// import type { Node, Edge } from '@xyflow/react';
+// import type { FlowNodeData } from '@/store/flow-store';
 
 /**
  * Represents an action with branch tracking information
@@ -202,7 +202,7 @@ export function convertAutomationConfigToNodes(config: any): {
       // Clean up conflicting fields - remove 'trigger' field if 'platform' exists or will be set
       const cleanedTrigger = { ...trigger };
       delete cleanedTrigger.trigger; // Remove conflicting 'trigger' field
-      delete cleanedTrigger.domain; // Remove 'domain' field as it conflicts with 'platform'
+      // Keep 'domain' field for device triggers as it's needed by DeviceTriggerFields
 
       nodesToCreate.push({
         id: nodeId,
@@ -211,7 +211,9 @@ export function convertAutomationConfigToNodes(config: any): {
         data: {
           ...cleanedTrigger,
           alias: trigger.alias || `Trigger ${index + 1}`,
-          platform: trigger.platform || trigger.trigger || trigger.domain || 'device', // Derive platform from available fields
+          platform: trigger.device_id 
+            ? 'device'  // If device_id exists, this is definitely a device trigger
+            : trigger.platform || trigger.trigger || trigger.domain || 'state', // Otherwise derive from available fields
         },
       });
 

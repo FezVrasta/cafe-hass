@@ -151,7 +151,7 @@ class CafePanel extends HTMLElement {
       setTimeout(() => {
         const testElement = this.querySelector('div');
         if (testElement) {
-          const computedStyles = window.getComputedStyle(testElement);
+          // const computedStyles = window.getComputedStyle(testElement);
         }
       }, 100);
     }

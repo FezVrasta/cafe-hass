@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { convertAutomationConfigToNodes } from '../automation-converter';
 
 describe('Position Restoration', () => {
@@ -11,18 +11,18 @@ describe('Position Restoration', () => {
           alias: 'Trigger 1',
           platform: 'state',
           entity_id: 'alarm_control_panel.allarme',
-          trigger: 'state'
-        }
+          trigger: 'state',
+        },
       ],
       action: [
         {
           alias: 'Action: light.turn_on',
           service: 'light.turn_on',
           target: {
-            entity_id: 'light.studio'
+            entity_id: 'light.studio',
           },
-          data: {}
-        }
+          data: {},
+        },
       ],
       mode: 'single',
       variables: {
@@ -31,18 +31,18 @@ describe('Position Restoration', () => {
           nodes: {
             'trigger-1767901134917-0': {
               x: 150,
-              y: 200
+              y: 200,
             },
             'action-1767901134917-0': {
               x: 450,
-              y: 250
-            }
+              y: 250,
+            },
           },
           graph_id: '4600fa94-4226-4a53-bab7-16c06799c614',
           graph_version: 1,
-          strategy: 'native'
-        }
-      }
+          strategy: 'native',
+        },
+      },
     };
 
     // Temporarily replace console.log to capture logs
@@ -63,14 +63,14 @@ describe('Position Restoration', () => {
     expect(nodes).toHaveLength(2);
 
     // Check that logs show metadata was detected
-    const metadataLog = logs.find(log => log[0].includes('Loading automation with metadata'));
+    const metadataLog = logs.find((log) => log[0].includes('Loading automation with metadata'));
     expect(metadataLog).toBeTruthy();
     expect(metadataLog[1].hasTranspilerMetadata).toBe(true);
     expect(metadataLog[1].savedPositionsCount).toBe(2);
 
     // Find trigger and action nodes
-    const triggerNode = nodes.find(node => node.type === 'trigger');
-    const actionNode = nodes.find(node => node.type === 'action');
+    const triggerNode = nodes.find((node) => node.type === 'trigger');
+    const actionNode = nodes.find((node) => node.type === 'action');
 
     expect(triggerNode).toBeTruthy();
     expect(actionNode).toBeTruthy();
@@ -94,19 +94,19 @@ describe('Position Restoration', () => {
       alias: 'Simple Automation',
       trigger: [{ platform: 'state', entity_id: 'sensor.test' }],
       action: [{ service: 'light.turn_on', entity_id: 'light.test' }],
-      mode: 'single'
+      mode: 'single',
     };
 
     const { nodes } = convertAutomationConfigToNodes(automationConfigWithoutMetadata);
-    
+
     expect(nodes).toHaveLength(2);
-    
+
     // Should use default positions when no metadata
-    const triggerNode = nodes.find(node => node.type === 'trigger');
-    const actionNode = nodes.find(node => node.type === 'action');
-    
+    const triggerNode = nodes.find((node) => node.type === 'trigger');
+    const actionNode = nodes.find((node) => node.type === 'action');
+
     expect(triggerNode?.position.x).toBe(100); // Default x position
-    expect(actionNode?.position.x).toBe(400);  // Default x position + spacing
+    expect(actionNode?.position.x).toBe(400); // Default x position + spacing
   });
 
   it('should prioritize cafe_metadata over transpiler metadata', () => {
@@ -118,23 +118,23 @@ describe('Position Restoration', () => {
       variables: {
         cafe_metadata: {
           node_positions: {
-            'trigger-test': { x: 500, y: 600 }
+            'trigger-test': { x: 500, y: 600 },
           },
           node_mapping: {
-            'trigger-0': 'trigger-test'
-          }
+            'trigger-0': 'trigger-test',
+          },
         },
         _cafe_metadata: {
           nodes: {
-            'trigger-old': { x: 100, y: 100 }
-          }
-        }
-      }
+            'trigger-old': { x: 100, y: 100 },
+          },
+        },
+      },
     };
 
     const { nodes } = convertAutomationConfigToNodes(automationConfigWithBothMetadata);
-    const triggerNode = nodes.find(node => node.type === 'trigger');
-    
+    const triggerNode = nodes.find((node) => node.type === 'trigger');
+
     // Should use cafe_metadata positions when available
     expect(triggerNode?.position.x).toBe(500);
     expect(triggerNode?.position.y).toBe(600);

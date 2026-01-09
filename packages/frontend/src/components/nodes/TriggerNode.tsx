@@ -37,7 +37,7 @@ export const TriggerNode = memo(function TriggerNode({ id, data, selected }: Tri
         return {
           title: data.alias || 'Device Trigger',
           subtitle: data.type ? `${data.domain || 'device'}: ${data.type}` : 'Device',
-          detail: data.device_id ? `Device: ${data.device_id.substring(0, 8)}...` : null,
+          detail: data.device_id ? `Device: ${String(data.device_id).substring(0, 8)}...` : null,
         };
 
       case 'state':
@@ -128,7 +128,9 @@ export const TriggerNode = memo(function TriggerNode({ id, data, selected }: Tri
 
       <div className="space-y-0.5 text-amber-700 text-xs">
         <div className="font-medium">{displayInfo.subtitle}</div>
-        {displayInfo.detail && <div className="truncate opacity-75">{displayInfo.detail}</div>}
+        {displayInfo.detail && (
+          <div className="truncate opacity-75">{String(displayInfo.detail)}</div>
+        )}
       </div>
 
       <Handle

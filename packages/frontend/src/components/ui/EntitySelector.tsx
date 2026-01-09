@@ -210,7 +210,7 @@ export function EntitySelector({
                       'w-full px-4 py-2.5 text-left',
                       'transition-colors hover:bg-blue-50',
                       'flex items-start gap-3',
-                      'border-b border-slate-100 last:border-0',
+                      'border-slate-100 border-b last:border-0',
                       entity.entity_id === normalizedValue && 'bg-blue-50'
                     )}
                   >

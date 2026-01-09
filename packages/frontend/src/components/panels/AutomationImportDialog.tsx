@@ -12,8 +12,8 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { useHass } from '@/hooks/useHass';
-import { getHomeAssistantAPI } from '@/lib/ha-api';
 import { convertAutomationConfigToNodes } from '@/lib/automation-converter';
+import { getHomeAssistantAPI } from '@/lib/ha-api';
 import { useFlowStore } from '@/store/flow-store';
 
 interface AutomationImportDialogProps {
@@ -122,7 +122,7 @@ export function AutomationImportDialog({ isOpen, onClose }: AutomationImportDial
         // Even if we couldn't fetch config, still set the automation ID
         // so that if user creates a flow with the same name, it will update instead of create new
         setAutomationId(automationId);
-        
+
         toast.warning(
           `Automation "${automation.attributes.friendly_name || automationId}" opened!`,
           {
