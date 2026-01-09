@@ -34,6 +34,7 @@ export const ConditionTypeSchema = z.enum([
   'not',
   'sun',
   'device',
+  'trigger',
 ]);
 export type ConditionType = z.infer<typeof ConditionTypeSchema>;
 
