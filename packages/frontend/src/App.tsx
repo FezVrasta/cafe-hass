@@ -23,6 +23,8 @@ import { NodePalette } from '@/components/panels/NodePalette';
 import { PropertyPanel } from '@/components/panels/PropertyPanel';
 import { YamlPreview } from '@/components/panels/YamlPreview';
 import { TraceSimulator } from '@/components/simulator/TraceSimulator';
+import { AutomationTraceViewer } from '@/components/simulator/AutomationTraceViewer';
+import { SpeedControl } from '@/components/simulator/SpeedControl';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -125,6 +127,8 @@ function App({ hass: externalHass, narrow = false, route, panel }: AppProps = {}
     automationId,
     hasUnsavedChanges,
     isSaving,
+    simulationSpeed,
+    setSimulationSpeed,
   } = useFlowStore();
   const [rightTab, setRightTab] = useState<RightPanelTab>('properties');
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -346,7 +350,7 @@ function App({ hass: externalHass, narrow = false, route, panel }: AppProps = {}
                 <TabsList className="grid w-full grid-cols-3 rounded-none border-b">
                   <TabsTrigger value="properties">Properties</TabsTrigger>
                   <TabsTrigger value="yaml">YAML</TabsTrigger>
-                  <TabsTrigger value="simulator">Simulate</TabsTrigger>
+                  <TabsTrigger value="simulator">Debug</TabsTrigger>
                 </TabsList>
 
                 <div className="flex flex-1 flex-col overflow-hidden">
@@ -357,7 +361,26 @@ function App({ hass: externalHass, narrow = false, route, panel }: AppProps = {}
                     <YamlPreview />
                   </TabsContent>
                   <TabsContent value="simulator" className="mt-0 flex-1 overflow-hidden">
-                    <TraceSimulator />
+                    <div className="flex h-full flex-col">
+                      {/* Shared Speed Control */}
+                      <div className="border-b p-4">
+                        <h4 className="mb-2 font-medium text-muted-foreground text-xs">Debug Controls</h4>
+                        <SpeedControl 
+                          speed={simulationSpeed}
+                          onSpeedChange={setSimulationSpeed}
+                        />
+                      </div>
+                      
+                      {/* Simulation Section */}
+                      <div className="flex-1 border-b">
+                        <TraceSimulator />
+                      </div>
+                      
+                      {/* Trace Section */}
+                      <div className="flex-1">
+                        <AutomationTraceViewer />
+                      </div>
+                    </div>
                   </TabsContent>
                 </div>
               </Tabs>

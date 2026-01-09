@@ -34,6 +34,8 @@ export function FlowCanvas() {
     selectedNodeId,
     isSimulating,
     executionPath,
+    isShowingTrace,
+    traceExecutionPath,
   } = useFlowStore();
 
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
@@ -100,7 +102,7 @@ export function FlowCanvas() {
     [screenToFlowPosition, addNode]
   );
 
-  // Style edges based on simulation state and selected node
+  // Style edges based on simulation state, trace state, and selected node
   const styledEdges = useMemo(() => {
     return edges.map((edge) => {
       // Check if this edge is part of the execution path during simulation
@@ -114,11 +116,22 @@ export function FlowCanvas() {
         targetIdx !== -1 &&
         targetIdx === sourceIdx + 1;
 
+      // Check if this edge is part of the trace execution path
+      const traceSourceIdx = traceExecutionPath.indexOf(edge.source);
+      const traceTargetIdx = traceExecutionPath.indexOf(edge.target);
+
+      const isActiveInTrace =
+        isShowingTrace &&
+        traceExecutionPath.length >= 2 &&
+        traceSourceIdx !== -1 &&
+        traceTargetIdx !== -1 &&
+        traceTargetIdx === traceSourceIdx + 1;
+
       // Check if this edge is connected to the selected node
       const isConnectedToSelected =
         selectedNodeId && (edge.source === selectedNodeId || edge.target === selectedNodeId);
 
-      // Determine edge styling based on state
+      // Determine edge styling based on state (priority: simulation > trace > selection)
       let edgeStyle = { strokeWidth: 2, stroke: '#64748b' };
       let markerEnd = { type: MarkerType.ArrowClosed, color: '#64748b' };
 
@@ -126,6 +139,10 @@ export function FlowCanvas() {
         // Simulation takes precedence - green for active path
         edgeStyle = { stroke: '#22c55e', strokeWidth: 3 };
         markerEnd = { type: MarkerType.ArrowClosed, color: '#22c55e' };
+      } else if (isActiveInTrace) {
+        // Trace visualization - orange for trace path
+        edgeStyle = { stroke: '#f59e0b', strokeWidth: 3 };
+        markerEnd = { type: MarkerType.ArrowClosed, color: '#f59e0b' };
       } else if (isConnectedToSelected) {
         // Blue highlighting for connected edges
         edgeStyle = { stroke: '#3b82f6', strokeWidth: 3 };
@@ -134,12 +151,12 @@ export function FlowCanvas() {
 
       return {
         ...edge,
-        animated: isActiveInSimulation,
+        animated: isActiveInSimulation || isActiveInTrace,
         style: edgeStyle,
         markerEnd,
       };
     });
-  }, [edges, isSimulating, executionPath, selectedNodeId]);
+  }, [edges, isSimulating, executionPath, isShowingTrace, traceExecutionPath, selectedNodeId]);
 
   return (
     <div className="h-full w-full" ref={reactFlowWrapper}>
@@ -189,6 +206,18 @@ export function FlowCanvas() {
             <div className="flex items-center gap-2 font-medium text-green-800 text-sm">
               <div className="h-2 w-2 animate-pulse rounded-full bg-green-500" />
               Simulating execution...
+            </div>
+          </Panel>
+        )}
+
+        {isShowingTrace && !isSimulating && (
+          <Panel
+            position="top-center"
+            className="rounded-lg border border-orange-300 bg-orange-100 px-4 py-2"
+          >
+            <div className="flex items-center gap-2 font-medium text-orange-800 text-sm">
+              <div className="h-2 w-2 rounded-full bg-orange-500" />
+              Showing trace execution ({traceExecutionPath.length} steps)
             </div>
           </Panel>
         )}

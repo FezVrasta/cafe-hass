@@ -46,6 +46,54 @@ export interface AutomationConfig {
   variables?: Record<string, any>;
 }
 
+export interface TraceStep {
+  path: string;
+  timestamp: string;
+  changed_variables?: Record<string, any>;
+  result?: {
+    result?: boolean;
+    state?: any;
+    params?: Record<string, any>;
+    delay?: number;
+    done?: boolean;
+  };
+}
+
+export interface AutomationTrace {
+  last_step: string;
+  run_id: string;
+  state: 'running' | 'stopped';
+  script_execution: 'running' | 'finished' | 'cancelled';
+  timestamp: {
+    start: string;
+    finish?: string;
+  };
+  domain: string;
+  item_id: string;
+  trigger: string;
+  trace: Record<string, TraceStep[]>;
+  config: AutomationConfig;
+  context: {
+    id: string;
+    parent_id?: string;
+    user_id?: string;
+  };
+}
+
+export interface TraceListItem {
+  run_id: string;
+  last_step: string;
+  state: 'running' | 'stopped';
+  script_execution: 'running' | 'finished' | 'cancelled';
+  timestamp: {
+    start: string;
+    finish?: string;
+  };
+  trigger: string;
+  domain: string;
+  item_id: string;
+}
+
 /**
  * Home Assistant API abstraction layer
  * Works in both custom panel mode (with hass object) and standalone mode
@@ -613,6 +661,39 @@ export class HomeAssistantAPI {
     } catch (error) {
       console.error('Failed to validate config:', error);
       return { valid: false, error: 'Validation failed' };
+    }
+  }
+
+  /**
+   * Get automation trace list
+   */
+  async getAutomationTraces(automationId: string): Promise<TraceListItem[]> {
+    try {
+      return await this.sendMessage({
+        type: 'trace/list',
+        domain: 'automation',
+        item_id: automationId,
+      });
+    } catch (error) {
+      console.error('Failed to get automation traces:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get specific automation trace details
+   */
+  async getAutomationTraceDetails(automationId: string, runId: string): Promise<AutomationTrace | null> {
+    try {
+      return await this.sendMessage({
+        type: 'trace/get',
+        domain: 'automation',
+        item_id: automationId,
+        run_id: runId,
+      });
+    } catch (error) {
+      console.error('Failed to get automation trace details:', error);
+      return null;
     }
   }
 }

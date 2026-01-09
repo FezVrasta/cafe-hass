@@ -11,7 +11,9 @@ interface DelayNodeProps extends NodeProps {
 
 export const DelayNode = memo(function DelayNode({ id, data, selected }: DelayNodeProps) {
   const activeNodeId = useFlowStore((s) => s.activeNodeId);
+  const getExecutionStepNumber = useFlowStore((s) => s.getExecutionStepNumber);
   const isActive = activeNodeId === id;
+  const stepNumber = getExecutionStepNumber(id);
 
   // Format delay for display
   const delayDisplay = (() => {
@@ -45,6 +47,11 @@ export const DelayNode = memo(function DelayNode({ id, data, selected }: DelayNo
           <Clock className="h-4 w-4 text-purple-700" />
         </div>
         <span className="font-semibold text-purple-900 text-sm">{data.alias || 'Delay'}</span>
+        {stepNumber && (
+          <div className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-purple-600 text-white text-xs font-bold">
+            {stepNumber}
+          </div>
+        )}
       </div>
 
       <div className="text-purple-700 text-xs">

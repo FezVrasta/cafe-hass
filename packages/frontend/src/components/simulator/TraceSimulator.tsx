@@ -11,7 +11,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
 import { useFlowStore } from '@/store/flow-store';
 
@@ -27,9 +26,9 @@ export function TraceSimulator() {
     addToExecutionPath,
     clearExecutionPath,
     executionPath,
+    simulationSpeed,
   } = useFlowStore();
 
-  const [simulationSpeed, setSimulationSpeed] = useState(800);
   const [conditionResults, setConditionResults] = useState<Record<string, boolean>>({});
 
   const simulate = useCallback(async () => {
@@ -151,20 +150,7 @@ export function TraceSimulator() {
         </div>
       </div>
 
-      {/* Speed control */}
-      <div className="space-y-2">
-        <Label className="font-medium text-muted-foreground text-xs">
-          Speed: {simulationSpeed}ms
-        </Label>
-        <Slider
-          value={[simulationSpeed]}
-          onValueChange={(values) => setSimulationSpeed(values[0])}
-          min={200}
-          max={2000}
-          step={100}
-          className="w-full"
-        />
-      </div>
+
 
       {/* Condition overrides */}
       {conditionNodes.length > 0 && (

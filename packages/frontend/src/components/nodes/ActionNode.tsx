@@ -11,7 +11,9 @@ interface ActionNodeProps extends NodeProps {
 
 export const ActionNode = memo(function ActionNode({ id, data, selected }: ActionNodeProps) {
   const activeNodeId = useFlowStore((s) => s.activeNodeId);
+  const getExecutionStepNumber = useFlowStore((s) => s.getExecutionStepNumber);
   const isActive = activeNodeId === id;
+  const stepNumber = getExecutionStepNumber(id);
 
   // Parse service into domain and service name
   const [domain, serviceName] = data.service.split('.');
@@ -48,6 +50,11 @@ export const ActionNode = memo(function ActionNode({ id, data, selected }: Actio
         <span className="font-semibold text-green-900 text-sm">
           {data.alias || serviceName || 'Action'}
         </span>
+        {stepNumber && (
+          <div className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-green-600 text-white text-xs font-bold">
+            {stepNumber}
+          </div>
+        )}
       </div>
 
       <div className="space-y-0.5 text-green-700 text-xs">

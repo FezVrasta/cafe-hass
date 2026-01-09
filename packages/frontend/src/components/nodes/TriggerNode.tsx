@@ -11,7 +11,9 @@ interface TriggerNodeProps extends NodeProps {
 
 export const TriggerNode = memo(function TriggerNode({ id, data, selected }: TriggerNodeProps) {
   const activeNodeId = useFlowStore((s) => s.activeNodeId);
+  const getExecutionStepNumber = useFlowStore((s) => s.getExecutionStepNumber);
   const isActive = activeNodeId === id;
+  const stepNumber = getExecutionStepNumber(id);
 
   const platformLabels: Record<string, string> = {
     state: 'State Change',
@@ -124,6 +126,11 @@ export const TriggerNode = memo(function TriggerNode({ id, data, selected }: Tri
           <Zap className="h-4 w-4 text-amber-700" />
         </div>
         <span className="font-semibold text-amber-900 text-sm">{displayInfo.title}</span>
+        {stepNumber && (
+          <div className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-amber-600 text-white text-xs font-bold">
+            {stepNumber}
+          </div>
+        )}
       </div>
 
       <div className="space-y-0.5 text-amber-700 text-xs">

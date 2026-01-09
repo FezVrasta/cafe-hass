@@ -122,6 +122,15 @@ interface FlowState {
   activeNodeId: string | null;
   executionPath: string[];
 
+  // Trace state
+  isShowingTrace: boolean;
+  traceData: any | null;
+  traceExecutionPath: string[];
+  traceTimestamps: Record<string, string>;
+
+  // Shared simulation/trace state
+  simulationSpeed: number;
+
   // Actions
   setNodes: (nodes: Node<FlowNodeData>[]) => void;
   setEdges: (edges: Edge[]) => void;
@@ -153,6 +162,15 @@ interface FlowState {
   addToExecutionPath: (nodeId: string) => void;
   clearExecutionPath: () => void;
 
+  // Trace
+  showTrace: (traceData: any) => void;
+  hideTrace: () => void;
+  clearTraceExecutionPath: () => void;
+
+  // Shared simulation/trace actions
+  setSimulationSpeed: (speed: number) => void;
+  getExecutionStepNumber: (nodeId: string) => number | null;
+
   // Import/Export
   toFlowGraph: () => FlowGraph;
   fromFlowGraph: (graph: FlowGraph) => void;
@@ -173,6 +191,11 @@ const initialState = {
   isSimulating: false,
   activeNodeId: null,
   executionPath: [],
+  isShowingTrace: false,
+  traceData: null,
+  traceExecutionPath: [],
+  traceTimestamps: {},
+  simulationSpeed: 800,
 };
 
 export const useFlowStore = create<FlowState>((set, get) => ({
@@ -458,6 +481,97 @@ export const useFlowStore = create<FlowState>((set, get) => ({
       executionPath: [...state.executionPath, nodeId],
     })),
   clearExecutionPath: () => set({ executionPath: [] }),
+
+  showTrace: (traceData) => {
+    const traceExecutionPath: string[] = [];
+    const traceTimestamps: Record<string, string> = {};
+    
+    // Extract execution path and timestamps from trace data
+    if (traceData?.trace) {
+      // Get current flow nodes grouped by type and sorted by position
+      const state = get();
+      const nodesByType: Record<string, any[]> = {
+        trigger: [],
+        condition: [],
+        action: [],
+        wait: [],
+        delay: [],
+      };
+      
+      // Group nodes by type and sort them (could be by y-position or order in array)
+      for (const node of state.nodes) {
+        const nodeType = node.type as keyof typeof nodesByType;
+        if (nodesByType[nodeType]) {
+          nodesByType[nodeType].push(node);
+        }
+      }
+      
+      // Sort each group by y-position to match likely execution order
+      for (const type in nodesByType) {
+        nodesByType[type].sort((a, b) => a.position.y - b.position.y);
+      }
+
+      // Sort trace steps by timestamp to get execution order
+      const sortedSteps = Object.entries(traceData.trace)
+        .flatMap(([path, steps]) => {
+          if (Array.isArray(steps)) {
+            return steps.map(step => ({ path, ...step }));
+          }
+          return [];
+        })
+        .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+      
+      // Map trace paths to actual node IDs
+      for (const step of sortedSteps) {
+        const pathParts = step.path.split('/');
+        const nodeType = pathParts[0]; // trigger, condition, action, etc.
+        const nodeIndex = parseInt(pathParts[1], 10); // 0, 1, 2, etc.
+        
+        // Find the corresponding node in our flow
+        const nodesOfType = nodesByType[nodeType] || [];
+        if (nodesOfType[nodeIndex]) {
+          const nodeId = nodesOfType[nodeIndex].id;
+          
+          if (!traceExecutionPath.includes(nodeId)) {
+            traceExecutionPath.push(nodeId);
+            traceTimestamps[nodeId] = step.timestamp;
+          }
+        }
+      }
+    }
+    
+    set({ 
+      isShowingTrace: true, 
+      traceData, 
+      traceExecutionPath, 
+      traceTimestamps,
+      activeNodeId: null 
+    });
+  },
+  hideTrace: () => set({ 
+    isShowingTrace: false, 
+    traceData: null, 
+    traceExecutionPath: [], 
+    traceTimestamps: {},
+    activeNodeId: null 
+  }),
+  clearTraceExecutionPath: () => set({ traceExecutionPath: [], traceTimestamps: {} }),
+
+  setSimulationSpeed: (speed) => set({ simulationSpeed: speed }),
+  getExecutionStepNumber: (nodeId) => {
+    const state = get();
+    // Check simulation execution path first
+    if (state.isSimulating && state.executionPath.length > 0) {
+      const stepIndex = state.executionPath.indexOf(nodeId);
+      return stepIndex >= 0 ? stepIndex + 1 : null;
+    }
+    // Check trace execution path
+    if (state.isShowingTrace && state.traceExecutionPath.length > 0) {
+      const stepIndex = state.traceExecutionPath.indexOf(nodeId);
+      return stepIndex >= 0 ? stepIndex + 1 : null;
+    }
+    return null;
+  },
 
   toFlowGraph: (): FlowGraph => {
     const state = get();

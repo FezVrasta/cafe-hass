@@ -11,7 +11,9 @@ interface WaitNodeProps extends NodeProps {
 
 export const WaitNode = memo(function WaitNode({ id, data, selected }: WaitNodeProps) {
   const activeNodeId = useFlowStore((s) => s.activeNodeId);
+  const getExecutionStepNumber = useFlowStore((s) => s.getExecutionStepNumber);
   const isActive = activeNodeId === id;
+  const stepNumber = getExecutionStepNumber(id);
 
   return (
     <div
@@ -33,6 +35,11 @@ export const WaitNode = memo(function WaitNode({ id, data, selected }: WaitNodeP
           <Hourglass className="h-4 w-4 text-orange-700" />
         </div>
         <span className="font-semibold text-orange-900 text-sm">{data.alias || 'Wait for'}</span>
+        {stepNumber && (
+          <div className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-orange-600 text-white text-xs font-bold">
+            {stepNumber}
+          </div>
+        )}
       </div>
 
       <div className="space-y-0.5 text-orange-700 text-xs">

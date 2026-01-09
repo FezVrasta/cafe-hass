@@ -15,7 +15,9 @@ export const ConditionNode = memo(function ConditionNode({
   selected,
 }: ConditionNodeProps) {
   const activeNodeId = useFlowStore((s) => s.activeNodeId);
+  const getExecutionStepNumber = useFlowStore((s) => s.getExecutionStepNumber);
   const isActive = activeNodeId === id;
+  const stepNumber = getExecutionStepNumber(id);
 
   const conditionLabels: Record<string, string> = {
     state: 'State',
@@ -52,6 +54,11 @@ export const ConditionNode = memo(function ConditionNode({
         <span className="font-semibold text-blue-900 text-sm">
           {data.alias || conditionLabels[data.condition_type] || 'Condition'}
         </span>
+        {stepNumber && (
+          <div className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-white text-xs font-bold">
+            {stepNumber}
+          </div>
+        )}
       </div>
 
       <div className="space-y-0.5 text-blue-700 text-xs">
