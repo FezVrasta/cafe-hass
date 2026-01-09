@@ -250,14 +250,14 @@ describe('automation-converter', () => {
     expect(result.output?.automation).toBeDefined();
 
     if (result.output?.automation) {
-      const automation = result.output.automation as any;
+      const automation = result.output.automation as Record<string, unknown>;
       console.log('Generated automation:', JSON.stringify(automation, null, 2));
 
       // Check that trigger properties are preserved in final output
       expect(automation.trigger).toBeDefined();
       expect(Array.isArray(automation.trigger)).toBe(true);
 
-      if (automation.trigger?.[0]) {
+      if (Array.isArray(automation.trigger) && automation.trigger[0]) {
         const trigger = automation.trigger[0];
         console.log('Generated trigger:', trigger);
 
@@ -276,7 +276,7 @@ describe('automation-converter', () => {
       // Check that actions are preserved
       expect(automation.action).toBeDefined();
       expect(Array.isArray(automation.action)).toBe(true);
-      expect(automation.action.length).toBeGreaterThan(0);
+      expect(Array.isArray(automation.action) ? automation.action.length : 1).toBeGreaterThan(0);
 
       // TODO: Fix action preservation - currently actions are being simplified
       // The original automation had choose conditions with sun conditions and script actions

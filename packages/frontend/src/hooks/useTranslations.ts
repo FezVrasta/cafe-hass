@@ -1,5 +1,20 @@
 import { useEffect, useState } from 'react';
+import { z } from 'zod';
 import { useHass } from '@/hooks/useHass';
+
+// Zod schema for translation API response
+const TranslationResponseSchema = z.object({
+  resources: z.record(z.string(), z.unknown()).transform((resources) => {
+    // Filter to only include string values
+    const stringResources: Record<string, string> = {};
+    Object.entries(resources).forEach(([key, value]) => {
+      if (typeof value === 'string') {
+        stringResources[key] = value;
+      }
+    });
+    return stringResources;
+  }),
+});
 
 /**
  * Hook to manage Home Assistant translation loading.
@@ -81,8 +96,12 @@ export function useTranslations() {
         });
 
         console.log('Translation fetch result:', result);
-        if (result?.resources) {
-          setTranslations((prev) => ({ ...prev, ...result.resources }));
+        
+        const parseResult = TranslationResponseSchema.safeParse(result);
+        if (parseResult.success) {
+          setTranslations((prev) => ({ ...prev, ...parseResult.data.resources }));
+        } else {
+          console.log('Failed to parse translation response:', parseResult.error);
         }
       } catch (error) {
         console.log('Failed to fetch translations via WebSocket:', error);

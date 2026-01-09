@@ -1,11 +1,25 @@
 // import type { Node, Edge } from '@xyflow/react';
 // import type { FlowNodeData } from '@/store/flow-store';
 
+import type { AutomationConfig } from './ha-api';
+
+// Define automation action types
+export interface BaseAction {
+  [key: string]: unknown;
+}
+
+export interface ChooseAction extends BaseAction {
+  choose?: Array<{ conditions?: unknown; sequence?: unknown }>;
+  default?: unknown;
+}
+
+export type AutomationAction = BaseAction | ChooseAction;
+
 /**
  * Represents an action with branch tracking information
  */
 export interface ProcessedAction {
-  action: any;
+  action: Record<string, unknown>;
   branch?: 'then' | 'else' | 'default';
   parentConditionId?: string;
 }
@@ -17,7 +31,7 @@ export interface NodeToCreate {
   id: string;
   type: string;
   position: { x: number; y: number };
-  data: any;
+  data: Record<string, unknown>;
   parentNodeId?: string;
   sourceHandle?: string | null;
 }
@@ -27,7 +41,7 @@ export interface NodeToCreate {
  * This handles if/then/else and choose structures, preserving branch information
  */
 export function processActions(
-  actionList: any[],
+  actionList: AutomationAction[],
   parentConditionId?: string,
   branch?: 'then' | 'else' | 'default'
 ): ProcessedAction[] {
@@ -66,31 +80,36 @@ export function processActions(
       // Process each choice as a separate condition
       let lastConditionId: string | undefined;
 
-      for (const choice of action.choose) {
-        if (choice.conditions) {
-          const conditionId = `condition-${Date.now()}-${Math.random()}`;
-          lastConditionId = conditionId;
+      if (Array.isArray(action.choose)) {
+        for (const choice of action.choose) {
+          if (typeof choice === 'object' && choice !== null) {
+            const choiceObj = choice as Record<string, unknown>;
+            if (choiceObj.conditions) {
+              const conditionId = `condition-${Date.now()}-${Math.random()}`;
+              lastConditionId = conditionId;
 
-          processed.push({
-            action: {
-              type: 'condition',
-              condition: choice.conditions,
-              alias: action.alias || 'Choose condition',
-              _conditionId: conditionId,
-            },
-            branch,
-            parentConditionId,
-          });
+              processed.push({
+                action: {
+                  type: 'condition',
+                  condition: choiceObj.conditions,
+                  alias: action.alias || 'Choose condition',
+                  _conditionId: conditionId,
+                },
+                branch,
+                parentConditionId,
+              });
 
-          if (choice.sequence) {
-            processed.push(...processActions(choice.sequence, conditionId, 'then'));
+              if (choiceObj.sequence && Array.isArray(choiceObj.sequence)) {
+                processed.push(...processActions(choiceObj.sequence as AutomationAction[], conditionId, 'then'));
+              }
+            }
           }
         }
       }
 
       // Process default branch - connect to the last condition's else path
-      if (action.default && lastConditionId) {
-        processed.push(...processActions(action.default, lastConditionId, 'else'));
+      if (action.default && lastConditionId && Array.isArray(action.default)) {
+        processed.push(...processActions(action.default as AutomationAction[], lastConditionId, 'else'));
       }
     }
     // Otherwise it's a regular action
@@ -109,7 +128,7 @@ export function processActions(
 /**
  * Convert Home Assistant automation config to nodes with proper connections
  */
-export function convertAutomationConfigToNodes(config: any): {
+export function convertAutomationConfigToNodes(config: AutomationConfig): {
   nodes: NodeToCreate[];
   edges: Array<{ source: string; target: string; sourceHandle: string | null }>;
 } {
@@ -181,7 +200,7 @@ export function convertAutomationConfigToNodes(config: any): {
 
     for (const [index, trigger] of triggers.entries()) {
       // Try to get node ID from CAFE metadata node mapping first
-      let nodeId;
+      let nodeId: string;
       const mappingKey = `trigger_${globalNodeIndex}`; // Use global index, not trigger index
       if (nodeMapping[mappingKey]) {
         nodeId = nodeMapping[mappingKey];
@@ -213,8 +232,8 @@ export function convertAutomationConfigToNodes(config: any): {
         data: {
           ...cleanedTrigger,
           alias: trigger.alias || `Trigger ${index + 1}`,
-          platform: trigger.device_id 
-            ? 'device'  // If device_id exists, this is definitely a device trigger
+          platform: trigger.device_id
+            ? 'device' // If device_id exists, this is definitely a device trigger
             : trigger.platform || trigger.trigger || trigger.domain || 'state', // Otherwise derive from available fields
         },
       });
@@ -284,7 +303,17 @@ export function convertAutomationConfigToNodes(config: any): {
     for (const [index, processedAction] of processedActions.entries()) {
       const { action, branch, parentConditionId } = processedAction;
 
-      let nodeId = action._conditionId;
+      // Type guard to ensure we can access properties safely
+      const isValidAction = (obj: unknown): obj is Record<string, unknown> => {
+        return typeof obj === 'object' && obj !== null;
+      };
+
+      if (!isValidAction(action)) {
+        console.warn(`Skipping invalid action at index ${index}`);
+        continue;
+      }
+
+      let nodeId = typeof action._conditionId === 'string' ? action._conditionId : undefined;
       if (!nodeId) {
         // Try to get node ID from CAFE metadata node mapping first
         const mappingKey = `action_${globalNodeIndex}`; // Use global index
@@ -308,7 +337,15 @@ export function convertAutomationConfigToNodes(config: any): {
       // Skip actions without valid node IDs when using state machine strategy
       // This happens with state machine wrappers that aren't actual flow nodes
       if (strategy === 'state-machine' && !nodeId) {
-        console.log(`C.A.F.E.: Skipping action ${index} - no valid node ID for state machine strategy`);
+        console.log(
+          `C.A.F.E.: Skipping action ${index} - no valid node ID for state machine strategy`
+        );
+        continue;
+      }
+
+      // Ensure nodeId is a string at this point
+      if (typeof nodeId !== 'string') {
+        console.warn(`Unable to determine valid nodeId for action ${index}`);
         continue;
       }
 
@@ -336,16 +373,21 @@ export function convertAutomationConfigToNodes(config: any): {
 
       // For condition nodes from if/then/else
       if (nodeType === 'condition') {
+        let conditionType = 'template';
+        if (Array.isArray(action.condition) && action.condition[0]) {
+          const firstCondition = action.condition[0];
+          if (typeof firstCondition === 'object' && firstCondition !== null && 'condition' in firstCondition) {
+            conditionType = typeof firstCondition.condition === 'string' ? firstCondition.condition : 'template';
+          }
+        }
+
         nodesToCreate.push({
           id: nodeId,
           type: 'condition',
           position: getNodePosition(nodeId, xOffset, yPosition),
           data: {
-            alias: action.alias || `Condition ${index + 1}`,
-            condition_type:
-              Array.isArray(action.condition) && action.condition[0]?.condition
-                ? action.condition[0].condition
-                : 'template',
+            alias: typeof action.alias === 'string' ? action.alias : `Condition ${index + 1}`,
+            condition_type: conditionType,
             ...action,
           },
         });
@@ -353,8 +395,10 @@ export function convertAutomationConfigToNodes(config: any): {
         // For regular action nodes
         // Determine service for different action types
         let service = 'unknown';
-        if (action.action || action.service) {
-          service = action.action || action.service;
+        if (typeof action.action === 'string') {
+          service = action.action;
+        } else if (typeof action.service === 'string') {
+          service = action.service;
         } else if (action.variables) {
           service = 'variables';
         } else if (action.delay) {
@@ -368,9 +412,17 @@ export function convertAutomationConfigToNodes(config: any): {
           type: nodeType,
           position: getNodePosition(nodeId, xOffset, yPosition),
           data: {
-            alias: action.alias || `Action ${index + 1}`,
+            alias: typeof action.alias === 'string' ? action.alias : `Action ${index + 1}`,
             service: service,
-            entity_id: action.target?.entity_id || action.entity_id,
+            entity_id: (
+              action.target && 
+              typeof action.target === 'object' && 
+              action.target !== null &&
+              'entity_id' in action.target &&
+              typeof action.target.entity_id === 'string'
+            ) ? action.target.entity_id : (
+              typeof action.entity_id === 'string' ? action.entity_id : undefined
+            ),
             data: action.data || action.service_data || {},
             target: action.target,
             delay: action.delay,

@@ -150,8 +150,6 @@ export function TraceSimulator() {
         </div>
       </div>
 
-
-
       {/* Condition overrides */}
       {conditionNodes.length > 0 && (
         <div className="space-y-2">

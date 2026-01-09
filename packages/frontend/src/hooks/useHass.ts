@@ -50,7 +50,7 @@ export interface HassAPI {
   services: Record<string, Record<string, HassService>>;
   callService: (domain: string, service: string, data?: Record<string, unknown>) => Promise<void>;
   connection?: Connection | null;
-  callApi?: (method: string, path: string, data?: any) => Promise<any>;
+  callApi?: (method: string, path: string, data?: unknown) => Promise<unknown>;
 }
 
 /**
@@ -108,29 +108,33 @@ export function useHass(forceMode?: 'remote') {
   const [isLoading, setIsLoading] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [wsConnection, setWsConnection] = useState<Connection | null>(null);
-  
+
   // Check if global external hass is available (set from custom element)
-  const hasGlobalExternalHass = globalHassInstance && (globalHassInstance as any)?.states && 
-    Object.keys((globalHassInstance as any).states).length > 0;
-  
-  logger.debug('useHass hook called with config', { 
-    configUrl: config.url, 
+  const hasGlobalExternalHass =
+    globalHassInstance &&
+    typeof globalHassInstance === 'object' &&
+    'states' in globalHassInstance &&
+    globalHassInstance.states &&
+    Object.keys(globalHassInstance.states as Record<string, unknown>).length > 0;
+
+  logger.debug('useHass hook called with config', {
+    configUrl: config.url,
     hasToken: !!config.token,
     remoteEntitiesCount: remoteEntities.length,
     isLoading,
     connectionError,
-    hasGlobalExternalHass
+    hasGlobalExternalHass,
   });
 
   // Mode detection - remote connection or defer to external hass
   const hasRemoteConfig = !!(config.url && config.token);
   const shouldUseRemote = forceMode === 'remote' || (!hasGlobalExternalHass && hasRemoteConfig);
-  
+
   logger.debug('useHass mode detection', {
     forceMode,
     hasRemoteConfig,
     hasGlobalExternalHass,
-    shouldUseRemote
+    shouldUseRemote,
   });
 
   // Save config handler
@@ -227,7 +231,7 @@ export function useHass(forceMode?: 'remote') {
         states: Object.fromEntries(remoteEntities.map((e) => [e.entity_id, e])),
         services: remoteServices,
         connection: wsConnection,
-        callApi: async (method: string, path: string, data?: any) => {
+        callApi: async (method: string, path: string, data?: unknown) => {
           if (!config.url || !config.token) {
             throw new Error('No authentication configured');
           }
@@ -262,22 +266,24 @@ export function useHass(forceMode?: 'remote') {
         },
       } as HassAPI;
     }
-    
+
     // Use global external hass if available
-    if (hasGlobalExternalHass && globalHassInstance) {
+    if (hasGlobalExternalHass && globalHassInstance && typeof globalHassInstance === 'object') {
       logger.debug('Using global external hass data');
-      const globalHass = globalHassInstance as any;
+      const globalHass = globalHassInstance as Record<string, unknown>;
       return {
-        states: globalHass.states || {},
-        services: globalHass.services || {},
-        connection: globalHass.connection,
-        callApi: globalHass.callApi,
-        callService: globalHass.callService || (async () => {
-          logger.warn('No callService method available in global hass');
-        }),
+        states: (globalHass.states as Record<string, unknown>) || {},
+        services: (globalHass.services as Record<string, unknown>) || {},
+        connection: globalHass.connection || null,
+        callApi: globalHass.callApi as ((method: string, path: string, data?: unknown) => Promise<unknown>) || undefined,
+        callService:
+          (globalHass.callService as ((domain: string, service: string, data?: Record<string, unknown>) => Promise<void>)) ||
+          (async () => {
+            logger.warn('No callService method available in global hass');
+          }),
       } as HassAPI;
     }
-    
+
     // No connection available
     logger.warn('No Home Assistant connection available');
     return {
@@ -330,7 +336,7 @@ export function useHass(forceMode?: 'remote') {
 
   // Send raw WebSocket message
   const sendMessage = useCallback(
-    async <T = any>(message: Record<string, unknown> & { type: string }): Promise<T> => {
+    async <T = unknown>(message: Record<string, unknown> & { type: string }): Promise<T> => {
       // Try WebSocket connection first
       if (wsConnection) {
         return wsConnection.sendMessagePromise(message) as Promise<T>;
@@ -358,19 +364,19 @@ export function useHass(forceMode?: 'remote') {
 }
 
 // Global hass accessor for use outside React components (like zustand stores)
-let globalHassInstance: any = null;
+let globalHassInstance: unknown = null;
 
-export function setGlobalHass(hass: any) {
+export function setGlobalHass(hass: unknown) {
   logger.debug('Setting global hass instance', {
-    hasStates: !!hass?.states,
-    statesCount: hass?.states ? Object.keys(hass.states).length : 0,
-    hasServices: !!hass?.services,
-    servicesCount: hass?.services ? Object.keys(hass.services).length : 0,
-    hasConnection: !!hass?.connection,
-    hasCallApi: !!hass?.callApi,
-    hasCallService: !!hass?.callService,
-    hasAuth: !!hass?.auth,
-    hasUser: !!hass?.user
+    hasStates: !!(hass && typeof hass === 'object' && 'states' in hass),
+    statesCount: hass && typeof hass === 'object' && 'states' in hass && hass.states ? Object.keys(hass.states as Record<string, unknown>).length : 0,
+    hasServices: !!(hass && typeof hass === 'object' && 'services' in hass),
+    servicesCount: hass && typeof hass === 'object' && 'services' in hass && hass.services ? Object.keys(hass.services as Record<string, unknown>).length : 0,
+    hasConnection: !!(hass && typeof hass === 'object' && 'connection' in hass),
+    hasCallApi: !!(hass && typeof hass === 'object' && 'callApi' in hass),
+    hasCallService: !!(hass && typeof hass === 'object' && 'callService' in hass),
+    hasAuth: !!(hass && typeof hass === 'object' && 'auth' in hass),
+    hasUser: !!(hass && typeof hass === 'object' && 'user' in hass),
   });
   globalHassInstance = hass;
 }
@@ -379,15 +385,15 @@ export function getGlobalHass() {
   // Try to get from our global instance first
   if (globalHassInstance) {
     logger.debug('Retrieved global hass instance', {
-      statesCount: globalHassInstance?.states ? Object.keys(globalHassInstance.states).length : 0
+      statesCount: globalHassInstance && typeof globalHassInstance === 'object' && 'states' in globalHassInstance && globalHassInstance.states ? Object.keys(globalHassInstance.states as Record<string, unknown>).length : 0,
     });
     return globalHassInstance;
   }
 
   // Fallback: try to get from window.hass if available
-  if (typeof window !== 'undefined' && (window as any).hass) {
+  if (typeof window !== 'undefined' && typeof window === 'object' && 'hass' in window && window.hass) {
     logger.debug('Retrieved hass from window.hass fallback');
-    return (window as any).hass;
+    return window.hass;
   }
 
   logger.warn('No global hass instance available');

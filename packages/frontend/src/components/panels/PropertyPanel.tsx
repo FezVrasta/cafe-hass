@@ -1,11 +1,11 @@
+import type { FlowNode } from '@cafe/shared';
 import { Trash2 } from 'lucide-react';
 import { useMemo } from 'react';
-import type { FlowNode } from '@cafe/shared';
 import { FormField } from '@/components/forms/FormField';
-import type { HassEntity } from '@/hooks/useHass';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { getHandledProperties } from '@/config/handledProperties';
+import type { HassEntity } from '@/hooks/useHass';
 import { useHass } from '@/hooks/useHass';
 import { useFlowStore } from '@/store/flow-store';
 import { NodeFields } from './NodeFields';
@@ -48,22 +48,22 @@ export function PropertyPanel() {
     if (!selectedNode) {
       return getHandledProperties('trigger', []);
     }
-    
+
     const baseHandled = getHandledProperties(selectedNode.type || 'trigger', []);
-    const nodeData = selectedNode.data as Record<string, unknown>;
-    
+    const nodeData = selectedNode.data;
+
     // Check if this is a device-based node (trigger or condition with device_id)
-    const platform = nodeData.platform as string || '';
-    const deviceId = nodeData.device_id as string || '';
+    const platform = typeof nodeData.platform === 'string' ? nodeData.platform : '';
+    const deviceId = typeof nodeData.device_id === 'string' ? nodeData.device_id : '';
     const isDeviceNode = platform === 'device' || deviceId;
-    
+
     // For device nodes, exclude ALL properties to prevent duplicates with API-driven fields
     if (isDeviceNode && (selectedNode.type === 'trigger' || selectedNode.type === 'condition')) {
       const allNodeProperties = Object.keys(nodeData);
       const handledSet = new Set([...baseHandled, ...allNodeProperties]);
       return handledSet;
     }
-    
+
     return baseHandled;
   }, [selectedNode]);
 
@@ -107,14 +107,18 @@ export function PropertyPanel() {
       <FormField label="Alias (Display Name)">
         <Input
           type="text"
-          value={((selectedNode.data as Record<string, unknown>).alias as string) || ''}
+          value={typeof selectedNode.data.alias === 'string' ? selectedNode.data.alias : ''}
           onChange={(e) => handleChange('alias', e.target.value)}
           placeholder="Optional display name"
         />
       </FormField>
 
       {/* Node-specific fields */}
-      <NodeFields node={selectedNode as FlowNode} onChange={handleChange} entities={effectiveEntities} />
+      <NodeFields
+        node={selectedNode as FlowNode}
+        onChange={handleChange}
+        entities={effectiveEntities}
+      />
 
       {/* Additional properties editor */}
       <PropertyEditor

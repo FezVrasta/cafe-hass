@@ -271,6 +271,10 @@ export const useFlowStore = create<FlowState>((set, get) => ({
     const { getHomeAssistantAPI } = await import('@/lib/ha-api');
     const hass = getGlobalHass();
 
+    if (!hass) {
+      throw new Error('No Home Assistant connection available');
+    }
+
     const api = getHomeAssistantAPI(hass);
 
     set({ isSaving: true });
@@ -485,7 +489,7 @@ export const useFlowStore = create<FlowState>((set, get) => ({
   showTrace: (traceData) => {
     const traceExecutionPath: string[] = [];
     const traceTimestamps: Record<string, string> = {};
-    
+
     // Extract execution path and timestamps from trace data
     if (traceData?.trace) {
       // Get current flow nodes grouped by type and sorted by position
@@ -497,7 +501,7 @@ export const useFlowStore = create<FlowState>((set, get) => ({
         wait: [],
         delay: [],
       };
-      
+
       // Group nodes by type and sort them (could be by y-position or order in array)
       for (const node of state.nodes) {
         const nodeType = node.type as keyof typeof nodesByType;
@@ -505,7 +509,7 @@ export const useFlowStore = create<FlowState>((set, get) => ({
           nodesByType[nodeType].push(node);
         }
       }
-      
+
       // Sort each group by y-position to match likely execution order
       for (const type in nodesByType) {
         nodesByType[type].sort((a, b) => a.position.y - b.position.y);
@@ -515,23 +519,23 @@ export const useFlowStore = create<FlowState>((set, get) => ({
       const sortedSteps = Object.entries(traceData.trace)
         .flatMap(([path, steps]) => {
           if (Array.isArray(steps)) {
-            return steps.map(step => ({ path, ...step }));
+            return steps.map((step) => ({ path, ...step }));
           }
           return [];
         })
         .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-      
+
       // Map trace paths to actual node IDs
       for (const step of sortedSteps) {
         const pathParts = step.path.split('/');
         const nodeType = pathParts[0]; // trigger, condition, action, etc.
         const nodeIndex = parseInt(pathParts[1], 10); // 0, 1, 2, etc.
-        
+
         // Find the corresponding node in our flow
         const nodesOfType = nodesByType[nodeType] || [];
         if (nodesOfType[nodeIndex]) {
           const nodeId = nodesOfType[nodeIndex].id;
-          
+
           if (!traceExecutionPath.includes(nodeId)) {
             traceExecutionPath.push(nodeId);
             traceTimestamps[nodeId] = step.timestamp;
@@ -539,22 +543,23 @@ export const useFlowStore = create<FlowState>((set, get) => ({
         }
       }
     }
-    
-    set({ 
-      isShowingTrace: true, 
-      traceData, 
-      traceExecutionPath, 
+
+    set({
+      isShowingTrace: true,
+      traceData,
+      traceExecutionPath,
       traceTimestamps,
-      activeNodeId: null 
+      activeNodeId: null,
     });
   },
-  hideTrace: () => set({ 
-    isShowingTrace: false, 
-    traceData: null, 
-    traceExecutionPath: [], 
-    traceTimestamps: {},
-    activeNodeId: null 
-  }),
+  hideTrace: () =>
+    set({
+      isShowingTrace: false,
+      traceData: null,
+      traceExecutionPath: [],
+      traceTimestamps: {},
+      activeNodeId: null,
+    }),
   clearTraceExecutionPath: () => set({ traceExecutionPath: [], traceTimestamps: {} }),
 
   setSimulationSpeed: (speed) => set({ simulationSpeed: speed }),

@@ -115,7 +115,8 @@ export function DynamicFieldRenderer({
     const selectorKeys = Object.keys(field.selector);
     if (selectorKeys.length > 0) {
       selectorType = selectorKeys[0];
-      selectorConfig = (field.selector as any)[selectorType] || {};
+      const selector = field.selector as Record<string, unknown>;
+      selectorConfig = (selector[selectorType] as Record<string, unknown>) || {};
     }
   }
 
@@ -220,7 +221,14 @@ export function DynamicFieldRenderer({
                           <input
                             type="checkbox"
                             checked={isSelected}
-                            onChange={() => {}}
+                            onChange={(e) => {
+                              // Handle multi-select toggle
+                              const currentValues = Array.isArray(value) ? value : [];
+                              const newValues = e.target.checked 
+                                ? [...currentValues, option.value]
+                                : currentValues.filter(v => v !== option.value);
+                              onChange(newValues);
+                            }}
                             className="h-4 w-4"
                           />
                           <span>{option.label}</span>

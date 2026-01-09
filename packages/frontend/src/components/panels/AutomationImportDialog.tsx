@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { useHass, type HassEntity } from '@/hooks/useHass';
+import { type HassEntity, useHass } from '@/hooks/useHass';
 import { convertAutomationConfigToNodes } from '@/lib/automation-converter';
 import { getHomeAssistantAPI } from '@/lib/ha-api';
 import { useFlowStore } from '@/store/flow-store';

@@ -127,7 +127,7 @@ export const TriggerNode = memo(function TriggerNode({ id, data, selected }: Tri
         </div>
         <span className="font-semibold text-amber-900 text-sm">{displayInfo.title}</span>
         {stepNumber && (
-          <div className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-amber-600 text-white text-xs font-bold">
+          <div className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-amber-600 font-bold text-white text-xs">
             {stepNumber}
           </div>
         )}

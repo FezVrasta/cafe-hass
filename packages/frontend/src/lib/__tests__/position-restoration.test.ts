@@ -29,11 +29,11 @@ describe('Position Restoration', () => {
         _cafe_metadata: {
           version: 1,
           nodes: {
-            'trigger_1767901134917_0': {
+            trigger_1767901134917_0: {
               x: 150,
               y: 200,
             },
-            'action_1767901134917_0': {
+            action_1767901134917_0: {
               x: 450,
               y: 250,
             },
@@ -46,7 +46,7 @@ describe('Position Restoration', () => {
     };
 
     // Temporarily replace console.log to capture logs
-    const logs: any[] = [];
+    const logs: unknown[][] = [];
     const originalLog = console.log;
     console.log = (...args) => {
       if (args[0]?.includes?.('C.A.F.E.:')) {
@@ -63,10 +63,16 @@ describe('Position Restoration', () => {
     expect(nodes).toHaveLength(2);
 
     // Check that logs show metadata was detected
-    const metadataLog = logs.find((log) => log[0].includes('Loading automation with metadata'));
+    const metadataLog = logs.find((log) => 
+      Array.isArray(log) && log.length > 0 && 
+      typeof log[0] === 'string' && log[0].includes('Loading automation with metadata')
+    );
     expect(metadataLog).toBeTruthy();
-    expect(metadataLog[1].hasTranspilerMetadata).toBe(true);
-    expect(metadataLog[1].savedPositionsCount).toBe(2);
+    if (metadataLog && Array.isArray(metadataLog) && metadataLog.length > 1) {
+      const metadata = metadataLog[1] as { hasTranspilerMetadata?: boolean; savedPositionsCount?: number };
+      expect(metadata.hasTranspilerMetadata).toBe(true);
+      expect(metadata.savedPositionsCount).toBe(2);
+    }
 
     // Find trigger and action nodes
     const triggerNode = nodes.find((node) => node.type === 'trigger');
@@ -118,15 +124,15 @@ describe('Position Restoration', () => {
       variables: {
         cafe_metadata: {
           node_positions: {
-            'trigger_test': { x: 500, y: 600 },
+            trigger_test: { x: 500, y: 600 },
           },
           node_mapping: {
-            'trigger_0': 'trigger_test',
+            trigger_0: 'trigger_test',
           },
         },
         _cafe_metadata: {
           nodes: {
-            'trigger_old': { x: 100, y: 100 },
+            trigger_old: { x: 100, y: 100 },
           },
         },
       },

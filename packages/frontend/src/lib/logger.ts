@@ -4,10 +4,9 @@
  */
 
 // Enable debugging by setting this to true or via localStorage
-const DEBUG_ENABLED = 
-  typeof window !== 'undefined' && 
-  (localStorage.getItem('cafe_debug') === 'true' || 
-   window.location.search.includes('debug=true'));
+const DEBUG_ENABLED =
+  typeof window !== 'undefined' &&
+  (localStorage.getItem('cafe_debug') === 'true' || window.location.search.includes('debug=true'));
 
 // Console styling for better visibility
 const styles = {
@@ -47,7 +46,7 @@ class Logger {
   /**
    * Log info message
    */
-  info(message: string, ...args: any[]) {
+  info(message: string, ...args: unknown[]) {
     if (!this.enabled) return;
     console.log(`%c${this.prefix} ${message}`, styles.info, ...args);
   }
@@ -55,7 +54,7 @@ class Logger {
   /**
    * Log warning message
    */
-  warn(message: string, ...args: any[]) {
+  warn(message: string, ...args: unknown[]) {
     if (!this.enabled) return;
     console.warn(`%c${this.prefix} ${message}`, styles.warn, ...args);
   }
@@ -63,7 +62,7 @@ class Logger {
   /**
    * Log error message
    */
-  error(message: string, ...args: any[]) {
+  error(message: string, ...args: unknown[]) {
     if (!this.enabled) return;
     console.error(`%c${this.prefix} ${message}`, styles.error, ...args);
   }
@@ -71,7 +70,7 @@ class Logger {
   /**
    * Log success message
    */
-  success(message: string, ...args: any[]) {
+  success(message: string, ...args: unknown[]) {
     if (!this.enabled) return;
     console.log(`%c${this.prefix} ${message}`, styles.success, ...args);
   }
@@ -79,7 +78,7 @@ class Logger {
   /**
    * Log debug message
    */
-  debug(message: string, ...args: any[]) {
+  debug(message: string, ...args: unknown[]) {
     if (!this.enabled) return;
     console.log(`%c${this.prefix} DEBUG: ${message}`, styles.debug, ...args);
   }
@@ -87,7 +86,7 @@ class Logger {
   /**
    * Log object with structured formatting
    */
-  object(label: string, obj: any) {
+  object(label: string, obj: unknown) {
     if (!this.enabled) return;
     console.group(`%c${this.prefix} ${label}`, styles.info);
     console.log(obj);
@@ -116,7 +115,7 @@ export const logger = new Logger();
 
 // Helper to enable debugging from browser console
 if (typeof window !== 'undefined') {
-  (window as any).cafeLogger = logger;
+  (window as unknown as Record<string, unknown>).cafeLogger = logger;
 }
 
 export default logger;

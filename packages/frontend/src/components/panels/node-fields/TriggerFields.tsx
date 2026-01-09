@@ -31,7 +31,7 @@ export function TriggerFields({ node, onChange, entities }: TriggerFieldsProps) 
 
   // If we have a device_id but platform isn't 'device', auto-correct it
   const effectivePlatform = deviceId && platform !== 'device' ? 'device' : platform;
-  
+
   // Auto-correct platform to 'device' if we detected device_id but platform is wrong
   useEffect(() => {
     if (deviceId && platform !== 'device') {
