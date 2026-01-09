@@ -23,7 +23,7 @@ async function testAutomationUpdateFlow() {
   const { addNode, onConnect } = useFlowStore.getState();
 
   addNode({
-    id: 'trigger-test',
+    id: 'trigger_test',
     type: 'trigger',
     position: { x: 100, y: 100 },
     data: {
@@ -35,7 +35,7 @@ async function testAutomationUpdateFlow() {
   });
 
   addNode({
-    id: 'action-test',
+    id: 'action_test',
     type: 'action',
     position: { x: 300, y: 100 },
     data: {
@@ -46,8 +46,8 @@ async function testAutomationUpdateFlow() {
   });
 
   onConnect({
-    source: 'trigger-test',
-    target: 'action-test',
+    source: 'trigger_test',
+    target: 'action_test',
     sourceHandle: null,
     targetHandle: null,
   });
