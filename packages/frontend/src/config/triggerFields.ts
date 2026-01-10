@@ -9,6 +9,7 @@ export interface FieldConfig {
   label: string;
   type: SelectorType;
   required: boolean;
+  multiple?: boolean;
   placeholder?: string;
   description?: string;
   options?: Array<{ value: string; label: string }>;
@@ -27,6 +28,7 @@ export const TRIGGER_PLATFORM_FIELDS: Record<TriggerPlatform, FieldConfig[]> = {
       label: 'Entity',
       type: 'entity',
       required: true,
+      multiple: true,
       description: 'The entity to monitor for state changes',
     },
     {
@@ -62,6 +64,7 @@ export const TRIGGER_PLATFORM_FIELDS: Record<TriggerPlatform, FieldConfig[]> = {
       label: 'Entity',
       type: 'entity',
       required: true,
+      multiple: true,
       description: 'The sensor entity to monitor',
     },
     {
@@ -220,6 +223,7 @@ export const TRIGGER_PLATFORM_FIELDS: Record<TriggerPlatform, FieldConfig[]> = {
       label: 'Person/Device',
       type: 'entity',
       required: true,
+      multiple: true,
       description: 'The person or device tracker to monitor',
     },
     {

@@ -1,4 +1,5 @@
 import { EntitySelector } from '@/components/ui/EntitySelector';
+import { MultiEntitySelector } from '@/components/ui/MultiEntitySelector';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -224,9 +225,9 @@ export function DynamicFieldRenderer({
                             onChange={(e) => {
                               // Handle multi-select toggle
                               const currentValues = Array.isArray(value) ? value : [];
-                              const newValues = e.target.checked 
+                              const newValues = e.target.checked
                                 ? [...currentValues, option.value]
-                                : currentValues.filter(v => v !== option.value);
+                                : currentValues.filter((v) => v !== option.value);
                               onChange(newValues);
                             }}
                             className="h-4 w-4"
@@ -281,7 +282,29 @@ export function DynamicFieldRenderer({
       }
 
       // Entity picker
-      case 'entity':
+      case 'entity': {
+        // Check for multiple entities support from both static and dynamic configs
+        const isMultiple =
+          ('multiple' in field && field.multiple) || selectorConfig.multiple === true;
+
+        if (isMultiple) {
+          // Coerce value to an array, handling both strings and existing arrays
+          const values = Array.isArray(value)
+            ? value
+            : typeof value === 'string' && value
+              ? value.split(',').map((s) => s.trim())
+              : [];
+
+          return (
+            <MultiEntitySelector
+              value={values}
+              onChange={onChange}
+              entities={entities}
+              placeholder={placeholder || 'Select entities...'}
+            />
+          );
+        }
+
         return (
           <EntitySelector
             value={stringValue}
@@ -290,6 +313,7 @@ export function DynamicFieldRenderer({
             placeholder={placeholder || 'Select entity...'}
           />
         );
+      }
 
       // Template editor
       case 'template':

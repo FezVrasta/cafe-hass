@@ -27,7 +27,7 @@ export const ActionNode = memo(function ActionNode({ id, data, selected }: Actio
     if (!data.target) return null;
     const entityId = data.target.entity_id;
     if (Array.isArray(entityId)) {
-      return entityId.length > 1 ? `${entityId[0]} +${entityId.length - 1}` : entityId[0];
+      return entityId.join(', ');
     }
     return entityId;
   })();

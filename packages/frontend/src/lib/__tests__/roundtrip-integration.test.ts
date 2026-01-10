@@ -135,7 +135,7 @@ describe('Roundtrip Import/Export Tests', () => {
 
           // Validate core trigger properties are preserved
           if (originalTrigger.entity_id)
-            expect(triggerObj.entity_id).toBe(originalTrigger.entity_id);
+            expect(triggerObj.entity_id).toStrictEqual(originalTrigger.entity_id);
           if (originalTrigger.device_id)
             expect(triggerObj.device_id).toBe(originalTrigger.device_id);
           if (originalTrigger.domain) expect(triggerObj.domain).toBe(originalTrigger.domain);

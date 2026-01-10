@@ -1,6 +1,7 @@
 import { memo } from 'react';
 import { useHass, type HassEntity } from '@/hooks/useHass';
 import { EntitySelector } from '@/components/ui/EntitySelector';
+import { MultiEntitySelector } from '@/components/ui/MultiEntitySelector';
 import type { ConditionNodeData } from '@/store/flow-store';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -55,9 +56,9 @@ function ConditionTypeFields({
     case 'state':
       return (
         <div className="space-y-2">
-          <EntitySelector
-            value={cond.entity_id || ''}
-            onChange={(val) => onUpdate({ ...cond, entity_id: val })}
+          <MultiEntitySelector
+            value={Array.isArray(cond.entity_id) ? cond.entity_id : cond.entity_id ? [cond.entity_id] : []}
+            onChange={(val) => onUpdate({ ...cond, entity_id: val.length === 1 ? val[0] : val })}
             entities={entities}
             placeholder="Select entity..."
             className="w-full"
@@ -73,9 +74,9 @@ function ConditionTypeFields({
     case 'numeric_state':
       return (
         <div className="space-y-2">
-          <EntitySelector
-            value={cond.entity_id || ''}
-            onChange={(val) => onUpdate({ ...cond, entity_id: val })}
+          <MultiEntitySelector
+            value={Array.isArray(cond.entity_id) ? cond.entity_id : cond.entity_id ? [cond.entity_id] : []}
+            onChange={(val) => onUpdate({ ...cond, entity_id: val.length === 1 ? val[0] : val })}
             entities={entities}
             placeholder="Select entity..."
             className="w-full"
@@ -125,9 +126,9 @@ function ConditionTypeFields({
     case 'zone':
       return (
         <div className="space-y-2">
-          <EntitySelector
-            value={cond.entity_id || ''}
-            onChange={(val) => onUpdate({ ...cond, entity_id: val })}
+          <MultiEntitySelector
+            value={Array.isArray(cond.entity_id) ? cond.entity_id : cond.entity_id ? [cond.entity_id] : []}
+            onChange={(val) => onUpdate({ ...cond, entity_id: val.length === 1 ? val[0] : val })}
             entities={entities.filter((e) => e.entity_id.startsWith('person.'))}
             placeholder="Select person..."
             className="w-full"
@@ -169,9 +170,9 @@ function ConditionTypeFields({
     default:
       return (
         <div className="space-y-2">
-          <EntitySelector
-            value={cond.entity_id || ''}
-            onChange={(val) => onUpdate({ ...cond, entity_id: val })}
+          <MultiEntitySelector
+            value={Array.isArray(cond.entity_id) ? cond.entity_id : cond.entity_id ? [cond.entity_id] : []}
+            onChange={(val) => onUpdate({ ...cond, entity_id: val.length === 1 ? val[0] : val })}
             entities={entities}
             placeholder="Select entity..."
             className="w-full"

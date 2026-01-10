@@ -5,6 +5,41 @@ import path from 'path';
 import type { ConditionNode } from '@cafe/shared';
 
 describe('YamlParser', () => {
+    it('parses trigger and condition with entity_id as array', () => {
+      const yaml = `
+  alias: Array Entity Test
+  triggers:
+    - trigger: state
+      entity_id:
+        - sensor.one
+        - sensor.two
+  conditions:
+    - condition: state
+      entity_id:
+        - binary_sensor.a
+        - binary_sensor.b
+      state: 'on'
+  actions:
+    - action: light.turn_on
+      target:
+        entity_id:
+          - light.a
+          - light.b
+  `;
+      const result = yamlParser.parse(yaml);
+      expect(result.success).toBe(true);
+      expect(result.graph).toBeDefined();
+
+      const triggerNodes = result.graph!.nodes.filter((n) => n.type === 'trigger');
+      expect(triggerNodes.length).toBe(1);
+      expect(Array.isArray(triggerNodes[0].data.entity_id)).toBe(true);
+      expect(triggerNodes[0].data.entity_id).toEqual(['sensor.one', 'sensor.two']);
+
+      const conditionNodes = result.graph!.nodes.filter((n) => n.type === 'condition');
+      expect(conditionNodes.length).toBe(1);
+      expect(Array.isArray(conditionNodes[0].data.entity_id)).toBe(true);
+      expect(conditionNodes[0].data.entity_id).toEqual(['binary_sensor.a', 'binary_sensor.b']);
+    });
   it('parses 09-templates.yaml correctly', () => {
     const yamlPath = path.resolve(
       __dirname,

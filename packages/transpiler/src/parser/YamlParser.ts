@@ -71,7 +71,7 @@ function transformToNestedCondition(condition: Record<string, unknown>): NestedC
 
   return {
     condition_type: validatedType,
-    entity_id: condition.entity_id as string | undefined,
+    entity_id: (typeof condition.entity_id === 'string' || Array.isArray(condition.entity_id)) ? condition.entity_id : undefined,
     state: condition.state as string | string[] | undefined,
     above: condition.above as number | string | undefined,
     below: condition.below as number | string | undefined,
@@ -374,16 +374,29 @@ export class YamlParser {
         const nodeId = getNextNodeId('condition');
 
         try {
+          // Extract id for trigger condition type
+          const conditionType = condition.condition || 'state';
+          // entity_id can be string or string[]
+          let entity_id: string | string[] | undefined = undefined;
+          if (Array.isArray(condition.entity_id)) {
+            entity_id = condition.entity_id.slice();
+          } else if (typeof condition.entity_id === 'string') {
+            entity_id = condition.entity_id;
+          }
+          // id only for trigger condition type
+          let id: string | undefined = undefined;
+          if (conditionType === 'trigger' && typeof condition.id === 'string') {
+            id = condition.id;
+          }
           const node: ConditionNode = {
             id: nodeId,
             type: 'condition',
             position: { x: 0, y: 0 },
             data: {
               alias: condition.alias,
-              condition_type: condition.condition || 'state',
-              entity_id: condition.entity_id,
+              condition_type: conditionType,
+              entity_id,
               state: condition.state,
-              // Support both 'template' and 'value_template' (Home Assistant uses value_template)
               template: condition.template || condition.value_template,
               value_template: condition.value_template,
               after: condition.after,
@@ -398,6 +411,7 @@ export class YamlParser {
               above: condition.above,
               below: condition.below,
               attribute: condition.attribute,
+              ...(id ? { id } : {}),
             },
           };
 
@@ -701,10 +715,10 @@ export class YamlParser {
       data: {
         alias: ifAction.alias,
         condition_type: conditionType,
-        entity_id: firstCondition?.entity_id as string | undefined,
-        state: firstCondition?.state as string | undefined,
-        above: firstCondition?.above as number | undefined,
-        below: firstCondition?.below as number | undefined,
+        entity_id: (typeof firstCondition?.entity_id === 'string' || Array.isArray(firstCondition?.entity_id)) ? firstCondition?.entity_id : undefined,
+        state: firstCondition?.state as string | string[] | undefined,
+        above: firstCondition?.above as number | string | undefined,
+        below: firstCondition?.below as number | string | undefined,
         attribute: firstCondition?.attribute as string | undefined,
         template: templateValue,
         value_template: firstCondition?.value_template as string | undefined,

@@ -21,7 +21,7 @@ export const TriggerDataSchema = z
     alias: z.string().optional(),
     platform: TriggerPlatformSchema,
     // State trigger
-    entity_id: z.string().optional(),
+    entity_id: z.union([z.string(), z.array(z.string())]).optional(),
     from: z.string().optional(),
     to: z.string().optional(),
     for: z
@@ -74,7 +74,9 @@ export const TriggerNodeSchema = z.object({
   position: PositionSchema,
   data: TriggerDataSchema,
 });
-export type TriggerNode = z.infer<typeof TriggerNodeSchema>;
+export type TriggerNode = Omit<z.infer<typeof TriggerNodeSchema>, 'data'> & {
+  data: Omit<z.infer<typeof TriggerDataSchema>, 'entity_id'> & { entity_id?: string | string[] };
+};
 
 // ============================================
 // CONDITION NODE
@@ -99,7 +101,7 @@ const BaseConditionDataSchema = z.object({
     ])
     .optional(),
   // State condition
-  entity_id: z.string().optional(),
+  entity_id: z.union([z.string(), z.array(z.string())]).optional(),
   state: z.union([z.string(), z.array(z.string())]).optional(),
   // Numeric state condition
   above: z.union([z.number(), z.string()]).optional(),
@@ -145,7 +147,9 @@ export const ConditionNodeSchema = z.object({
   position: PositionSchema,
   data: ConditionDataSchema,
 });
-export type ConditionNode = z.infer<typeof ConditionNodeSchema>;
+export type ConditionNode = Omit<z.infer<typeof ConditionNodeSchema>, 'data'> & {
+  data: Omit<z.infer<typeof ConditionDataSchema>, 'entity_id'> & { entity_id?: string | string[] };
+};
 
 // ============================================
 // ACTION NODE

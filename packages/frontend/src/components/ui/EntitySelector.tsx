@@ -221,6 +221,7 @@ export function EntitySelector({
   const normalizedValue = Array.isArray(value) ? value[0] : value;
   const selectedEntity = entities.find((e) => e.entity_id === normalizedValue);
   const selectedInfo = normalizedValue ? getDomainInfo(normalizedValue) : null;
+  const isUnknown = normalizedValue && !selectedEntity;
 
   const handleSelect = (entityId: string) => {
     onChange(entityId);
@@ -258,6 +259,8 @@ export function EntitySelector({
                   </span>
                   <span className="truncate">{getEntityName(selectedEntity)}</span>
                 </>
+              ) : isUnknown ? (
+                <span className="truncate text-red-600 font-mono">{normalizedValue}</span>
               ) : (
                 <span>{placeholder}</span>
               )}
