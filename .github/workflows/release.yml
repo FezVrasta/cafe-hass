@@ -66,10 +66,11 @@ jobs:
           ls -la *.zip *.tar.gz
 
       - name: Upload Release Assets
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: |
             cafe-${{ steps.version.outputs.version }}.zip
             cafe-${{ steps.version.outputs.version }}.tar.gz
             hacs.zip
+          tag_name: ${{ github.ref_name }}
           token: ${{ secrets.GITHUB_TOKEN }}
