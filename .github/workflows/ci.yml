@@ -31,7 +31,7 @@ jobs:
         run: yarn typecheck
 
       - name: Linting
-        run: yarn lint:biome
+        run: yarn lint
 
       - name: Format checking
         run: yarn format:check
