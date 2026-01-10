@@ -233,9 +233,7 @@ export class NativeStrategy extends BaseStrategy {
           .map(mapCondition)
           .filter((c) => c && (!Array.isArray(c.conditions) || c.conditions.length > 0));
       }
-      return Object.fromEntries(
-        Object.entries(out).filter(([, v]) => v !== undefined && v !== '')
-      );
+      return Object.fromEntries(Object.entries(out).filter(([, v]) => v !== undefined && v !== ''));
     }
     return mapCondition(node.data);
   }

@@ -180,11 +180,7 @@ export const HaActionSchema: z.ZodType<HaAction> = z.lazy(() =>
         .object({
           count: z.union([z.string(), z.number()]).optional(),
           while: z.array(HaConditionSchema).optional(),
-          until: z.union([
-            z.string(),
-            z.array(z.string()),
-            z.array(HaConditionSchema)
-          ]).optional(),
+          until: z.union([z.string(), z.array(z.string()), z.array(HaConditionSchema)]).optional(),
           sequence: z.array(HaActionSchema),
         })
         .optional(),

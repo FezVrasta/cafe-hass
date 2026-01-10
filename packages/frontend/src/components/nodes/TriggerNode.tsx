@@ -102,7 +102,10 @@ export const TriggerNode = memo(function TriggerNode({ id, data, selected }: Tri
         return {
           title: data.alias || 'Zone',
           subtitle: platformLabels[platform],
-          detail: data.zone || (Array.isArray(data.entity_id) ? data.entity_id.join(', ') : data.entity_id) || null,
+          detail:
+            data.zone ||
+            (Array.isArray(data.entity_id) ? data.entity_id.join(', ') : data.entity_id) ||
+            null,
         };
 
       default:

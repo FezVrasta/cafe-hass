@@ -18,7 +18,11 @@ type HassInstance =
   | {
       states: Record<string, HassEntity>;
       services: Record<string, Record<string, unknown>>;
-      callService: (domain: string, service: string, data?: Record<string, unknown>) => Promise<void>;
+      callService: (
+        domain: string,
+        service: string,
+        data?: Record<string, unknown>
+      ) => Promise<void>;
       connection?: Connection | null;
       callApi?: (method: string, path: string, data?: Record<string, unknown>) => Promise<unknown>;
     };
@@ -301,8 +305,12 @@ export class HomeAssistantAPI {
       const automations = this.getAutomations();
       return automations.map((entity) => ({
         id: entity.entity_id.replace('automation.', ''),
-        alias: (typeof entity.attributes.friendly_name === 'string' ? entity.attributes.friendly_name : entity.entity_id),
-        description: (typeof entity.attributes.description === 'string' ? entity.attributes.description : ''),
+        alias:
+          typeof entity.attributes.friendly_name === 'string'
+            ? entity.attributes.friendly_name
+            : entity.entity_id,
+        description:
+          typeof entity.attributes.description === 'string' ? entity.attributes.description : '',
       }));
     } catch (error) {
       console.error('Failed to get automation configs:', error);

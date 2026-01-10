@@ -53,12 +53,7 @@ export function DeletableEdge({
 
   return (
     <>
-      <BaseEdge
-        id={id}
-        path={edgePath}
-        style={selectedStyle}
-        markerEnd={markerEnd}
-      />
+      <BaseEdge id={id} path={edgePath} style={selectedStyle} markerEnd={markerEnd} />
       {selected && (
         <EdgeLabelRenderer>
           <div

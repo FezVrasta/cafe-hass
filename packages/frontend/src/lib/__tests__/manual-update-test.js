@@ -10,8 +10,7 @@ async function testAutomationUpdateFlow() {
   console.log('=== Testing Automation Update Flow ===');
 
   // Step 1: Reset the flow store
-  const { reset, setAutomationId, setFlowName, updateAutomation } =
-    useFlowStore.getState();
+  const { reset, setAutomationId, setFlowName, updateAutomation } = useFlowStore.getState();
   reset();
   console.log('1. Reset flow store');
 

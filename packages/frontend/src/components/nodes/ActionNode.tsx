@@ -16,8 +16,8 @@ export const ActionNode = memo(function ActionNode({ id, data, selected }: Actio
   const stepNumber = getExecutionStepNumber(id);
 
   // Parse service into domain and service name, handle undefined
-  let domain: string | undefined ;
-  let serviceName: string | undefined ;
+  let domain: string | undefined;
+  let serviceName: string | undefined;
   if (typeof data.service === 'string' && data.service.includes('.')) {
     [domain, serviceName] = data.service.split('.');
   }

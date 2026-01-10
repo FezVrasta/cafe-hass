@@ -26,16 +26,18 @@ export function useDeviceRegistry() {
           type: 'config/device_registry/list',
         });
 
-        const devices = Array.isArray(deviceList) ? deviceList.map((device: unknown) => {
-          if (typeof device === 'object' && device !== null) {
-            const deviceObj = device as { id?: string; name?: string; name_by_user?: string };
-            return {
-              id: deviceObj.id || '',
-              name: deviceObj.name || deviceObj.name_by_user || deviceObj.id || '',
-            };
-          }
-          return { id: '', name: '' };
-        }) : [];
+        const devices = Array.isArray(deviceList)
+          ? deviceList.map((device: unknown) => {
+              if (typeof device === 'object' && device !== null) {
+                const deviceObj = device as { id?: string; name?: string; name_by_user?: string };
+                return {
+                  id: deviceObj.id || '',
+                  name: deviceObj.name || deviceObj.name_by_user || deviceObj.id || '',
+                };
+              }
+              return { id: '', name: '' };
+            })
+          : [];
 
         setDevices(devices);
       } catch (err) {

@@ -144,9 +144,9 @@ action:
 
           <Alert>
             <AlertDescription className="text-xs">
-              <strong>Tip:</strong> If your automation was created with C.A.F.E., node
-              positions will be preserved. Otherwise, nodes will be automatically arranged in a
-              readable layout.
+              <strong>Tip:</strong> If your automation was created with C.A.F.E., node positions
+              will be preserved. Otherwise, nodes will be automatically arranged in a readable
+              layout.
             </AlertDescription>
           </Alert>
         </div>

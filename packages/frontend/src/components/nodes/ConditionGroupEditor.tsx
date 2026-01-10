@@ -57,7 +57,13 @@ function ConditionTypeFields({
       return (
         <div className="space-y-2">
           <MultiEntitySelector
-            value={Array.isArray(cond.entity_id) ? cond.entity_id : cond.entity_id ? [cond.entity_id] : []}
+            value={
+              Array.isArray(cond.entity_id)
+                ? cond.entity_id
+                : cond.entity_id
+                  ? [cond.entity_id]
+                  : []
+            }
             onChange={(val) => onUpdate({ ...cond, entity_id: val.length === 1 ? val[0] : val })}
             entities={entities}
             placeholder="Select entity..."
@@ -75,7 +81,13 @@ function ConditionTypeFields({
       return (
         <div className="space-y-2">
           <MultiEntitySelector
-            value={Array.isArray(cond.entity_id) ? cond.entity_id : cond.entity_id ? [cond.entity_id] : []}
+            value={
+              Array.isArray(cond.entity_id)
+                ? cond.entity_id
+                : cond.entity_id
+                  ? [cond.entity_id]
+                  : []
+            }
             onChange={(val) => onUpdate({ ...cond, entity_id: val.length === 1 ? val[0] : val })}
             entities={entities}
             placeholder="Select entity..."
@@ -117,7 +129,7 @@ function ConditionTypeFields({
     case 'trigger':
       return (
         <Input
-          value={(cond as Record<string, unknown>).id as string || ''}
+          value={((cond as Record<string, unknown>).id as string) || ''}
           onChange={(e) => onUpdate({ ...cond, id: e.target.value } as ConditionNodeData)}
           placeholder="Trigger ID (e.g., arriving, leaving)"
         />
@@ -127,7 +139,13 @@ function ConditionTypeFields({
       return (
         <div className="space-y-2">
           <MultiEntitySelector
-            value={Array.isArray(cond.entity_id) ? cond.entity_id : cond.entity_id ? [cond.entity_id] : []}
+            value={
+              Array.isArray(cond.entity_id)
+                ? cond.entity_id
+                : cond.entity_id
+                  ? [cond.entity_id]
+                  : []
+            }
             onChange={(val) => onUpdate({ ...cond, entity_id: val.length === 1 ? val[0] : val })}
             entities={entities.filter((e) => e.entity_id.startsWith('person.'))}
             placeholder="Select person..."
@@ -171,7 +189,13 @@ function ConditionTypeFields({
       return (
         <div className="space-y-2">
           <MultiEntitySelector
-            value={Array.isArray(cond.entity_id) ? cond.entity_id : cond.entity_id ? [cond.entity_id] : []}
+            value={
+              Array.isArray(cond.entity_id)
+                ? cond.entity_id
+                : cond.entity_id
+                  ? [cond.entity_id]
+                  : []
+            }
             onChange={(val) => onUpdate({ ...cond, entity_id: val.length === 1 ? val[0] : val })}
             entities={entities}
             placeholder="Select entity..."
@@ -220,12 +244,7 @@ function ConditionCard({
   };
 
   return (
-    <div
-      className={cn(
-        'space-y-3 rounded-md border bg-card p-3',
-        depth > 0 && 'bg-muted/30'
-      )}
-    >
+    <div className={cn('space-y-3 rounded-md border bg-card p-3', depth > 0 && 'bg-muted/30')}>
       {/* Header row: type selector and delete button */}
       <div className="flex items-center justify-between gap-2">
         <Select value={cond.condition_type || 'state'} onValueChange={handleTypeChange}>
@@ -301,12 +320,7 @@ export const ConditionGroupEditor = memo(function ConditionGroupEditor({
           />
         ))
       )}
-      <Button
-        size="sm"
-        variant="outline"
-        onClick={handleAdd}
-        className="w-full"
-      >
+      <Button size="sm" variant="outline" onClick={handleAdd} className="w-full">
         <Plus className="mr-1 h-4 w-4" />
         Add Condition
       </Button>

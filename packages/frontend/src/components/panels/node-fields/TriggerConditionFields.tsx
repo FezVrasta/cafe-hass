@@ -16,11 +16,7 @@ export function TriggerConditionFields({ node, onChange }: TriggerConditionField
   const triggerId = getNodeDataString(node, 'id');
 
   return (
-    <FormField
-      label="Trigger ID"
-      required
-      description="The ID of the trigger to match"
-    >
+    <FormField label="Trigger ID" required description="The ID of the trigger to match">
       <Input
         value={triggerId}
         onChange={(e) => onChange('id', e.target.value)}

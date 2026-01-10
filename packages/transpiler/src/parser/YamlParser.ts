@@ -380,14 +380,14 @@ export class YamlParser {
           // Extract id for trigger condition type
           const conditionType = condition.condition || 'state';
           // entity_id can be string or string[]
-          let entity_id: string | string[] | undefined ;
+          let entity_id: string | string[] | undefined;
           if (Array.isArray(condition.entity_id)) {
             entity_id = condition.entity_id.slice();
           } else if (typeof condition.entity_id === 'string') {
             entity_id = condition.entity_id;
           }
           // id only for trigger condition type
-          let id: string | undefined ;
+          let id: string | undefined;
           if (conditionType === 'trigger' && typeof condition.id === 'string') {
             id = condition.id;
           }

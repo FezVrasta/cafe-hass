@@ -68,9 +68,7 @@ export const ConditionNode = memo(function ConditionNode({
         </div>
         {data.entity_id && (
           <div className="truncate opacity-75">
-            {Array.isArray(data.entity_id)
-              ? data.entity_id.join(', ')
-              : data.entity_id}
+            {Array.isArray(data.entity_id) ? data.entity_id.join(', ') : data.entity_id}
           </div>
         )}
         {data.state && <div className="opacity-75">= {data.state}</div>}

@@ -110,7 +110,7 @@ describe('Metadata Persistence', () => {
 
       // Act: Export to YAML
       const result = transpiler.transpile(originalFlow);
-      console.log(result.errors)
+      console.log(result.errors);
       expect(result.success).toBe(true);
       expect(result.yaml).toBeDefined();
 

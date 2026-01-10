@@ -192,8 +192,8 @@ function detectConvergingPaths(flow: FlowGraph): boolean {
 
       if (uniqueSources.size > 1) {
         // It's a convergence. But is it from multiple triggers?
-        const sourceNodes = [...uniqueSources].map(
-          (sourceId) => flow.nodes.find((n) => n.id === sourceId)
+        const sourceNodes = [...uniqueSources].map((sourceId) =>
+          flow.nodes.find((n) => n.id === sourceId)
         );
         const allSourcesAreTriggers = sourceNodes.every((n) => n?.type === 'trigger');
 
