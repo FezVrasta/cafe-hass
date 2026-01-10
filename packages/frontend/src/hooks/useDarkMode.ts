@@ -29,7 +29,7 @@ export function useDarkMode() {
     } else {
       logger.debug('[C.A.F.E.] Hass not available yet or no entities loaded');
     }
-  }, [hass, Object.keys(hass?.states || {}).length]);
+  }, [hass]);
 
   return isDarkMode;
 }

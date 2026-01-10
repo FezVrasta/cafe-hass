@@ -11,7 +11,7 @@ export default defineConfig({
       jsAssetsFilterFunction: function customJsAssetsfilterFunction(outputChunk) {
         return outputChunk.isEntry;
       },
-      injectCode: (cssCode: string, options) => {
+      injectCode: (cssCode: string, _options) => {
         return `try{
           if(typeof window != 'undefined'){
             window.__CAFE_CSS__ = ${cssCode};

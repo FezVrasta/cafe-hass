@@ -216,9 +216,9 @@ export function FlowCanvas() {
         {isSimulating && (
           <Panel
             position="top-center"
-            className="rounded-lg border border-green-300 dark:border-green-700 bg-green-100 dark:bg-green-950 px-4 py-2"
+            className="rounded-lg border border-green-300 bg-green-100 px-4 py-2 dark:border-green-700 dark:bg-green-950"
           >
-            <div className="flex items-center gap-2 font-medium text-green-800 dark:text-green-200 text-sm">
+            <div className="flex items-center gap-2 font-medium text-green-800 text-sm dark:text-green-200">
               <div className="h-2 w-2 animate-pulse rounded-full bg-green-500" />
               Simulating execution...
             </div>
@@ -228,9 +228,9 @@ export function FlowCanvas() {
         {isShowingTrace && !isSimulating && (
           <Panel
             position="top-center"
-            className="rounded-lg border border-orange-300 dark:border-orange-700 bg-orange-100 dark:bg-orange-950 px-4 py-2"
+            className="rounded-lg border border-orange-300 bg-orange-100 px-4 py-2 dark:border-orange-700 dark:bg-orange-950"
           >
-            <div className="flex items-center gap-2 font-medium text-orange-800 dark:text-orange-200 text-sm">
+            <div className="flex items-center gap-2 font-medium text-orange-800 text-sm dark:text-orange-200">
               <div className="h-2 w-2 rounded-full bg-orange-500" />
               Showing trace execution ({traceExecutionPath.length} steps)
             </div>
