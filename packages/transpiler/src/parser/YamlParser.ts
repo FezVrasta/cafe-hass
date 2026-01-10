@@ -46,7 +46,7 @@ export class YamlParser {
 
     try {
       // Step 1: Parse YAML string
-      const parsed = yamlLoad(yamlString) as any;
+      const parsed = yamlLoad(yamlString) as Record<string, unknown>;
 
       if (!parsed || typeof parsed !== 'object') {
         return {
@@ -69,7 +69,7 @@ export class YamlParser {
       const metadataNodeIds = metadata ? Object.keys(metadata.nodes) : [];
 
       // Step 5: Parse nodes and edges from YAML structure
-      const { nodes, edges } = this.parseAutomationStructure(content, warnings, metadataNodeIds);
+      const { nodes, edges } = this.parseAutomationStructure((content as Record<string, unknown>), warnings, metadataNodeIds);
 
       // Step 6: Apply positions from metadata or generate heuristic layout
       let nodesWithPositions: FlowNode[];
@@ -83,17 +83,17 @@ export class YamlParser {
       // Step 6: Build FlowGraph object
       const graph: FlowGraph = {
         id: metadata?.graph_id || uuidv4(),
-        name: content.alias || 'Imported Automation',
-        description: content.description || '',
+        name: (content as Record<string, unknown>).alias as string || 'Imported Automation',
+        description: (content as Record<string, unknown>).description as string || '',
         nodes: nodesWithPositions,
         edges,
         metadata: {
-          mode: content.mode || 'single',
-          max: content.max,
-          max_exceeded: content.max_exceeded,
-          initial_state: content.initial_state,
-          hide_entity: content.hide_entity,
-          trace: content.trace,
+          mode: ((content as Record<string, unknown>).mode as 'single' | 'restart' | 'queued' | 'parallel') || 'single',
+          max: (content as Record<string, unknown>).max as number | undefined,
+          max_exceeded: (content as Record<string, unknown>).max_exceeded as 'silent' | 'warning' | 'critical' | undefined,
+          initial_state: (content as Record<string, unknown>).initial_state as boolean,
+          hide_entity: (content as Record<string, unknown>).hide_entity as boolean | undefined,
+          trace: (content as Record<string, unknown>).trace as { stored_traces?: number } | undefined,
         },
         version: 1 as const,
       };
@@ -141,19 +141,20 @@ export class YamlParser {
   /**
    * Extract C.A.F.E. metadata from variables section
    */
-  private extractMetadata(parsed: any): FlowAutomatorMetadata | null {
+  private extractMetadata(parsed: Record<string, unknown>): FlowAutomatorMetadata | null {
     try {
+      const parsedObj = parsed as Record<string, unknown>;
       const variables =
-        parsed.variables || parsed.script?.[Object.keys(parsed.script)[0]]?.variables;
+        parsedObj.variables || ((parsedObj.script as Record<string, unknown>)?.[Object.keys(parsedObj.script as Record<string, unknown>)[0]] as Record<string, unknown> | undefined)?.variables;
 
-      if (variables?._cafe_metadata) {
-        const metadata = variables._cafe_metadata;
+      if (variables && typeof variables === 'object' && '_cafe_metadata' in variables) {
+        const metadata = (variables as Record<string, unknown>)._cafe_metadata;
         // Validate metadata structure
         if (
           typeof metadata === 'object' &&
           metadata !== null &&
-          typeof metadata.nodes === 'object' &&
-          metadata.nodes !== null
+          typeof (metadata as Record<string, unknown>).nodes === 'object' &&
+          (metadata as Record<string, unknown>).nodes !== null
         ) {
           return metadata as FlowAutomatorMetadata;
         }
@@ -168,16 +169,16 @@ export class YamlParser {
   /**
    * Extract script content from script wrapper
    */
-  private extractScriptContent(parsed: any): any {
-    const scriptName = Object.keys(parsed.script)[0];
-    return parsed.script[scriptName] || {};
+  private extractScriptContent(parsed: Record<string, unknown>):  unknown {
+    const scriptName = Object.keys((parsed as Record<string, unknown>).script as Record<string, unknown>)[0];
+    return ((parsed as Record<string, unknown>).script as Record<string, unknown>)[scriptName];
   }
 
   /**
    * Parse automation structure into nodes and edges
    */
   private parseAutomationStructure(
-    content: any,
+    content: Record<string, unknown>,
     warnings: string[],
     metadataNodeIds: string[]
   ): { nodes: FlowNode[]; edges: FlowEdge[] } {
@@ -195,7 +196,7 @@ export class YamlParser {
     };
 
     // Parse triggers (support both 'trigger' and 'triggers')
-    const triggerData = content.triggers || content.trigger;
+    const triggerData = (content as Record<string, unknown>).triggers || (content as Record<string, unknown>).trigger;
     if (!triggerData) {
       warnings.push('No triggers found in automation');
       return { nodes, edges };
@@ -255,7 +256,7 @@ export class YamlParser {
    * Parse trigger configurations
    */
   private parseTriggers(
-    triggers: any[],
+    triggers: Record<string, unknown>[],
     warnings: string[],
     getNextNodeId: (type: string) => string
   ): FlowNode[] {
@@ -273,23 +274,22 @@ export class YamlParser {
             type: 'trigger',
             position: { x: 0, y: 0 }, // Will be positioned later
             data: {
-              alias: trigger.alias,
-              platform: platform as any,
-              entity_id: trigger.entity_id,
-              from: trigger.from,
-              to: trigger.to,
-              for: trigger.for,
-              at: trigger.at,
-              event_type: trigger.event_type,
-              event_data: trigger.event_data,
-              above: trigger.above,
-              below: trigger.below,
-              value_template: trigger.value_template,
-              template: trigger.template,
-              webhook_id: trigger.webhook_id,
-              zone: trigger.zone,
-              topic: trigger.topic,
-              payload: trigger.payload,
+              alias: (trigger as Record<string, undefined>).alias,
+              platform: (platform as "state" | "time" | "time_pattern" | "event" | "mqtt" | "webhook" | "sun" | "zone" | "numeric_state" | "template" | "homeassistant" | "device"),              entity_id: (trigger as Record<string, undefined>).entity_id,
+              from: (trigger as Record<string, undefined>).from,
+              to: (trigger as Record<string, undefined>).to,
+              for: (trigger as Record<string, undefined>).for,
+              at: (trigger as Record<string, undefined>).at,
+              event_type: (trigger as Record<string, undefined>).event_type,
+              event_data: (trigger as Record<string, undefined>).event_data,
+              above: (trigger as Record<string, undefined>).above,
+              below: (trigger as Record<string, undefined>).below,
+              value_template: (trigger as Record<string, undefined>).value_template,
+              template: (trigger as Record<string, undefined>).template,
+              webhook_id: (trigger as Record<string, undefined>).webhook_id,
+              zone: (trigger as Record<string, undefined>).zone,
+              topic: (trigger as Record<string, undefined>).topic,
+              payload: (trigger as Record<string, undefined>).payload,
             },
           };
 
@@ -305,7 +305,7 @@ export class YamlParser {
    * Parse condition configurations
    */
   private parseConditions(
-    conditions: any[],
+    conditions: Record<string, unknown>[],
     warnings: string[],
     getNextNodeId: (type: string) => string
   ): { nodes: ConditionNode[]; edges: FlowEdge[]; outputNodeIds: string[] } {
@@ -324,18 +324,18 @@ export class YamlParser {
             type: 'condition',
             position: { x: 0, y: 0 },
             data: {
-              alias: condition.alias,
-              condition_type: condition.condition || 'state',
-              entity_id: condition.entity_id,
-              state: condition.state,
-              template: condition.template,
-              after: condition.after,
-              before: condition.before,
-              weekday: condition.weekday,
-              after_offset: condition.after_offset,
-              before_offset: condition.before_offset,
-              zone: condition.zone,
-              conditions: condition.conditions,
+              alias: (condition as Record<string, undefined>).alias,
+              condition_type: (condition.condition as "template" | "zone" | "state" | "numeric_state" | "sun" | "time" | "device" | "and" | "or" | "not") || 'state',
+              entity_id: (condition as Record<string, undefined>).entity_id,
+              state: (condition as Record<string, undefined>).state,
+              template: (condition as Record<string, undefined>).template,
+              after: (condition as Record<string, undefined>).after,
+              before: (condition as Record<string, undefined>).before,
+              weekday: (condition as Record<string, undefined>).weekday,
+              after_offset: (condition as Record<string, undefined>).after_offset,
+              before_offset: (condition as Record<string, undefined>).before_offset,
+              zone: (condition as Record<string, undefined>).zone,
+              conditions: (condition as Record<string, undefined>).conditions,
             },
           };
 
@@ -343,8 +343,18 @@ export class YamlParser {
           outputNodeIds.push(nodeId);
         } catch (error) {
           warnings.push(`Failed to parse condition ${index}: ${error}`);
-          const unknownNode = this.createUnknownNode(nodeId, condition);
-          nodes.push(unknownNode as any);
+          //const unknownNode = this.createUnknownNode(nodeId, condition);
+          const unknownNode: ConditionNode = {
+            id: nodeId,
+            type: 'condition',
+            position: { x: 0, y: 0 },
+            data: {
+              alias: `Unknown condition: ${JSON.stringify(condition)}`,
+              condition_type: 'template',
+              template: JSON.stringify(condition),
+            },
+          };
+          nodes.push(unknownNode);
         }
       });
 
@@ -355,7 +365,7 @@ export class YamlParser {
    * Parse action sequences (including choose blocks, delays, etc.)
    */
   private parseActions(
-    actions: any[],
+    actions: Record<string, unknown>[],
     warnings: string[],
     previousNodeIds: string[],
     getNextNodeId: (type: string) => string,
@@ -376,7 +386,7 @@ export class YamlParser {
             type: 'delay',
             position: { x: 0, y: 0 },
             data: {
-              alias: action.alias,
+              alias: (action as Record<string, undefined>).alias,
               delay: action.delay,
             },
           };
@@ -397,10 +407,10 @@ export class YamlParser {
             type: 'wait',
             position: { x: 0, y: 0 },
             data: {
-              alias: action.alias,
-              wait_template: action.wait_template,
-              timeout: action.timeout,
-              continue_on_timeout: action.continue_on_timeout,
+              alias: (action as Record<string, undefined>).alias,
+              wait_template: (action as Record<string, undefined>).wait_template,
+              timeout: (action as Record<string, undefined>).timeout,
+              continue_on_timeout: (action as Record<string, undefined>).continue_on_timeout,
             },
           };
 
@@ -434,14 +444,14 @@ export class YamlParser {
               type: 'action',
               position: { x: 0, y: 0 },
               data: {
-                alias: action.alias,
-                service: action.service || action.action,
-                target: action.target,
-                data: action.data,
-                data_template: action.data_template,
-                response_variable: action.response_variable,
-                continue_on_error: action.continue_on_error,
-                enabled: action.enabled,
+                alias: (action as Record<string, undefined>).alias,
+                service: (action.service || action.action) as string,
+                target: (action as Record<string, undefined>).target,
+                data: (action as Record<string, undefined>).data,
+                data_template: (action as Record<string, undefined>).data_template,
+                response_variable: (action as Record<string, undefined>).response_variable,
+                continue_on_error: (action as Record<string, undefined>).continue_on_error,
+                enabled: (action as Record<string, undefined>).enabled,
               },
             };
 
@@ -456,14 +466,14 @@ export class YamlParser {
           } catch (error) {
             warnings.push(`Failed to parse action ${index}: ${error}`);
             const unknownNode = this.createUnknownNode(nodeId, action);
-            nodes.push(unknownNode as any);
+            nodes.push(unknownNode);
           }
         } else {
           // Unknown action type - create unknown node
           warnings.push(`Unknown action type at index ${index}`);
           const nodeId = getNextNodeId('unknown');
           const unknownNode = this.createUnknownNode(nodeId, action);
-          nodes.push(unknownNode as any);
+          nodes.push(unknownNode);
 
           for (const prevId of currentNodeIds) {
             const sourceHandle = conditionNodeIds.has(prevId) ? 'true' : undefined;
@@ -481,7 +491,7 @@ export class YamlParser {
    * Parse choose block (condition branching in actions)
    */
   private parseChooseBlock(
-    chooseAction: any,
+    chooseAction: Record<string, unknown>,
     warnings: string[],
     previousNodeIds: string[],
     getNextNodeId: (type: string) => string,
@@ -496,7 +506,7 @@ export class YamlParser {
       ? chooseAction.choose
       : [chooseAction.choose];
 
-    choices.forEach((choice: any) => {
+    choices.forEach((choice: Record<string, unknown>) => {
       if (choice.conditions) {
         const conditionId = getNextNodeId('condition');
         const conditionNode: ConditionNode = {
@@ -504,8 +514,8 @@ export class YamlParser {
           type: 'condition',
           position: { x: 0, y: 0 },
           data: {
-            alias: choice.alias,
-            condition_type: choice.conditions.condition || 'template',
+            alias: (choice as Record<string, undefined>).alias,
+            condition_type: ((choice.conditions as Record<string, unknown>).condition as "template" | "state" | "time" | "sun" | "zone" | "numeric_state" | "device" | "and" | "or" | "not") || 'template',
             ...choice.conditions,
           },
         };
@@ -570,14 +580,14 @@ export class YamlParser {
   /**
    * Create an unknown node for unparseable content
    */
-  private createUnknownNode(nodeId: string, originalData: any): ActionNode {
+  private createUnknownNode(nodeId: string, originalData: Record<string, unknown>): ActionNode {
     return {
       id: nodeId,
       type: 'action',
       position: { x: 0, y: 0 },
       data: {
         alias: `Unknown: ${originalData.service || originalData.platform || 'Node'}`,
-        service: originalData.service || 'unknown.unknown',
+        service: originalData.service as string || 'unknown.unknown',
         data: originalData,
       },
     };

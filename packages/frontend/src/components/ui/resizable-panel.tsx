@@ -70,6 +70,7 @@ export function ResizablePanel({
       style={{ width }}
     >
       {/* Resize handle */}
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: this element is intentionally interactive */}
       <div
         onMouseDown={handleMouseDown}
         className={cn(

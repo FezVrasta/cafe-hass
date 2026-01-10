@@ -13,6 +13,7 @@ export function CSSInjector({ children }: { children?: React.ReactNode }) {
     <div className={isDarkMode ? 'dark contents' : 'contents'}>
       <style
         data-cafe-injected="true"
+        // biome-ignore lint/security/noDangerouslySetInnerHtml: Need to inject CSS dynamically
         dangerouslySetInnerHTML={{ __html: cssCode?.replace(':root', ':host') || '' }}
       />
       {children}

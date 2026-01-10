@@ -520,7 +520,7 @@ export const useFlowStore = create<FlowState>((set, get) => ({
       const sortedSteps = Object.entries(traceData.trace)
         .flatMap(([path, steps]) => {
           if (Array.isArray(steps)) {
-            return steps.map((step) => ({ path, ...step }));
+            return steps.map((step) => ({ ...step, path }));
           }
           return [];
         })
