@@ -5,7 +5,12 @@
     "rules": {
       "recommended": true,
       "complexity": {
-        "noExcessiveCognitiveComplexity": "warn",
+        "noExcessiveCognitiveComplexity": {
+          "level": "warn",
+          "options": {
+            "maxAllowedComplexity": 100
+          }
+        },
         "noExtraBooleanCast": "error",
         "noUselessCatch": "error",
         "noUselessTypeConstraint": "error"

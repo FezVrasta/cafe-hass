@@ -13,7 +13,7 @@
     "test:cli": "yarn workspace @cafe/transpiler cli",
     "lint": "turbo run lint",
     "lint:biome": "biome lint .",
-    "lint:fix": "biome lint --apply .",
+    "lint:fix": "biome lint --write .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "format:biome": "biome format --write .",
