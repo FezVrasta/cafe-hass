@@ -94,7 +94,7 @@ export function analyzeTopology(flow: FlowGraph): TopologyAnalysis {
   // - Single entry point
   // - No cross-links
   // - No converging paths (except for condition branches that merge)
-  const isTree = !hasCycles && entryNodes.length === 1 && !hasCrossLinks && !hasConvergingPaths;
+  const isTree = !hasCycles && !hasCrossLinks && !hasConvergingPaths;
 
   // Determine recommended strategy
   const recommendedStrategy = isTree ? 'native' : 'state-machine';
@@ -185,17 +185,21 @@ function detectConvergingPaths(flow: FlowGraph): boolean {
     incomingCount.set(edge.target, count + 1);
   }
 
-  // If any node has more than one incoming edge, we have converging paths
-  // Exception: condition nodes can have both true/false edges from same source
   for (const [nodeId, count] of incomingCount) {
     if (count > 1) {
-      // Check if all incoming edges are from the same condition node
       const incomingEdges = flow.edges.filter((e) => e.target === nodeId);
       const uniqueSources = new Set(incomingEdges.map((e) => e.source));
 
-      // If incoming edges are from different sources, it's a true convergence
       if (uniqueSources.size > 1) {
-        return true;
+        // It's a convergence. But is it from multiple triggers?
+        const sourceNodes = [...uniqueSources].map(
+          (sourceId) => flow.nodes.find((n) => n.id === sourceId)
+        );
+        const allSourcesAreTriggers = sourceNodes.every((n) => n?.type === 'trigger');
+
+        if (!allSourcesAreTriggers) {
+          return true; // It's a true convergence that requires state-machine
+        }
       }
     }
   }

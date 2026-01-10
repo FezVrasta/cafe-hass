@@ -198,11 +198,7 @@ function App({ hass: externalHass, narrow = false, route, panel }: AppProps = {}
       };
     }
     if (isExternalHass) {
-      return {
-        label: 'Panel Mode',
-        className: 'bg-green-100 text-green-700',
-        icon: <Wifi className="h-3 w-3" />,
-      };
+      return null;
     }
     return null;
   };
@@ -249,14 +245,16 @@ function App({ hass: externalHass, narrow = false, route, panel }: AppProps = {}
                     </Badge>
                   )}
 
-                  <Button
-                    onClick={() => setSettingsOpen(true)}
-                    variant="ghost"
-                    size="icon"
-                    title="Settings"
-                  >
-                    <Settings className="h-5 w-5" />
-                  </Button>
+                  {isExternalHass && (
+                    <Button
+                      onClick={() => setSettingsOpen(true)}
+                      variant="ghost"
+                      size="icon"
+                      title="Settings"
+                    >
+                      <Settings className="h-5 w-5" />
+                    </Button>
+                  )}
 
                   <Separator orientation="vertical" className="h-6" />
 
@@ -426,14 +424,12 @@ function App({ hass: externalHass, narrow = false, route, panel }: AppProps = {}
             </div>
 
             {/* Settings modal - Only show when not in panel mode */}
-            {!isExternalHass && (
-              <HassSettings
-                isOpen={settingsOpen}
-                onClose={() => setSettingsOpen(false)}
-                config={config}
-                onSave={setConfig}
-              />
-            )}
+            <HassSettings
+              isOpen={settingsOpen}
+              onClose={() => setSettingsOpen(false)}
+              config={config}
+              onSave={setConfig}
+            />
 
             {/* Import YAML dialog */}
             <ImportYamlDialog isOpen={importYamlOpen} onClose={() => setImportYamlOpen(false)} />

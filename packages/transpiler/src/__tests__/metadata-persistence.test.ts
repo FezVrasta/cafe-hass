@@ -1,4 +1,5 @@
-import type { FlowGraph } from '@cafe/shared';
+import type { FlowGraph, TriggerNode, ConditionNode } from '@cafe/shared';
+import { isTriggerNode, isConditionNode } from '@cafe/shared';
 import { v4 as uuidv4 } from 'uuid';
 import { describe, expect, it } from 'vitest';
 import { FlowTranspiler } from '../FlowTranspiler';
@@ -40,11 +41,11 @@ describe('Metadata Persistence', () => {
       const yaml = transpiler.transpile(flow).yaml!;
       const parsed = parser.parse(yaml);
       expect(parsed.success).toBe(true);
-      const trigger = parsed.graph?.nodes.find((n) => n.id === 'trigger-1');
+      const trigger = parsed.graph?.nodes.find((n): n is TriggerNode => isTriggerNode(n) && n.id === 'trigger-1');
       expect(trigger).toBeDefined();
       expect(Array.isArray(trigger?.data.entity_id)).toBe(true);
       expect(trigger?.data.entity_id).toEqual(['sensor.one', 'sensor.two']);
-      const condition = parsed.graph?.nodes.find((n) => n.id === 'condition-1');
+      const condition = parsed.graph?.nodes.find((n): n is ConditionNode => isConditionNode(n) && n.id === 'condition-1');
       expect(condition).toBeDefined();
       expect(Array.isArray(condition?.data.entity_id)).toBe(true);
       expect(condition?.data.entity_id).toEqual(['binary_sensor.a', 'binary_sensor.b']);

@@ -1,4 +1,4 @@
-import { Minus, XIcon } from 'lucide-react';
+import { XIcon } from 'lucide-react';
 import type { HassEntity } from '@/hooks/useHass';
 import { cn } from '@/lib/utils';
 import { EntitySelector } from './EntitySelector';

@@ -74,9 +74,7 @@ export const TriggerNodeSchema = z.object({
   position: PositionSchema,
   data: TriggerDataSchema,
 });
-export type TriggerNode = Omit<z.infer<typeof TriggerNodeSchema>, 'data'> & {
-  data: Omit<z.infer<typeof TriggerDataSchema>, 'entity_id'> & { entity_id?: string | string[] };
-};
+export type TriggerNode = z.infer<typeof TriggerNodeSchema>;
 
 // ============================================
 // CONDITION NODE
@@ -147,9 +145,7 @@ export const ConditionNodeSchema = z.object({
   position: PositionSchema,
   data: ConditionDataSchema,
 });
-export type ConditionNode = Omit<z.infer<typeof ConditionNodeSchema>, 'data'> & {
-  data: Omit<z.infer<typeof ConditionDataSchema>, 'entity_id'> & { entity_id?: string | string[] };
-};
+export type ConditionNode = z.infer<typeof ConditionNodeSchema>;
 
 // ============================================
 // ACTION NODE
