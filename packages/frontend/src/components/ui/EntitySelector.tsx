@@ -260,7 +260,7 @@ export function EntitySelector({
                   <span className="truncate">{getEntityName(selectedEntity)}</span>
                 </>
               ) : isUnknown ? (
-                <span className="truncate text-red-600 font-mono">{normalizedValue}</span>
+                <span className="truncate font-mono text-red-600">{normalizedValue}</span>
               ) : (
                 <span>{placeholder}</span>
               )}
@@ -274,7 +274,7 @@ export function EntitySelector({
           </Button>
         </PopoverTrigger>
         <PopoverContent
-          className="w-[--radix-popover-trigger-width] p-0 min-w-[360px]"
+          className="w-[--radix-popover-trigger-width] min-w-[360px] p-0"
           align="start"
           container={portalContainer}
         >

@@ -1,12 +1,12 @@
 // @vitest-environment node
-import { readFileSync } from 'fs';
+import { readFileSync } from 'node:fs';
 import { yamlParser } from '../parser/YamlParser';
-import path from 'path';
+import path from 'node:path';
 import type { ConditionNode } from '@cafe/shared';
 
 describe('YamlParser', () => {
-    it('parses trigger and condition with entity_id as array', () => {
-      const yaml = `
+  it('parses trigger and condition with entity_id as array', () => {
+    const yaml = `
   alias: Array Entity Test
   triggers:
     - trigger: state
@@ -26,20 +26,20 @@ describe('YamlParser', () => {
           - light.a
           - light.b
   `;
-      const result = yamlParser.parse(yaml);
-      expect(result.success).toBe(true);
-      expect(result.graph).toBeDefined();
+    const result = yamlParser.parse(yaml);
+    expect(result.success).toBe(true);
+    expect(result.graph).toBeDefined();
 
-      const triggerNodes = result.graph!.nodes.filter((n) => n.type === 'trigger');
-      expect(triggerNodes.length).toBe(1);
-      expect(Array.isArray(triggerNodes[0].data.entity_id)).toBe(true);
-      expect(triggerNodes[0].data.entity_id).toEqual(['sensor.one', 'sensor.two']);
+    const triggerNodes = result.graph?.nodes.filter((n) => n.type === 'trigger');
+    expect(triggerNodes?.length).toBe(1);
+    expect(Array.isArray(triggerNodes?.[0].data.entity_id)).toBe(true);
+    expect(triggerNodes?.[0].data.entity_id).toEqual(['sensor.one', 'sensor.two']);
 
-      const conditionNodes = result.graph!.nodes.filter((n) => n.type === 'condition');
-      expect(conditionNodes.length).toBe(1);
-      expect(Array.isArray(conditionNodes[0].data.entity_id)).toBe(true);
-      expect(conditionNodes[0].data.entity_id).toEqual(['binary_sensor.a', 'binary_sensor.b']);
-    });
+    const conditionNodes = result.graph?.nodes.filter((n) => n.type === 'condition');
+    expect(conditionNodes?.length).toBe(1);
+    expect(Array.isArray(conditionNodes?.[0].data.entity_id)).toBe(true);
+    expect(conditionNodes?.[0].data.entity_id).toEqual(['binary_sensor.a', 'binary_sensor.b']);
+  });
   it('parses 09-templates.yaml correctly', () => {
     const yamlPath = path.resolve(
       __dirname,
@@ -97,15 +97,15 @@ actions:
     expect(result.success).toBe(true);
     expect(result.graph).toBeDefined();
 
-    const conditionNodes = result.graph!.nodes.filter(
+    const conditionNodes = result.graph?.nodes.filter(
       (n): n is ConditionNode => n.type === 'condition'
     );
-    expect(conditionNodes.length).toBe(1);
+    expect(conditionNodes?.length).toBe(1);
 
-    const templateCondition = conditionNodes[0];
-    expect(templateCondition.data.condition_type).toBe('template');
-    expect(templateCondition.data.template).toBe("{{ states('sensor.test') == 'on' }}");
-    expect(templateCondition.data.value_template).toBe("{{ states('sensor.test') == 'on' }}");
+    const templateCondition = conditionNodes?.[0];
+    expect(templateCondition?.data.condition_type).toBe('template');
+    expect(templateCondition?.data.template).toBe("{{ states('sensor.test') == 'on' }}");
+    expect(templateCondition?.data.value_template).toBe("{{ states('sensor.test') == 'on' }}");
   });
 
   it('parses nested conditions with value_template in choose block', () => {
@@ -133,24 +133,22 @@ actions:
     expect(result.success).toBe(true);
     expect(result.graph).toBeDefined();
 
-    const conditionNodes = result.graph!.nodes.filter(
+    const conditionNodes = result.graph?.nodes.filter(
       (n): n is ConditionNode => n.type === 'condition'
     );
-    expect(conditionNodes.length).toBe(1);
+    expect(conditionNodes?.length).toBe(1);
 
-    const andCondition = conditionNodes[0];
-    expect(andCondition.data.condition_type).toBe('and');
-    expect(andCondition.data.conditions).toBeDefined();
-    expect(andCondition.data.conditions!.length).toBe(2);
+    const andCondition = conditionNodes?.[0];
+    expect(andCondition?.data.condition_type).toBe('and');
+    expect(andCondition?.data.conditions).toBeDefined();
+    expect(andCondition?.data.conditions?.length).toBe(2);
 
     // Verify the template condition within the 'and' has its template populated
-    const nestedTemplateCondition = andCondition.data.conditions!.find(
+    const nestedTemplateCondition = andCondition?.data.conditions?.find(
       (c) => c.condition_type === 'template'
     );
     expect(nestedTemplateCondition).toBeDefined();
-    expect(nestedTemplateCondition!.template).toBe(
-      "{{ is_state('binary_sensor.motion', 'on') }}"
-    );
+    expect(nestedTemplateCondition?.template).toBe("{{ is_state('binary_sensor.motion', 'on') }}");
   });
 
   it('parses if/then/else with template condition', () => {
@@ -176,15 +174,15 @@ actions:
     expect(result.success).toBe(true);
     expect(result.graph).toBeDefined();
 
-    const conditionNodes = result.graph!.nodes.filter(
+    const conditionNodes = result.graph?.nodes.filter(
       (n): n is ConditionNode => n.type === 'condition'
     );
-    expect(conditionNodes.length).toBe(1);
+    expect(conditionNodes?.length).toBe(1);
 
-    const ifCondition = conditionNodes[0];
-    expect(ifCondition.data.condition_type).toBe('template');
-    expect(ifCondition.data.template).toBe('{{ now().hour >= 18 }}');
-    expect(ifCondition.data.value_template).toBe('{{ now().hour >= 18 }}');
+    const ifCondition = conditionNodes?.[0];
+    expect(ifCondition?.data.condition_type).toBe('template');
+    expect(ifCondition?.data.template).toBe('{{ now().hour >= 18 }}');
+    expect(ifCondition?.data.value_template).toBe('{{ now().hour >= 18 }}');
   });
 
   it('parses top-level template condition', () => {
@@ -205,17 +203,15 @@ actions:
     expect(result.success).toBe(true);
     expect(result.graph).toBeDefined();
 
-    const conditionNodes = result.graph!.nodes.filter(
+    const conditionNodes = result.graph?.nodes.filter(
       (n): n is ConditionNode => n.type === 'condition'
     );
-    expect(conditionNodes.length).toBe(1);
+    expect(conditionNodes?.length).toBe(1);
 
-    const templateCondition = conditionNodes[0];
-    expect(templateCondition.data.condition_type).toBe('template');
-    expect(templateCondition.data.template).toBe(
-      "{{ states('input_boolean.enabled') == 'on' }}"
-    );
-    expect(templateCondition.data.value_template).toBe(
+    const templateCondition = conditionNodes?.[0];
+    expect(templateCondition?.data.condition_type).toBe('template');
+    expect(templateCondition?.data.template).toBe("{{ states('input_boolean.enabled') == 'on' }}");
+    expect(templateCondition?.data.value_template).toBe(
       "{{ states('input_boolean.enabled') == 'on' }}"
     );
   });

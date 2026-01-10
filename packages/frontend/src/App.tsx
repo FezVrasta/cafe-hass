@@ -212,10 +212,10 @@ function App({ hass: externalHass, narrow = false, route, panel }: AppProps = {}
           <ReactFlowProvider>
             <div className="flex h-screen flex-col bg-background">
               {/* Header */}
-              <header className="flex h-16 items-center justify-between border-b bg-card border-border px-4 shadow-sm">
+              <header className="flex h-16 items-center justify-between border-border border-b bg-card px-4 shadow-sm">
                 <div className="flex items-center gap-4">
                   <h1
-                    className="font-bold text-lg text-foreground"
+                    className="font-bold text-foreground text-lg"
                     title="Complex Automation Flow Editor"
                   >
                     ☕ C.A.F.E.
@@ -327,7 +327,7 @@ function App({ hass: externalHass, narrow = false, route, panel }: AppProps = {}
               {/* Main content */}
               <div className="flex flex-1 overflow-hidden">
                 {/* Left sidebar - Node palette */}
-                <aside className="flex w-56 flex-col border-r border-border bg-card">
+                <aside className="flex w-56 flex-col border-border border-r bg-card">
                   <NodePalette />
                   <div className="border-t p-4">
                     <h4 className="mb-2 font-medium text-muted-foreground text-xs">Quick Help</h4>
@@ -351,7 +351,7 @@ function App({ hass: externalHass, narrow = false, route, panel }: AppProps = {}
                   minWidth={280}
                   maxWidth={600}
                   side="right"
-                  className="border-l border-border bg-card"
+                  className="border-border border-l bg-card"
                 >
                   <Tabs
                     value={rightTab}
@@ -401,7 +401,7 @@ function App({ hass: externalHass, narrow = false, route, panel }: AppProps = {}
               </div>
 
               {/* Footer */}
-              <footer className="flex h-8 items-center justify-between border-t border-border bg-card px-4 text-muted-foreground text-xs">
+              <footer className="flex h-8 items-center justify-between border-border border-t bg-card px-4 text-muted-foreground text-xs">
                 <div className="flex items-center gap-4">
                   <span>C.A.F.E. v0.1.8</span>
                   {actualIsRemote && config.url && (

@@ -105,7 +105,7 @@ function ConditionTypeFields({
     case 'template':
       return (
         <Textarea
-          className="font-mono text-xs min-h-[80px] w-full"
+          className="min-h-[80px] w-full font-mono text-xs"
           value={cond.template || cond.value_template || ''}
           onChange={(e) =>
             onUpdate({ ...cond, template: e.target.value, value_template: e.target.value })
@@ -147,7 +147,7 @@ function ConditionTypeFields({
       return (
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="text-xs text-muted-foreground mb-1 block">After</label>
+            <label className="mb-1 block text-muted-foreground text-xs">After</label>
             <Input
               value={cond.after || ''}
               onChange={(e) => onUpdate({ ...cond, after: e.target.value })}
@@ -156,7 +156,7 @@ function ConditionTypeFields({
             />
           </div>
           <div>
-            <label className="text-xs text-muted-foreground mb-1 block">Before</label>
+            <label className="mb-1 block text-muted-foreground text-xs">Before</label>
             <Input
               value={cond.before || ''}
               onChange={(e) => onUpdate({ ...cond, before: e.target.value })}
@@ -222,7 +222,7 @@ function ConditionCard({
   return (
     <div
       className={cn(
-        'rounded-md border bg-card p-3 space-y-3',
+        'space-y-3 rounded-md border bg-card p-3',
         depth > 0 && 'bg-muted/30'
       )}
     >
@@ -244,7 +244,7 @@ function ConditionCard({
           size="icon"
           variant="ghost"
           onClick={onRemove}
-          className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0"
+          className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
         >
           <Trash2 className="h-4 w-4" />
         </Button>
@@ -286,9 +286,9 @@ export const ConditionGroupEditor = memo(function ConditionGroupEditor({
   };
 
   return (
-    <div className={cn('space-y-2', depth > 0 && 'pl-2 border-l-2 border-muted')}>
+    <div className={cn('space-y-2', depth > 0 && 'border-muted border-l-2 pl-2')}>
       {conditions.length === 0 ? (
-        <p className="text-xs text-muted-foreground italic py-2">No conditions added yet</p>
+        <p className="py-2 text-muted-foreground text-xs italic">No conditions added yet</p>
       ) : (
         conditions.map((cond, idx) => (
           <ConditionCard
@@ -307,7 +307,7 @@ export const ConditionGroupEditor = memo(function ConditionGroupEditor({
         onClick={handleAdd}
         className="w-full"
       >
-        <Plus className="h-4 w-4 mr-1" />
+        <Plus className="mr-1 h-4 w-4" />
         Add Condition
       </Button>
     </div>

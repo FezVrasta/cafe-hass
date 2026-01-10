@@ -40,7 +40,7 @@ export function MultiEntitySelector({
         {value.map((id) => (
           <span
             key={id}
-            className="inline-flex items-center rounded bg-muted px-2 py-0.5 text-xs font-mono text-muted-foreground border"
+            className="inline-flex items-center rounded border bg-muted px-2 py-0.5 font-mono text-muted-foreground text-xs"
           >
             {id}
             <XIcon
