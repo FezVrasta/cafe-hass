@@ -144,7 +144,7 @@ action:
 
           <Alert>
             <AlertDescription className="text-xs">
-              <strong>Tip:</strong> If your automation was created with Flow Automator, node
+              <strong>Tip:</strong> If your automation was created with C.A.F.E., node
               positions will be preserved. Otherwise, nodes will be automatically arranged in a
               readable layout.
             </AlertDescription>
