@@ -221,6 +221,7 @@ export function EntitySelector({
   const normalizedValue = Array.isArray(value) ? value[0] : value;
   const selectedEntity = entities.find((e) => e.entity_id === normalizedValue);
   const selectedInfo = normalizedValue ? getDomainInfo(normalizedValue) : null;
+  const isUnknown = normalizedValue && !selectedEntity;
 
   const handleSelect = (entityId: string) => {
     onChange(entityId);
@@ -258,6 +259,8 @@ export function EntitySelector({
                   </span>
                   <span className="truncate">{getEntityName(selectedEntity)}</span>
                 </>
+              ) : isUnknown ? (
+                <span className="truncate font-mono text-red-600">{normalizedValue}</span>
               ) : (
                 <span>{placeholder}</span>
               )}
@@ -271,7 +274,7 @@ export function EntitySelector({
           </Button>
         </PopoverTrigger>
         <PopoverContent
-          className="w-[--radix-popover-trigger-width] p-0"
+          className="w-[--radix-popover-trigger-width] min-w-[360px] p-0"
           align="start"
           container={portalContainer}
         >

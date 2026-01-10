@@ -63,13 +63,19 @@ describe('Position Restoration', () => {
     expect(nodes).toHaveLength(2);
 
     // Check that logs show metadata was detected
-    const metadataLog = logs.find((log) => 
-      Array.isArray(log) && log.length > 0 && 
-      typeof log[0] === 'string' && log[0].includes('Loading automation with metadata')
+    const metadataLog = logs.find(
+      (log) =>
+        Array.isArray(log) &&
+        log.length > 0 &&
+        typeof log[0] === 'string' &&
+        log[0].includes('Loading automation with metadata')
     );
     expect(metadataLog).toBeTruthy();
     if (metadataLog && Array.isArray(metadataLog) && metadataLog.length > 1) {
-      const metadata = metadataLog[1] as { hasTranspilerMetadata?: boolean; savedPositionsCount?: number };
+      const metadata = metadataLog[1] as {
+        hasTranspilerMetadata?: boolean;
+        savedPositionsCount?: number;
+      };
       expect(metadata.hasTranspilerMetadata).toBe(true);
       expect(metadata.savedPositionsCount).toBe(2);
     }

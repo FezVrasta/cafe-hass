@@ -99,7 +99,9 @@ export function processActions(
                 parentConditionId,
               });
               if (choiceObj.sequence && Array.isArray(choiceObj.sequence)) {
-                processed.push(...processActions(choiceObj.sequence as AutomationAction[], conditionId, 'then'));
+                processed.push(
+                  ...processActions(choiceObj.sequence as AutomationAction[], conditionId, 'then')
+                );
               }
             }
           }
@@ -108,7 +110,9 @@ export function processActions(
 
       // Process default branch - connect to the last condition's else path
       if (action.default && lastConditionId && Array.isArray(action.default)) {
-        processed.push(...processActions(action.default as AutomationAction[], lastConditionId, 'else'));
+        processed.push(
+          ...processActions(action.default as AutomationAction[], lastConditionId, 'else')
+        );
       }
     }
     // Otherwise it's a regular action
@@ -390,10 +394,39 @@ export function convertAutomationConfigToNodes(config: AutomationConfig): {
       // For condition nodes from if/then/else
       if (nodeType === 'condition') {
         let conditionType = 'template';
-        if (Array.isArray(action.condition) && action.condition[0]) {
-          const firstCondition = action.condition[0];
-          if (typeof firstCondition === 'object' && firstCondition !== null && 'condition' in firstCondition) {
-            conditionType = typeof firstCondition.condition === 'string' ? firstCondition.condition : 'template';
+        let conditionProps: Record<string, unknown> = {};
+
+        if (Array.isArray(action.condition)) {
+          if (action.condition.length === 1 && action.condition[0]) {
+            // Single condition - extract its properties directly
+            const firstCondition = action.condition[0];
+            if (typeof firstCondition === 'object' && firstCondition !== null) {
+              // Extract condition type
+              if ('condition' in firstCondition) {
+                conditionType =
+                  typeof firstCondition.condition === 'string'
+                    ? firstCondition.condition
+                    : 'template';
+              }
+              // Extract specific properties from the condition (value_template, entity_id, etc.)
+              // but not the nested 'condition' or 'conditions' fields as those would conflict
+              const {
+                condition: _,
+                conditions: __,
+                ...restProps
+              } = firstCondition as Record<string, unknown>;
+              conditionProps = restProps;
+            }
+          } else if (action.condition.length > 1) {
+            // Multiple conditions - treat as AND with nested conditions
+            conditionType = 'and';
+            // Store the full conditions array for the UI to display/edit
+            conditionProps = {
+              conditions: action.condition.map((cond: Record<string, unknown>) => ({
+                ...cond,
+                condition_type: cond.condition, // Map 'condition' to 'condition_type' for schema compatibility
+              })),
+            };
           }
         }
 
@@ -404,6 +437,7 @@ export function convertAutomationConfigToNodes(config: AutomationConfig): {
           data: {
             alias: typeof action.alias === 'string' ? action.alias : `Condition ${index + 1}`,
             condition_type: conditionType,
+            ...conditionProps,
             ...action,
           },
         });
@@ -430,15 +464,16 @@ export function convertAutomationConfigToNodes(config: AutomationConfig): {
           data: {
             alias: typeof action.alias === 'string' ? action.alias : `Action ${index + 1}`,
             service: service,
-            entity_id: (
-              action.target && 
-              typeof action.target === 'object' && 
+            entity_id:
+              action.target &&
+              typeof action.target === 'object' &&
               action.target !== null &&
               'entity_id' in action.target &&
               typeof action.target.entity_id === 'string'
-            ) ? action.target.entity_id : (
-              typeof action.entity_id === 'string' ? action.entity_id : undefined
-            ),
+                ? action.target.entity_id
+                : typeof action.entity_id === 'string'
+                  ? action.entity_id
+                  : undefined,
             data: action.data || action.service_data || {},
             target: action.target,
             delay: action.delay,

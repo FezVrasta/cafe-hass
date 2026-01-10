@@ -12,7 +12,7 @@ jobs:
   validate:
     name: HACS Validation
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -30,17 +30,17 @@ jobs:
             echo "❌ Missing manifest.json"
             exit 1
           fi
-          
+
           if [ ! -f "custom_components/cafe/__init__.py" ]; then
             echo "❌ Missing __init__.py"
             exit 1
           fi
-          
+
           if [ ! -f "hacs.json" ]; then
             echo "❌ Missing hacs.json"
             exit 1
           fi
-          
+
           echo "✅ Integration structure is valid"
 
       - name: Validate manifest.json
@@ -49,7 +49,7 @@ jobs:
           python3 -c "
           import json
           import sys
-          
+
           try:
               with open('custom_components/cafe/manifest.json', 'r') as f:
                   manifest = json.load(f)
@@ -76,7 +76,7 @@ jobs:
           python3 -c "
           import json
           import sys
-          
+
           try:
               with open('hacs.json', 'r') as f:
                   hacs_config = json.load(f)
@@ -100,7 +100,7 @@ jobs:
   validate-frontend:
     name: Validate Frontend Build
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -111,8 +111,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20.x'
-          cache: 'yarn'
+          node-version: "20.x"
+          cache: "yarn"
 
       - name: Install dependencies
         run: yarn install --immutable
@@ -126,25 +126,25 @@ jobs:
             echo "❌ Frontend build failed - missing index.html"
             exit 1
           fi
-          
+
           if [ ! -d "custom_components/cafe/www/assets" ]; then
             echo "❌ Frontend build failed - missing assets directory"
             exit 1
           fi
-          
+
           # Check if assets are not empty
           if [ -z "$(ls -A custom_components/cafe/www/assets/)" ]; then
             echo "❌ Frontend assets directory is empty"
             exit 1
           fi
-          
+
           echo "✅ Frontend build is valid"
 
   update-hacs-version:
     name: Update HACS Version
     runs-on: ubuntu-latest
     if: github.event_name == 'release'
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -156,19 +156,19 @@ jobs:
           VERSION="${{ github.event.release.tag_name }}"
           # Remove 'v' prefix if present
           VERSION=${VERSION#v}
-          
+
           # Update manifest.json version
           python3 -c "
           import json
-          
+
           with open('custom_components/cafe/manifest.json', 'r') as f:
               manifest = json.load(f)
-          
+
           manifest['version'] = '${VERSION}'
-          
+
           with open('custom_components/cafe/manifest.json', 'w') as f:
               json.dump(manifest, f, indent=2)
-          
+
           print(f'✅ Updated manifest.json version to ${VERSION}')
           "
 

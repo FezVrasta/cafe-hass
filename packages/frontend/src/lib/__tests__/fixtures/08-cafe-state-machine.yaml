@@ -10,12 +10,12 @@ action:
       flow_context: {}
   - alias: State Machine Loop
     repeat:
-      until: "{{ current_node == \"END\" }}"
+      until: '{{ current_node == "END" }}'
       sequence:
         - choose:
             - conditions:
                 - condition: template
-                  value_template: "{{ current_node == \"action_1767904379001_0\" }}"
+                  value_template: '{{ current_node == "action_1767904379001_0" }}'
               sequence:
                 - alias: "Action: light.turn_on"
                   service: light.turn_on
@@ -27,7 +27,7 @@ action:
           default:
             - service: system_log.write
               data:
-                message: "C.A.F.E.: Unknown state \"{{ current_node }}\", ending flow"
+                message: 'C.A.F.E.: Unknown state "{{ current_node }}", ending flow'
                 level: warning
             - variables:
                 current_node: END

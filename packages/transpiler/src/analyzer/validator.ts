@@ -120,7 +120,11 @@ function validateSemantics(graph: FlowGraph): ValidationError[] {
         'if',
       ];
 
-      if (!service.includes('.') && !specialActionTypes.includes(service)) {
+      if (
+        typeof service === 'string' &&
+        !service.includes('.') &&
+        !specialActionTypes.includes(service)
+      ) {
         errors.push({
           code: 'INVALID_SERVICE',
           message: `Action node "${node.id}" has invalid service format: "${service}". Expected "domain.service"`,

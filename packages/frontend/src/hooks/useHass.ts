@@ -279,9 +279,18 @@ export function useHass(forceMode?: 'remote') {
         services: (globalHass.services as Record<string, unknown>) || {},
         themes: (globalHass.themes as { darkMode?: boolean }) || undefined,
         connection: globalHass.connection || null,
-        callApi: globalHass.callApi as ((method: string, path: string, data?: unknown) => Promise<unknown>) || undefined,
+        callApi:
+          (globalHass.callApi as (
+            method: string,
+            path: string,
+            data?: unknown
+          ) => Promise<unknown>) || undefined,
         callService:
-          (globalHass.callService as ((domain: string, service: string, data?: Record<string, unknown>) => Promise<void>)) ||
+          (globalHass.callService as (
+            domain: string,
+            service: string,
+            data?: Record<string, unknown>
+          ) => Promise<void>) ||
           (async () => {
             logger.warn('No callService method available in global hass');
           }),
@@ -373,9 +382,15 @@ let globalHassInstance: unknown = null;
 export function setGlobalHass(hass: unknown) {
   logger.debug('Setting global hass instance', {
     hasStates: !!(hass && typeof hass === 'object' && 'states' in hass),
-    statesCount: hass && typeof hass === 'object' && 'states' in hass && hass.states ? Object.keys(hass.states as Record<string, unknown>).length : 0,
+    statesCount:
+      hass && typeof hass === 'object' && 'states' in hass && hass.states
+        ? Object.keys(hass.states as Record<string, unknown>).length
+        : 0,
     hasServices: !!(hass && typeof hass === 'object' && 'services' in hass),
-    servicesCount: hass && typeof hass === 'object' && 'services' in hass && hass.services ? Object.keys(hass.services as Record<string, unknown>).length : 0,
+    servicesCount:
+      hass && typeof hass === 'object' && 'services' in hass && hass.services
+        ? Object.keys(hass.services as Record<string, unknown>).length
+        : 0,
     hasConnection: !!(hass && typeof hass === 'object' && 'connection' in hass),
     hasCallApi: !!(hass && typeof hass === 'object' && 'callApi' in hass),
     hasCallService: !!(hass && typeof hass === 'object' && 'callService' in hass),
@@ -389,13 +404,24 @@ export function getGlobalHass() {
   // Try to get from our global instance first
   if (globalHassInstance) {
     logger.debug('Retrieved global hass instance', {
-      statesCount: globalHassInstance && typeof globalHassInstance === 'object' && 'states' in globalHassInstance && globalHassInstance.states ? Object.keys(globalHassInstance.states as Record<string, unknown>).length : 0,
+      statesCount:
+        globalHassInstance &&
+        typeof globalHassInstance === 'object' &&
+        'states' in globalHassInstance &&
+        globalHassInstance.states
+          ? Object.keys(globalHassInstance.states as Record<string, unknown>).length
+          : 0,
     });
     return globalHassInstance;
   }
 
   // Fallback: try to get from window.hass if available
-  if (typeof window !== 'undefined' && typeof window === 'object' && 'hass' in window && window.hass) {
+  if (
+    typeof window !== 'undefined' &&
+    typeof window === 'object' &&
+    'hass' in window &&
+    window.hass
+  ) {
     logger.debug('Retrieved hass from window.hass fallback');
     return window.hass;
   }

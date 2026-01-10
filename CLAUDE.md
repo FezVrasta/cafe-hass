@@ -1,12 +1,71 @@
-# Claude Development Guidelines
+# Project Overview
+
+**C.A.F.E.** (Complex Automation Flow Editor) is a visual flow editor for Home Assistant automations, inspired by Node-RED. It allows users to design automations as diagrams and transpiles them to 100% native Home Assistant YAML—no vendor lock-in. Automations remain editable in HA’s built-in editor. (Beta status: v0.1.8)
+
+# Repository Structure
+
+```
+hflow/
+├── packages/
+│   ├── shared/          # @cafe/shared - Types and Zod schemas
+│   ├── frontend/        # @cafe/frontend - React UI (Vite + Tailwind)
+│   └── transpiler/      # @cafe/transpiler - YAML parser/generator
+├── custom_components/cafe/  # Home Assistant integration (Python)
+└── .github/workflows/       # CI/CD pipelines
+```
+
+# Package Descriptions
+
+- **@cafe/shared**: Zod schemas, TypeScript types, validation utilities
+- **@cafe/frontend**: React 18 + XYFlow canvas + Zustand state + Radix UI
+- **@cafe/transpiler**: YAML parsing, topology analysis, transpilation strategies
+
+# Key Domains/Features
+
+- Flow Canvas (trigger, condition, action, delay, wait nodes)
+- YAML Parsing & Transpilation (YamlParser, FlowTranspiler)
+- Home Assistant Integration (WebSocket API, entity/device/service registry)
+- Simulation & Trace Visualization
+- Property Editing Panels
+
+# Build System & Tooling
+
+- Yarn 4 workspaces + Turbo for orchestration
+- TypeScript 5.7 with strict mode
+- Vite for frontend builds
+- Vitest for testing
+- Biome for linting, Prettier for formatting
+
+# Coding Conventions
+
+In addition to strict TypeScript rules:
+
+- **Zod for Schema Validation**: All data structures use Zod schemas in `@cafe/shared`
+- **Zustand for State**: Single cohesive store pattern in `flow-store.ts`
+- **React Patterns**: Use `memo()` for nodes, `cn()` for class merging, and typed NodeProps
+- **Import Aliases**: `@/` for frontend, `@cafe/*` for packages
+
+# Common Commands
+
+```bash
+yarn dev          # Watch mode
+yarn build        # Build all packages
+yarn build:ha     # Build + copy to custom_components
+yarn test         # Run tests
+yarn typecheck    # Type checking
+yarn lint:biome   # Linting
+```
+
+# Development Guidelines
 
 ## Release and Commit Policy
 
 **IMPORTANT**: Never cut a new release or commit changes without first asking the user for permission.
 
 Always ask before:
+
 - Creating git commits
-- Pushing changes to the repository  
+- Pushing changes to the repository
 - Bumping version numbers
 - Creating new releases/tags
 - Running any git operations that modify the repository
@@ -18,12 +77,14 @@ The user should have full control over when changes are committed and released.
 **STRICT TYPING REQUIRED**: Always maintain strict TypeScript types throughout the codebase.
 
 **FORBIDDEN PRACTICES**:
+
 - Never use `as` type assertions unless absolutely necessary for external API boundaries
 - Never use `any` type - use proper type definitions or `unknown` with type guards
 - Avoid type casting hacks or workarounds
 - Don't suppress TypeScript errors with `@ts-ignore` or `@ts-expect-error`
 
 **REQUIRED PRACTICES**:
+
 - Define proper interfaces and types for all data structures
 - Use type guards for runtime type checking
 - Leverage TypeScript's strict mode features
@@ -32,9 +93,38 @@ The user should have full control over when changes are committed and released.
 
 The codebase should compile with zero TypeScript errors and maintain type safety throughout.
 
-## Lessons Learned
+# Cutting a New Release
 
-### Project Structure
-- Monorepo with shared, frontend, and transpiler packages
-- Frontend builds to dist/ then copies to custom_components/cafe/www/
-- Release workflow should verify directory structure before creating archives
+To cut a new release, follow these steps:
+
+**Important:** Before tagging and releasing, always bump the version in `custom_components/cafe/manifest.json` to match the new release version.
+
+1. **Commit your changes**
+   - Ensure all changes are staged and committed with a clear message.
+   - Bump the version in `custom_components/cafe/manifest.json` to the new release version (e.g., "0.1.9").
+   - Example:
+     ```bash
+     # Edit manifest.json and update the version field
+     git add .
+     git commit -m "Release: v0.x.x - <short description>"
+     ```
+
+2. **Create a new git tag**
+   - Use semantic versioning (e.g., v0.1.9). For pre-1.x.x, all releases are considered pre-release.
+   - Example:
+     ```bash
+     git tag v0.1.9
+     git push origin v0.1.9
+     ```
+
+3. **Create a GitHub release (pre-release)**
+   - Use the GitHub CLI (`gh`) to create a release. Mark as pre-release until 1.x.x.
+   - Example:
+     ```bash
+     gh release create v0.1.9 --prerelease --title "C.A.F.E. v0.1.9" --notes "<release notes>"
+     ```
+
+4. **Verify release on GitHub**
+   - Check the Releases page to confirm the new release is published and marked as pre-release.
+
+**Note:** Do not cut a release without explicit user approval. Always confirm before pushing tags or creating releases.

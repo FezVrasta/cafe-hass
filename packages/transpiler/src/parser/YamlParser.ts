@@ -35,6 +35,64 @@ export interface ParseResult {
 }
 
 /**
+ * Valid condition types for Home Assistant
+ */
+const VALID_CONDITION_TYPES = [
+  'state',
+  'numeric_state',
+  'template',
+  'time',
+  'sun',
+  'zone',
+  'and',
+  'or',
+  'not',
+  'device',
+  'trigger',
+] as const;
+
+type ValidConditionType = (typeof VALID_CONDITION_TYPES)[number];
+
+/**
+ * Nested condition type (limited to one level per schema)
+ */
+type NestedCondition = NonNullable<ConditionNode['data']['conditions']>[number];
+
+/**
+ * Transform Home Assistant condition format to internal nested condition format
+ * HA uses 'condition' field, internal schema uses 'condition_type'
+ * Note: Nested conditions are limited to one level per the schema
+ */
+function transformToNestedCondition(condition: Record<string, unknown>): NestedCondition {
+  const conditionType = (condition.condition as string) || 'template';
+  const validatedType = VALID_CONDITION_TYPES.includes(conditionType as ValidConditionType)
+    ? (conditionType as ValidConditionType)
+    : 'template';
+
+  return {
+    condition_type: validatedType,
+    entity_id:
+      typeof condition.entity_id === 'string' || Array.isArray(condition.entity_id)
+        ? condition.entity_id
+        : undefined,
+    state: condition.state as string | string[] | undefined,
+    above: condition.above as number | string | undefined,
+    below: condition.below as number | string | undefined,
+    attribute: condition.attribute as string | undefined,
+    template: (condition.template as string) || (condition.value_template as string) || undefined,
+    value_template: condition.value_template as string | undefined,
+    zone: condition.zone as string | undefined,
+  };
+}
+
+/**
+ * Transform an array of Home Assistant conditions to internal format
+ */
+function transformConditions(conditions: unknown[]): NestedCondition[] {
+  return conditions.map((c) => transformToNestedCondition(c as Record<string, unknown>));
+}
+
+/**
  * Parser for converting Home Assistant YAML back to FlowGraph
  */
 export class YamlParser {
@@ -319,16 +377,32 @@ export class YamlParser {
         const nodeId = getNextNodeId('condition');
 
         try {
+          // Extract id for trigger condition type
+          const conditionType = (condition.condition as "trigger" | "template" | "zone" | "state" | "numeric_state" | "sun" | "time" | "device" | "and" | "or" | "not") || 'state'
+          // entity_id: (condition as Record<string, undefined>).entity_id,
+          // entity_id can be string or string[]
+          let entity_id: string | string[] | undefined;
+          if (Array.isArray(condition.entity_id)) {
+            entity_id = condition.entity_id.slice();
+          } else if (typeof condition.entity_id === 'string') {
+            entity_id = condition.entity_id;
+          }
+          // id only for trigger condition type
+          let id: string | undefined;
+          if (conditionType === 'trigger' && typeof condition.id === 'string') {
+            id = condition.id;
+          }
           const node: ConditionNode = {
             id: nodeId,
             type: 'condition',
             position: { x: 0, y: 0 },
             data: {
               alias: (condition as Record<string, undefined>).alias,
-              condition_type: (condition.condition as "template" | "zone" | "state" | "numeric_state" | "sun" | "time" | "device" | "and" | "or" | "not") || 'state',
-              entity_id: (condition as Record<string, undefined>).entity_id,
+              condition_type: conditionType,
+              entity_id,
               state: (condition as Record<string, undefined>).state,
-              template: (condition as Record<string, undefined>).template,
+              template: (condition as Record<string, undefined>).template || (condition as Record<string, undefined>).value_template,
+              value_template: (condition as Record<string, undefined>).value_template,
               after: (condition as Record<string, undefined>).after,
               before: (condition as Record<string, undefined>).before,
               weekday: (condition as Record<string, undefined>).weekday,
@@ -336,6 +410,10 @@ export class YamlParser {
               before_offset: (condition as Record<string, undefined>).before_offset,
               zone: (condition as Record<string, undefined>).zone,
               conditions: (condition as Record<string, undefined>).conditions,
+              above: (condition as Record<string, undefined>).above,
+              below: (condition as Record<string, undefined>).below,
+              attribute: (condition as Record<string, undefined>).attribute,
+              ...(id ? { id } : {}),
             },
           };
 
@@ -434,6 +512,18 @@ export class YamlParser {
           nodes.push(...chooseResult.nodes);
           edges.push(...chooseResult.edges);
           currentNodeIds = chooseResult.outputNodeIds;
+        } else if (action.if) {
+          // Handle if/then/else blocks
+          const ifResult = this.parseIfBlock(
+            action as { if: unknown[]; then: unknown[]; else?: unknown[]; alias?: string },
+            warnings,
+            currentNodeIds,
+            getNextNodeId,
+            conditionNodeIds
+          );
+          nodes.push(...ifResult.nodes);
+          edges.push(...ifResult.edges);
+          currentNodeIds = ifResult.outputNodeIds;
         } else if (action.service || action.action) {
           // Regular service call action (support both 'service' and 'action' fields)
           const nodeId = getNextNodeId('action');
@@ -509,13 +599,35 @@ export class YamlParser {
     choices.forEach((choice: Record<string, unknown>) => {
       if (choice.conditions) {
         const conditionId = getNextNodeId('condition');
+        // choice.conditions can be an array of conditions or a single condition object
+        const conditionsArray = Array.isArray(choice.conditions)
+          ? choice.conditions
+          : [choice.conditions];
+        // Use the first condition to determine the type and extract properties
+        const firstCondition = conditionsArray[0] || {};
         const conditionNode: ConditionNode = {
           id: conditionId,
           type: 'condition',
           position: { x: 0, y: 0 },
           data: {
             alias: (choice as Record<string, undefined>).alias,
-            condition_type: ((choice.conditions as Record<string, unknown>).condition as "template" | "state" | "time" | "sun" | "zone" | "numeric_state" | "device" | "and" | "or" | "not") || 'template',
+            condition_type: firstCondition.condition || 'template',
+            entity_id: firstCondition.entity_id,
+            state: firstCondition.state,
+            // Support both 'template' and 'value_template' (Home Assistant uses value_template)
+            template: firstCondition.template || firstCondition.value_template,
+            value_template: firstCondition.value_template,
+            above: firstCondition.above,
+            below: firstCondition.below,
+            attribute: firstCondition.attribute,
+            zone: firstCondition.zone,
+            // Store all conditions if there are multiple
+            conditions:
+              conditionsArray.length > 1
+                ? transformConditions(conditionsArray)
+                : Array.isArray(firstCondition.conditions)
+                  ? transformConditions(firstCondition.conditions)
+                  : undefined,
             ...choice.conditions,
           },
         };
@@ -578,9 +690,145 @@ export class YamlParser {
   }
 
   /**
+   * Parse if/then/else block
+   */
+  private parseIfBlock(
+    ifAction: { if: unknown[]; then: unknown[]; else?: unknown[]; alias?: string },
+    warnings: string[],
+    previousNodeIds: string[],
+    getNextNodeId: (type: string) => string,
+    conditionNodeIds: Set<string> = new Set()
+  ): { nodes: FlowNode[]; edges: FlowEdge[]; outputNodeIds: string[] } {
+    const nodes: FlowNode[] = [];
+    const edges: FlowEdge[] = [];
+    const outputNodeIds: string[] = [];
+    const localConditionIds = new Set(conditionNodeIds);
+
+    // Create condition node from the 'if' conditions
+    const conditionId = getNextNodeId('condition');
+    const ifConditions = Array.isArray(ifAction.if) ? ifAction.if : [ifAction.if];
+
+    // Use the first condition's type or default to 'template'
+    const firstCondition = ifConditions[0] as Record<string, unknown> | undefined;
+    const rawConditionType = (firstCondition?.condition as string) || 'numeric_state';
+    // Validate condition type against known types
+    const conditionType = VALID_CONDITION_TYPES.includes(rawConditionType as ValidConditionType)
+      ? (rawConditionType as ValidConditionType)
+      : 'template';
+
+    // Extract template value (Home Assistant uses value_template)
+    const templateValue =
+      (firstCondition?.template as string | undefined) ||
+      (firstCondition?.value_template as string | undefined);
+
+    const conditionNode: ConditionNode = {
+      id: conditionId,
+      type: 'condition',
+      position: { x: 0, y: 0 },
+      data: {
+        alias: ifAction.alias,
+        condition_type: conditionType,
+        entity_id:
+          typeof firstCondition?.entity_id === 'string' || Array.isArray(firstCondition?.entity_id)
+            ? firstCondition?.entity_id
+            : undefined,
+        state: firstCondition?.state as string | string[] | undefined,
+        above: firstCondition?.above as number | string | undefined,
+        below: firstCondition?.below as number | string | undefined,
+        attribute: firstCondition?.attribute as string | undefined,
+        template: templateValue,
+        value_template: firstCondition?.value_template as string | undefined,
+        zone: firstCondition?.zone as string | undefined,
+        // Store all conditions if there are multiple
+        conditions: ifConditions.length > 1 ? transformConditions(ifConditions) : undefined,
+      },
+    };
+
+    nodes.push(conditionNode);
+    localConditionIds.add(conditionId);
+
+    // Connect from previous nodes
+    for (const prevId of previousNodeIds) {
+      const sourceHandle = conditionNodeIds.has(prevId) ? 'true' : undefined;
+      edges.push(this.createEdge(prevId, conditionId, sourceHandle));
+    }
+
+    // Parse 'then' sequence (true branch)
+    if (ifAction.then) {
+      const thenSequence = Array.isArray(ifAction.then) ? ifAction.then : [ifAction.then];
+      const thenResult = this.parseActions(
+        thenSequence as Record<string, unknown>[],
+        warnings,
+        [conditionId],
+        getNextNodeId,
+        localConditionIds
+      );
+      nodes.push(...thenResult.nodes);
+      edges.push(...thenResult.edges);
+
+      // The edges from condition to first action should use 'true' handle
+      if (thenResult.nodes.length > 0) {
+        const firstActionId = thenResult.nodes[0].id;
+        const trueEdge = edges.find((e) => e.source === conditionId && e.target === firstActionId);
+        if (trueEdge) {
+          trueEdge.sourceHandle = 'true';
+        }
+      }
+
+      // Track output nodes from then branch
+      if (thenResult.nodes.length > 0) {
+        outputNodeIds.push(thenResult.nodes[thenResult.nodes.length - 1].id);
+      }
+    }
+
+    // Parse 'else' sequence (false branch)
+    if (ifAction.else) {
+      const elseSequence = Array.isArray(ifAction.else) ? ifAction.else : [ifAction.else];
+      // For else branch, we need to connect from condition with 'false' handle
+      const elseResult = this.parseActions(
+        elseSequence as Record<string, unknown>[],
+        warnings,
+        [conditionId],
+        getNextNodeId,
+        new Set() // Don't use localConditionIds for else - we handle the edge manually
+      );
+      nodes.push(...elseResult.nodes);
+
+      // Add edges manually with 'false' handle for first connection
+      if (elseResult.nodes.length > 0) {
+        const firstElseNodeId = elseResult.nodes[0].id;
+        // Remove any auto-generated edges from condition to first else node
+        const existingEdgeIndex = elseResult.edges.findIndex(
+          (e) => e.source === conditionId && e.target === firstElseNodeId
+        );
+        if (existingEdgeIndex >= 0) {
+          elseResult.edges.splice(existingEdgeIndex, 1);
+        }
+        // Add edge with 'false' handle
+        edges.push(this.createEdge(conditionId, firstElseNodeId, 'false'));
+      }
+
+      // Add remaining edges from else result
+      edges.push(...elseResult.edges);
+
+      // Track output nodes from else branch
+      if (elseResult.nodes.length > 0) {
+        outputNodeIds.push(elseResult.nodes[elseResult.nodes.length - 1].id);
+      }
+    }
+
+    // If no outputs were added, the condition itself is the output
+    if (outputNodeIds.length === 0) {
+      outputNodeIds.push(conditionId);
+    }
+
+    return { nodes, edges, outputNodeIds };
+  }
+
+  /**
    * Create an unknown node for unparseable content
    */
-  private createUnknownNode(nodeId: string, originalData: Record<string, unknown>): ActionNode {
+  private createUnknownNode(nodeId: string, originalData: any): ActionNode {
     return {
       id: nodeId,
       type: 'action',

@@ -1,10 +1,71 @@
-import type { FlowGraph } from '@cafe/shared';
+import type { FlowGraph, TriggerNode, ConditionNode } from '@cafe/shared';
+import { isTriggerNode, isConditionNode } from '@cafe/shared';
 import { v4 as uuidv4 } from 'uuid';
 import { describe, expect, it } from 'vitest';
 import { FlowTranspiler } from '../FlowTranspiler';
 import { YamlParser } from '../parser/YamlParser';
 
 describe('Metadata Persistence', () => {
+  it('should support entity_id as array in trigger and condition nodes', () => {
+    const flow: FlowGraph = {
+      id: uuidv4(),
+      name: 'Array EntityId',
+      description: '',
+      nodes: [
+        {
+          id: 'trigger-1',
+          type: 'trigger',
+          position: { x: 0, y: 0 },
+          data: {
+            platform: 'state',
+            entity_id: ['sensor.one', 'sensor.two'],
+          },
+        },
+        {
+          id: 'condition-1',
+          type: 'condition',
+          position: { x: 0, y: 0 },
+          data: {
+            condition_type: 'state',
+            entity_id: ['binary_sensor.a', 'binary_sensor.b'],
+            state: 'on',
+          },
+        },
+        {
+          id: 'action-1',
+          type: 'action',
+          position: { x: 0, y: 0 },
+          data: {
+            service: 'light.turn_on',
+          },
+        },
+      ],
+      edges: [
+        { id: 'e1', source: 'trigger-1', target: 'condition-1' },
+        { id: 'e2', source: 'condition-1', target: 'action-1', sourceHandle: 'true' },
+      ],
+      metadata: { mode: 'single', initial_state: true },
+      version: 1,
+    };
+    const transpiler = new FlowTranspiler();
+    const parser = new YamlParser();
+    const yaml = transpiler.transpile(flow).yaml!;
+    const parsed = parser.parse(yaml);
+    console.log(yaml, parsed.errors);
+    expect(parsed.success).toBe(true);
+    const trigger = parsed.graph?.nodes.find(
+      (n): n is TriggerNode => isTriggerNode(n) && n.id === 'trigger-1'
+    );
+    expect(trigger).toBeDefined();
+    expect(Array.isArray(trigger?.data.entity_id)).toBe(true);
+    expect(trigger?.data.entity_id).toEqual(['sensor.one', 'sensor.two']);
+    const condition = parsed.graph?.nodes.find(
+      (n): n is ConditionNode => isConditionNode(n) && n.id === 'condition-1'
+    );
+    expect(condition).toBeDefined();
+    expect(Array.isArray(condition?.data.entity_id)).toBe(true);
+    expect(condition?.data.entity_id).toEqual(['binary_sensor.a', 'binary_sensor.b']);
+  });
   const transpiler = new FlowTranspiler();
   const parser = new YamlParser();
 
@@ -49,6 +110,7 @@ describe('Metadata Persistence', () => {
 
       // Act: Export to YAML
       const result = transpiler.transpile(originalFlow);
+      console.log(result.errors);
       expect(result.success).toBe(true);
       expect(result.yaml).toBeDefined();
 

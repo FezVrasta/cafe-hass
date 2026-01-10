@@ -30,6 +30,7 @@ export const ConditionNode = memo(function ConditionNode({
     or: 'OR',
     not: 'NOT',
     device: 'Device',
+    trigger: 'Trigger',
   };
 
   return (
@@ -65,7 +66,11 @@ export const ConditionNode = memo(function ConditionNode({
         <div className="font-medium">
           {conditionLabels[data.condition_type] || data.condition_type}
         </div>
-        {data.entity_id && <div className="truncate opacity-75">{data.entity_id}</div>}
+        {data.entity_id && (
+          <div className="truncate opacity-75">
+            {Array.isArray(data.entity_id) ? data.entity_id.join(', ') : data.entity_id}
+          </div>
+        )}
         {data.state && <div className="opacity-75">= {data.state}</div>}
         {data.above !== undefined && <div className="opacity-75">&gt; {data.above}</div>}
         {data.below !== undefined && <div className="opacity-75">&lt; {data.below}</div>}
@@ -91,6 +96,14 @@ export const ConditionNode = memo(function ConditionNode({
             {data.value_template.slice(0, 30)}...
           </div>
         )}
+        {typeof data.id === 'string' && <div className="opacity-75">id: {data.id}</div>}
+        {Array.isArray(data.conditions) && data.conditions.length > 0 && (
+          <div className="opacity-75">
+            {data.conditions.length} nested condition{data.conditions.length !== 1 ? 's' : ''}
+          </div>
+        )}
+
+        {/* Group editor moved to side panel */}
       </div>
 
       {/* True/False output handles */}

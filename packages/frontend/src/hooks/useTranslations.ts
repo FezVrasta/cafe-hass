@@ -96,7 +96,7 @@ export function useTranslations() {
         });
 
         console.log('Translation fetch result:', result);
-        
+
         const parseResult = TranslationResponseSchema.safeParse(result);
         if (parseResult.success) {
           setTranslations((prev) => ({ ...prev, ...parseResult.data.resources }));

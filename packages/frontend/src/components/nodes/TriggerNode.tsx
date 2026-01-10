@@ -45,14 +45,18 @@ export const TriggerNode = memo(function TriggerNode({ id, data, selected }: Tri
       case 'state':
         return {
           title: data.alias || 'State Change',
-          subtitle: data.entity_id || 'State',
+          subtitle: Array.isArray(data.entity_id)
+            ? data.entity_id.join(', ')
+            : data.entity_id || 'State',
           detail: data.to ? `to: ${data.to}` : null,
         };
 
       case 'numeric_state':
         return {
           title: data.alias || 'Numeric State',
-          subtitle: data.entity_id || 'Numeric State',
+          subtitle: Array.isArray(data.entity_id)
+            ? data.entity_id.join(', ')
+            : data.entity_id || 'Numeric State',
           detail:
             data.above || data.below
               ? `${data.above ? `>${data.above}` : ''}${data.above && data.below ? ' ' : ''}${data.below ? `<${data.below}` : ''}`
@@ -98,7 +102,10 @@ export const TriggerNode = memo(function TriggerNode({ id, data, selected }: Tri
         return {
           title: data.alias || 'Zone',
           subtitle: platformLabels[platform],
-          detail: data.zone || data.entity_id || null,
+          detail:
+            data.zone ||
+            (Array.isArray(data.entity_id) ? data.entity_id.join(', ') : data.entity_id) ||
+            null,
         };
 
       default:

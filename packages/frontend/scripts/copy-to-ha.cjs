@@ -31,4 +31,3 @@ try {
   console.error('Error copying files:', error.message);
   process.exit(1);
 }
-

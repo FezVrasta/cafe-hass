@@ -15,15 +15,19 @@ export const ActionNode = memo(function ActionNode({ id, data, selected }: Actio
   const isActive = activeNodeId === id;
   const stepNumber = getExecutionStepNumber(id);
 
-  // Parse service into domain and service name
-  const [domain, serviceName] = data.service.split('.');
+  // Parse service into domain and service name, handle undefined
+  let domain: string | undefined;
+  let serviceName: string | undefined;
+  if (typeof data.service === 'string' && data.service.includes('.')) {
+    [domain, serviceName] = data.service.split('.');
+  }
 
   // Get target entity display
   const targetDisplay = (() => {
     if (!data.target) return null;
     const entityId = data.target.entity_id;
     if (Array.isArray(entityId)) {
-      return entityId.length > 1 ? `${entityId[0]} +${entityId.length - 1}` : entityId[0];
+      return entityId.join(', ');
     }
     return entityId;
   })();

@@ -135,7 +135,7 @@ describe('Roundtrip Import/Export Tests', () => {
 
           // Validate core trigger properties are preserved
           if (originalTrigger.entity_id)
-            expect(triggerObj.entity_id).toBe(originalTrigger.entity_id);
+            expect(triggerObj.entity_id).toStrictEqual(originalTrigger.entity_id);
           if (originalTrigger.device_id)
             expect(triggerObj.device_id).toBe(originalTrigger.device_id);
           if (originalTrigger.domain) expect(triggerObj.domain).toBe(originalTrigger.domain);
@@ -165,7 +165,7 @@ describe('Roundtrip Import/Export Tests', () => {
           generatedConfig.action.forEach((action: unknown, actionIndex: number) => {
             expect(action).toBeDefined();
             // Action should have either service, choose, if, delay, wait, variables (for state machine), or repeat
-            
+
             // Type guard to check if action is a valid object
             if (typeof action === 'object' && action !== null) {
               const actionObj = action as Record<string, unknown>;
@@ -178,7 +178,7 @@ describe('Roundtrip Import/Export Tests', () => {
                 actionObj.wait_for_trigger ||
                 actionObj.variables ||
                 actionObj.repeat;
-              
+
               if (!hasValidActionType) {
                 console.error(`Invalid action at index ${actionIndex}:`, action);
               }
@@ -200,7 +200,7 @@ describe('Roundtrip Import/Export Tests', () => {
         const finalConfig = yaml.load(finalYaml) as Record<string, unknown>;
         expect(finalConfig).toBeDefined();
         expect(finalConfig.alias).toBe(originalConfig.alias);
-        
+
         // Metadata validation (CAFE variables should be present)
         const variables = finalConfig.variables as
           | Record<string, Record<string, unknown>>

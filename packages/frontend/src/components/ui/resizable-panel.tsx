@@ -64,11 +64,7 @@ export function ResizablePanel({
   }, [isResizing, minWidth, maxWidth, side]);
 
   return (
-    <div
-      ref={panelRef}
-      className={cn('relative flex flex-col', className)}
-      style={{ width }}
-    >
+    <div ref={panelRef} className={cn('relative flex flex-col', className)} style={{ width }}>
       {/* Resize handle */}
       {/* biome-ignore lint/a11y/noStaticElementInteractions: this element is intentionally interactive */}
       <div

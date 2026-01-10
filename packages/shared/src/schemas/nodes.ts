@@ -21,7 +21,7 @@ export const TriggerDataSchema = z
     alias: z.string().optional(),
     platform: TriggerPlatformSchema,
     // State trigger
-    entity_id: z.string().optional(),
+    entity_id: z.union([z.string(), z.array(z.string())]).optional(),
     from: z.string().optional(),
     to: z.string().optional(),
     for: z
@@ -43,8 +43,8 @@ export const TriggerDataSchema = z
     // Event trigger
     event_type: z.string().optional(),
     event_data: z.record(z.unknown()).optional(),
-    // Sun trigger
-    event: z.enum(['sunrise', 'sunset']).optional(),
+    // Sun trigger (sunrise/sunset) or Zone trigger (enter/leave)
+    event: z.enum(['sunrise', 'sunset', 'enter', 'leave']).optional(),
     offset: z.string().optional(),
     // Numeric state trigger
     above: z.union([z.number(), z.string()]).optional(),
@@ -99,7 +99,7 @@ const BaseConditionDataSchema = z.object({
     ])
     .optional(),
   // State condition
-  entity_id: z.string().optional(),
+  entity_id: z.union([z.string(), z.array(z.string())]).optional(),
   state: z.union([z.string(), z.array(z.string())]).optional(),
   // Numeric state condition
   above: z.union([z.number(), z.string()]).optional(),
@@ -157,8 +157,8 @@ export type ConditionNode = z.infer<typeof ConditionNodeSchema>;
  */
 export const ActionDataSchema = z.object({
   alias: z.string().optional(),
-  service: z.string().min(1), // e.g., "light.turn_on"
-  target: OptionalTargetSchema,
+  service: z.string().min(1).optional(), // e.g., "light.turn_on"
+  target: OptionalTargetSchema.optional(),
   data: ServiceDataSchema.optional(),
   data_template: ServiceDataTemplateSchema.optional(),
   // Response variable for service calls that return data
@@ -167,6 +167,10 @@ export const ActionDataSchema = z.object({
   continue_on_error: z.boolean().optional(),
   // Enabled flag
   enabled: z.boolean().optional(),
+  // Conditional actions (if/then/else)
+  if: z.any().optional(),
+  then: z.any().optional(),
+  else: z.any().optional(),
 });
 export type ActionData = z.infer<typeof ActionDataSchema>;
 

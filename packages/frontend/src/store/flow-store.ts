@@ -16,10 +16,11 @@ import type { AutomationTrace } from '@/lib/ha-api';
 /**
  * Node data types for React Flow
  */
+
 export interface TriggerNodeData {
   alias?: string;
   platform: string;
-  entity_id?: string;
+  entity_id?: string | string[];
   to?: string;
   from?: string;
   event_type?: string;
@@ -29,7 +30,7 @@ export interface TriggerNodeData {
 export interface ConditionNodeData {
   alias?: string;
   condition_type: string;
-  entity_id?: string;
+  entity_id?: string | string[];
   state?: string;
   template?: string;
 

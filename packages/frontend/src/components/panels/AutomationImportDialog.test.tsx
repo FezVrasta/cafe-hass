@@ -103,15 +103,32 @@ describe('automation-converter', () => {
 
       const result = processActions(actions);
 
+      console.log(JSON.stringify(result, null, 2));
+
+      // The processActions output for choose structure is:
+      // 0: condition (home)
+      // 1: light.turn_on (then, home)
+      // 2: condition (away)
+      // 3: light.turn_off (then, away)
+      // 4: light.turn_on (else, default)
       expect(result).toHaveLength(5);
-      expect(getActionProperty(result[0].action, 'type')).toBe('condition');
-      expect(getActionProperty(result[0].action, 'alias')).toBe('Choose condition');
-      expect(getActionProperty(result[1].action, 'action')).toBe('light.turn_on');
+      expect(result[0].action).toEqual(
+        expect.objectContaining({
+          type: 'condition',
+          condition: [expect.objectContaining({ entity_id: 'input_select.mode', state: 'home' })],
+        })
+      );
+      expect(result[1].action).toEqual(expect.objectContaining({ action: 'light.turn_on' }));
       expect(result[1].branch).toBe('then');
-      expect(getActionProperty(result[2].action, 'type')).toBe('condition');
-      expect(getActionProperty(result[3].action, 'action')).toBe('light.turn_off');
+      expect(result[2].action).toEqual(
+        expect.objectContaining({
+          type: 'condition',
+          condition: [expect.objectContaining({ entity_id: 'input_select.mode', state: 'away' })],
+        })
+      );
+      expect(result[3].action).toEqual(expect.objectContaining({ action: 'light.turn_off' }));
       expect(result[3].branch).toBe('then');
-      expect(getActionProperty(result[4].action, 'action')).toBe('light.turn_on');
+      expect(result[4].action).toEqual(expect.objectContaining({ action: 'light.turn_on' }));
       expect(result[4].branch).toBe('else');
     });
 
@@ -268,10 +285,12 @@ describe('automation-converter', () => {
       const nodeData = {
         alias: 'Trigger 1',
         platform:
-          ('platform' in trigger ? trigger.platform : null) || 
-          ('trigger' in trigger ? (trigger as { trigger: string }).trigger : null) || 
-          trigger.domain || 'device',
-        entity_id: 'entity_id' in trigger ? (trigger as { entity_id: string }).entity_id : undefined,
+          ('platform' in trigger ? trigger.platform : null) ||
+          ('trigger' in trigger ? (trigger as { trigger: string }).trigger : null) ||
+          trigger.domain ||
+          'device',
+        entity_id:
+          'entity_id' in trigger ? (trigger as { entity_id: string }).entity_id : undefined,
         ...trigger,
       };
 
@@ -292,8 +311,13 @@ describe('automation-converter', () => {
 
       const nodeData = {
         alias: 'Action 1',
-        service: action.action || ('service' in action ? (action as { service: string }).service : null) || 'unknown',
-        entity_id: action.target?.entity_id || ('entity_id' in action ? (action as { entity_id: unknown }).entity_id : undefined),
+        service:
+          action.action ||
+          ('service' in action ? (action as { service: string }).service : null) ||
+          'unknown',
+        entity_id:
+          action.target?.entity_id ||
+          ('entity_id' in action ? (action as { entity_id: unknown }).entity_id : undefined),
         data: ('data' in action ? action.data : {}) || {},
         target: action.target,
       };
@@ -314,9 +338,18 @@ describe('automation-converter', () => {
 
       const nodeData = {
         alias: 'Action 1',
-        service: ('action' in action ? (action as { action: string }).action : null) || action.service || 'unknown',
-        entity_id: ('target' in action ? (action as { target?: { entity_id: unknown } }).target?.entity_id : null) || action.entity_id,
-        data: ('data' in action ? (action as { data: unknown }).data : null) || action.service_data || {},
+        service:
+          ('action' in action ? (action as { action: string }).action : null) ||
+          action.service ||
+          'unknown',
+        entity_id:
+          ('target' in action
+            ? (action as { target?: { entity_id: unknown } }).target?.entity_id
+            : null) || action.entity_id,
+        data:
+          ('data' in action ? (action as { data: unknown }).data : null) ||
+          action.service_data ||
+          {},
       };
 
       expect(nodeData.service).toBe('light.turn_on');
@@ -350,9 +383,16 @@ describe('automation-converter', () => {
 
       // Should not throw, just not create any nodes
       expect(() => {
-        const triggers = 'triggers' in config ? config.triggers : 'trigger' in config ? config.trigger : undefined;
-        const conditions = 'conditions' in config ? config.conditions : 'condition' in config ? config.condition : undefined;
-        const actions = 'actions' in config ? config.actions : 'action' in config ? config.action : undefined;
+        const triggers =
+          'triggers' in config ? config.triggers : 'trigger' in config ? config.trigger : undefined;
+        const conditions =
+          'conditions' in config
+            ? config.conditions
+            : 'condition' in config
+              ? config.condition
+              : undefined;
+        const actions =
+          'actions' in config ? config.actions : 'action' in config ? config.action : undefined;
 
         expect(triggers).toBeUndefined();
         expect(conditions).toBeUndefined();
@@ -366,7 +406,8 @@ describe('automation-converter', () => {
         target: { entity_id: 'light.test' },
       };
 
-      const service = 'action' in action ? action.action : 'service' in action ? action.service : 'unknown';
+      const service =
+        'action' in action ? action.action : 'service' in action ? action.service : 'unknown';
 
       expect(service).toBe('unknown');
     });
