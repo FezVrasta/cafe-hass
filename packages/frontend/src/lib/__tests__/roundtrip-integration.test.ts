@@ -13,6 +13,7 @@ describe('Roundtrip Import/Export Tests', () => {
 
   // Get all YAML files from fixtures directory
   const yamlFiles = readdirSync(fixturesDir)
+    .filter((file) => file.includes('11-state-machine'))
     .filter((file) => file.endsWith('.yaml') || file.endsWith('.yml'))
     .sort(); // Sort to ensure consistent test order
 

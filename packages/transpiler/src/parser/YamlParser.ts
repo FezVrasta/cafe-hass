@@ -160,9 +160,25 @@ export class YamlParser {
       const validation = FlowGraphSchema.safeParse(graph);
 
       if (!validation.success) {
+        // Enhanced error logging: show node data and schema path
+        // Zod v4 uses 'issues' instead of 'errors'
+        const errorDetails = validation.error.issues.map((e) => {
+          let nodeInfo = '';
+          if (e.path && e.path.length > 0) {
+            // Try to extract node id/type if error is in nodes array
+            if (e.path[0] === 'nodes' && typeof e.path[1] === 'number') {
+              const idx = e.path[1];
+              const node = graph.nodes[idx];
+              nodeInfo = `Node index ${idx} (id: ${node?.id}, type: ${node?.type})\nData: ${JSON.stringify(node?.data, null, 2)}`;
+            }
+          }
+          return `Schema path: ${e.path.join('.')}\nMessage: ${e.message}${nodeInfo ? '\n' + nodeInfo : ''}`;
+        });
+        // Also log to console for debugging
+        console.error('Zod validation error details:', errorDetails);
         return {
           success: false,
-          errors: validation.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`),
+          errors: errorDetails,
           warnings,
           hadMetadata,
         };
@@ -187,6 +203,9 @@ export class YamlParser {
         hadMetadata,
       };
     } catch (error) {
+      // Enhanced catch block: log YAML and error
+      console.error('YAML parsing error:', error);
+      console.error('YAML string:', yamlString);
       return {
         success: false,
         errors: [error instanceof Error ? error.message : 'Unknown parsing error'],

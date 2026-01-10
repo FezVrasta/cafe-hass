@@ -42,7 +42,7 @@ export const TriggerDataSchema = z
     seconds: z.string().optional(),
     // Event trigger
     event_type: z.string().optional(),
-    event_data: z.record(z.unknown()).optional(),
+    event_data: z.record(z.string(), z.unknown()).optional(),
     // Sun trigger (sunrise/sunset) or Zone trigger (enter/leave)
     event: z.enum(['sunrise', 'sunset', 'enter', 'leave']).optional(),
     offset: z.string().optional(),
@@ -152,8 +152,35 @@ export type ConditionNode = z.infer<typeof ConditionNodeSchema>;
 // ============================================
 
 /**
+ * Variables block schema for state-machine pattern
+ */
+export const VariablesSchema = z.record(z.string(), z.unknown());
+export type Variables = z.infer<typeof VariablesSchema>;
+
+/**
+ * Choose block schema for Home Assistant actions
+ */
+export const ChooseBlockSchema = z.object({
+  conditions: z.array(BaseConditionDataSchema),
+  sequence: z.array(z.any()), // Accepts array of actions (will be validated as nodes)
+  alias: z.string().optional(),
+});
+export type ChooseBlock = z.infer<typeof ChooseBlockSchema>;
+
+/**
+ * Repeat block schema for Home Assistant actions
+ */
+export const RepeatBlockSchema = z.object({
+  sequence: z.array(z.any()), // Accepts array of actions (will be validated as nodes)
+  until: z.string().optional(), // Template string for until condition
+  count: z.number().optional(),
+  alias: z.string().optional(),
+});
+export type RepeatBlock = z.infer<typeof RepeatBlockSchema>;
+
+/**
  * Data schema for action nodes
- * Contains HA service call configuration
+ * Contains HA service call configuration and extended blocks
  */
 export const ActionDataSchema = z.object({
   alias: z.string().optional(),
@@ -168,9 +195,13 @@ export const ActionDataSchema = z.object({
   // Enabled flag
   enabled: z.boolean().optional(),
   // Conditional actions (if/then/else)
-  if: z.any().optional(),
-  then: z.any().optional(),
-  else: z.any().optional(),
+  if: z.array(BaseConditionDataSchema).optional(),
+  then: z.array(z.any()).optional(),
+  else: z.array(z.any()).optional(),
+  // State machine/advanced blocks
+  repeat: RepeatBlockSchema.optional(),
+  choose: z.array(ChooseBlockSchema).optional(),
+  variables: VariablesSchema.optional(),
 });
 export type ActionData = z.infer<typeof ActionDataSchema>;
 

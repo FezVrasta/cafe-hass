@@ -66,11 +66,11 @@ export const OptionalTargetSchema = z
 /**
  * Service call data - arbitrary key-value pairs
  */
-export const ServiceDataSchema = z.record(z.unknown());
+export const ServiceDataSchema = z.record(z.string(), z.unknown());
 export type ServiceData = z.infer<typeof ServiceDataSchema>;
 
 /**
  * Service call data template - Jinja2 templates as values
  */
-export const ServiceDataTemplateSchema = z.record(z.string());
+export const ServiceDataTemplateSchema = z.record(z.string(), z.string());
 export type ServiceDataTemplate = z.infer<typeof ServiceDataTemplateSchema>;

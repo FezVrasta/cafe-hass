@@ -136,6 +136,26 @@ export function convertAutomationConfigToNodes(config: AutomationConfig): {
   nodes: NodeToCreate[];
   edges: Array<{ source: string; target: string; sourceHandle: string | null }>;
 } {
+  const cafeMetadata = config.variables?.cafe_metadata;
+  const transpilerMetadata = config.variables?._cafe_metadata;
+
+  const strategy = cafeMetadata?.strategy || transpilerMetadata?.strategy || 'native';
+
+  switch (strategy) {
+    case 'state-machine': {
+      throw new Error('State machine strategy not supported in this converter');
+    }
+    case 'native':
+    default: {
+      return convertNativeAutomationConfigToNodes(config);
+    }
+  }
+}
+
+export function convertNativeAutomationConfigToNodes(config: AutomationConfig): {
+  nodes: NodeToCreate[];
+  edges: Array<{ source: string; target: string; sourceHandle: string | null }>;
+} {
   const nodesToCreate: NodeToCreate[] = [];
   const edgesToCreate: Array<{ source: string; target: string; sourceHandle: string | null }> = [];
 
@@ -336,15 +356,6 @@ export function convertAutomationConfigToNodes(config: AutomationConfig): {
           nodeId = `action_${Date.now()}_${index}`;
           console.log(`C.A.F.E.: Generated new action ID: ${nodeId}`);
         }
-      }
-
-      // Skip actions without valid node IDs when using state machine strategy
-      // This happens with state machine wrappers that aren't actual flow nodes
-      if (strategy === 'state-machine' && !nodeId) {
-        console.log(
-          `C.A.F.E.: Skipping action ${index} - no valid node ID for state machine strategy`
-        );
-        continue;
       }
 
       // Ensure nodeId is a string at this point
