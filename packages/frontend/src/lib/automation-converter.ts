@@ -143,7 +143,7 @@ export function convertAutomationConfigToNodes(config: AutomationConfig): {
 
   switch (strategy) {
     case 'state-machine': {
-      throw new Error('State machine strategy not supported in this converter');
+      return convertStateMachineAutomationConfigToNodes(config);
     }
     case 'native':
     default: {
@@ -507,6 +507,323 @@ export function convertNativeAutomationConfigToNodes(config: AutomationConfig): 
       previousNodeId = nodeId;
       globalNodeIndex++; // Increment global index for each action node created
       xOffset += nodeSpacing;
+    }
+  }
+
+  return { nodes: nodesToCreate, edges: edgesToCreate };
+}
+
+// ============================================
+// STATE MACHINE CONVERTER
+// ============================================
+
+/**
+ * Result of parsing a state-machine choose block
+ */
+export interface StateMachineNodeInfo {
+  nodeId: string;
+  nodeType: 'trigger' | 'condition' | 'action' | 'delay' | 'wait';
+  data: Record<string, unknown>;
+  trueTarget: string | null;
+  falseTarget: string | null;
+}
+
+/**
+ * Extract node ID from a state-machine condition template
+ * E.g., '{{ current_node == "action-1" }}' -> 'action-1'
+ */
+export function extractNodeIdFromCondition(condition: Record<string, unknown>): string | null {
+  if (condition.condition !== 'template') {
+    return null;
+  }
+
+  const template = condition.value_template;
+  if (typeof template !== 'string') {
+    return null;
+  }
+
+  // Match pattern: current_node == "node-id" or current_node == 'node-id'
+  const match = template.match(/current_node\s*==\s*["']([^"']+)["']/);
+  return match ? match[1] : null;
+}
+
+/**
+ * Extract next node(s) from a variables action setting current_node
+ * Returns { trueTarget, falseTarget } for conditional transitions
+ */
+export function extractNextNodeFromVariables(
+  action: Record<string, unknown>
+): { trueTarget: string; falseTarget: string | null } | null {
+  if (!action.variables || typeof action.variables !== 'object') {
+    return null;
+  }
+
+  const variables = action.variables as Record<string, unknown>;
+  const currentNode = variables.current_node;
+
+  if (typeof currentNode !== 'string') {
+    return null;
+  }
+
+  // Check for conditional template: {% if ... %}"node1"{% else %}"node2"{% endif %}
+  const conditionalMatch = currentNode.match(
+    /\{%\s*if\s+.+?\s*%\}\s*["']([^"']+)["']\s*\{%\s*else\s*%\}\s*["']([^"']+)["']\s*\{%\s*endif\s*%\}/
+  );
+
+  if (conditionalMatch) {
+    return {
+      trueTarget: conditionalMatch[1],
+      falseTarget: conditionalMatch[2],
+    };
+  }
+
+  // Simple next node (not a template)
+  return {
+    trueTarget: currentNode,
+    falseTarget: null,
+  };
+}
+
+/**
+ * Parse a single choose block from a state-machine automation
+ * Extracts the node information and transitions
+ */
+export function parseStateMachineChooseBlock(
+  chooseBlock: Record<string, unknown>
+): StateMachineNodeInfo | null {
+  const conditions = chooseBlock.conditions;
+  if (!Array.isArray(conditions) || conditions.length === 0) {
+    return null;
+  }
+
+  // Extract node ID from the first condition
+  const firstCondition = conditions[0] as Record<string, unknown>;
+  const nodeId = extractNodeIdFromCondition(firstCondition);
+  if (!nodeId) {
+    return null;
+  }
+
+  const sequence = chooseBlock.sequence;
+  if (!Array.isArray(sequence) || sequence.length === 0) {
+    return null;
+  }
+
+  // Determine node type and extract data from the sequence
+  let nodeType: StateMachineNodeInfo['nodeType'] = 'action';
+  const data: Record<string, unknown> = {};
+  let trueTarget: string | null = null;
+  let falseTarget: string | null = null;
+
+  for (const item of sequence) {
+    const seqItem = item as Record<string, unknown>;
+
+    // Check for variables action (sets next node)
+    if (seqItem.variables) {
+      const nextInfo = extractNextNodeFromVariables(seqItem);
+      if (nextInfo) {
+        // If we have both true and false targets, this is a condition node
+        if (nextInfo.falseTarget) {
+          nodeType = 'condition';
+          trueTarget = nextInfo.trueTarget === 'END' ? null : nextInfo.trueTarget;
+          falseTarget = nextInfo.falseTarget === 'END' ? null : nextInfo.falseTarget;
+        } else {
+          trueTarget = nextInfo.trueTarget === 'END' ? null : nextInfo.trueTarget;
+        }
+
+        // Copy alias from the variables action if it's a condition (Check: pattern)
+        if (seqItem.alias && typeof seqItem.alias === 'string') {
+          data.alias = seqItem.alias;
+        }
+      }
+    }
+    // Check for delay action
+    else if (seqItem.delay !== undefined) {
+      nodeType = 'delay';
+      data.delay = seqItem.delay;
+      if (seqItem.alias) data.alias = seqItem.alias;
+    }
+    // Check for wait action
+    else if (seqItem.wait_template !== undefined) {
+      nodeType = 'wait';
+      data.wait_template = seqItem.wait_template;
+      if (seqItem.timeout) data.timeout = seqItem.timeout;
+      if (seqItem.continue_on_timeout !== undefined) {
+        data.continue_on_timeout = seqItem.continue_on_timeout;
+      }
+      if (seqItem.alias) data.alias = seqItem.alias;
+    }
+    // Check for service call action
+    else if (seqItem.service || seqItem.action) {
+      nodeType = 'action';
+      data.service = seqItem.service || seqItem.action;
+      if (seqItem.target) data.target = seqItem.target;
+      if (seqItem.data) data.data = seqItem.data;
+      if (seqItem.alias) data.alias = seqItem.alias;
+    }
+  }
+
+  return {
+    nodeId,
+    nodeType,
+    data,
+    trueTarget,
+    falseTarget,
+  };
+}
+
+/**
+ * Convert a state-machine automation config to nodes and edges
+ * State-machine automations have a specific structure:
+ * - A variables action initializing current_node
+ * - A repeat loop with choose blocks for each node
+ */
+export function convertStateMachineAutomationConfigToNodes(config: AutomationConfig): {
+  nodes: NodeToCreate[];
+  edges: Array<{ source: string; target: string; sourceHandle: string | null }>;
+} {
+  const nodesToCreate: NodeToCreate[] = [];
+  const edgesToCreate: Array<{ source: string; target: string; sourceHandle: string | null }> = [];
+
+  // Get metadata for positions
+  const transpilerMetadata = config.variables?._cafe_metadata;
+  const savedPositions = transpilerMetadata?.nodes || {};
+
+  // Helper to get position for a node
+  const getNodePosition = (nodeId: string, defaultX: number, defaultY: number) => {
+    if (savedPositions[nodeId]) {
+      const pos = savedPositions[nodeId];
+      return { x: Number(pos.x), y: Number(pos.y) };
+    }
+    return { x: defaultX, y: defaultY };
+  };
+
+  // Track the entry node (first node after triggers)
+  let entryNodeId: string | null = null;
+
+  // Parse triggers
+  const triggers = config.triggers || config.trigger || [];
+  const triggerArray = Array.isArray(triggers) ? triggers : [triggers];
+  const triggerNodeIds: string[] = [];
+
+  let xOffset = 100;
+  const baseYOffset = 150;
+  const nodeSpacing = 250;
+
+  for (const [index, trigger] of triggerArray.entries()) {
+    // Try to find trigger ID from metadata
+    let nodeId: string | undefined;
+    if (transpilerMetadata?.nodes) {
+      const triggerKeys = Object.keys(transpilerMetadata.nodes).filter((key) =>
+        key.startsWith('trigger')
+      );
+      nodeId = triggerKeys[index];
+    }
+    if (!nodeId) {
+      nodeId = `trigger_${Date.now()}_${index}`;
+    }
+
+    // Clean up trigger data
+    const cleanedTrigger = { ...trigger };
+    delete cleanedTrigger.trigger;
+
+    nodesToCreate.push({
+      id: nodeId,
+      type: 'trigger',
+      position: getNodePosition(nodeId, xOffset, baseYOffset),
+      data: {
+        ...cleanedTrigger,
+        alias: trigger.alias || `Trigger ${index + 1}`,
+        platform: trigger.device_id
+          ? 'device'
+          : trigger.platform || trigger.trigger || trigger.domain || 'state',
+      },
+    });
+
+    triggerNodeIds.push(nodeId);
+    xOffset += nodeSpacing;
+  }
+
+  // Find the repeat/choose structure in actions
+  const actions = config.actions || config.action || [];
+  const actionArray = Array.isArray(actions) ? actions : [actions];
+
+  // Map to store parsed node info by ID
+  const nodeInfoMap = new Map<string, StateMachineNodeInfo>();
+
+  for (const action of actionArray) {
+    const actionObj = action as Record<string, unknown>;
+
+    // Check for initial variables (to find entry node)
+    if (actionObj.variables && typeof actionObj.variables === 'object') {
+      const vars = actionObj.variables as Record<string, unknown>;
+      if (typeof vars.current_node === 'string' && vars.current_node !== 'END') {
+        entryNodeId = vars.current_node;
+      }
+    }
+
+    // Check for repeat block with choose
+    if (actionObj.repeat && typeof actionObj.repeat === 'object') {
+      const repeat = actionObj.repeat as Record<string, unknown>;
+      const sequence = repeat.sequence;
+
+      if (Array.isArray(sequence)) {
+        for (const seqItem of sequence) {
+          const seqObj = seqItem as Record<string, unknown>;
+
+          // Look for choose block
+          if (Array.isArray(seqObj.choose)) {
+            for (const chooseBlock of seqObj.choose) {
+              const nodeInfo = parseStateMachineChooseBlock(
+                chooseBlock as Record<string, unknown>
+              );
+              if (nodeInfo) {
+                nodeInfoMap.set(nodeInfo.nodeId, nodeInfo);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Create nodes from parsed info
+  for (const [nodeId, info] of nodeInfoMap) {
+    nodesToCreate.push({
+      id: nodeId,
+      type: info.nodeType,
+      position: getNodePosition(nodeId, xOffset, baseYOffset),
+      data: info.data,
+    });
+    xOffset += nodeSpacing;
+  }
+
+  // Create edges
+  // Connect triggers to entry node
+  if (entryNodeId) {
+    for (const triggerId of triggerNodeIds) {
+      edgesToCreate.push({
+        source: triggerId,
+        target: entryNodeId,
+        sourceHandle: null,
+      });
+    }
+  }
+
+  // Create edges between nodes based on transitions
+  for (const [nodeId, info] of nodeInfoMap) {
+    if (info.trueTarget && info.trueTarget !== 'END') {
+      edgesToCreate.push({
+        source: nodeId,
+        target: info.trueTarget,
+        sourceHandle: info.falseTarget ? 'true' : null,
+      });
+    }
+    if (info.falseTarget && info.falseTarget !== 'END') {
+      edgesToCreate.push({
+        source: nodeId,
+        target: info.falseTarget,
+        sourceHandle: 'false',
+      });
     }
   }
 
