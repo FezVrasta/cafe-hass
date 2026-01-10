@@ -71,7 +71,10 @@ function transformToNestedCondition(condition: Record<string, unknown>): NestedC
 
   return {
     condition_type: validatedType,
-    entity_id: (typeof condition.entity_id === 'string' || Array.isArray(condition.entity_id)) ? condition.entity_id : undefined,
+    entity_id:
+      typeof condition.entity_id === 'string' || Array.isArray(condition.entity_id)
+        ? condition.entity_id
+        : undefined,
     state: condition.state as string | string[] | undefined,
     above: condition.above as number | string | undefined,
     below: condition.below as number | string | undefined,
@@ -715,7 +718,10 @@ export class YamlParser {
       data: {
         alias: ifAction.alias,
         condition_type: conditionType,
-        entity_id: (typeof firstCondition?.entity_id === 'string' || Array.isArray(firstCondition?.entity_id)) ? firstCondition?.entity_id : undefined,
+        entity_id:
+          typeof firstCondition?.entity_id === 'string' || Array.isArray(firstCondition?.entity_id)
+            ? firstCondition?.entity_id
+            : undefined,
         state: firstCondition?.state as string | string[] | undefined,
         above: firstCondition?.above as number | string | undefined,
         below: firstCondition?.below as number | string | undefined,
@@ -724,10 +730,7 @@ export class YamlParser {
         value_template: firstCondition?.value_template as string | undefined,
         zone: firstCondition?.zone as string | undefined,
         // Store all conditions if there are multiple
-        conditions:
-          ifConditions.length > 1
-            ? transformConditions(ifConditions)
-            : undefined,
+        conditions: ifConditions.length > 1 ? transformConditions(ifConditions) : undefined,
       },
     };
 
@@ -756,9 +759,7 @@ export class YamlParser {
       // The edges from condition to first action should use 'true' handle
       if (thenResult.nodes.length > 0) {
         const firstActionId = thenResult.nodes[0].id;
-        const trueEdge = edges.find(
-          (e) => e.source === conditionId && e.target === firstActionId
-        );
+        const trueEdge = edges.find((e) => e.source === conditionId && e.target === firstActionId);
         if (trueEdge) {
           trueEdge.sourceHandle = 'true';
         }
