@@ -51,6 +51,7 @@ export const HANDLED_PROPERTIES = {
     'above',
     'below',
     'value_template',
+    'template', // Template condition field
     'after',
     'before',
     'weekday',
@@ -61,6 +62,8 @@ export const HANDLED_PROPERTIES = {
     'zone',
     'condition',
     'for', // Duration field
+    'conditions', // Nested conditions for and/or/not and multi-condition blocks
+    'id', // Trigger condition ID field
   ],
 
   // Action properties handled by ActionFields component

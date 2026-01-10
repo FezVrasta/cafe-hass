@@ -2,6 +2,7 @@ import {
   Background,
   BackgroundVariant,
   Controls,
+  type EdgeTypes,
   MarkerType,
   MiniMap,
   type NodeTypes,
@@ -12,6 +13,7 @@ import {
 } from '@xyflow/react';
 import { type DragEvent, useCallback, useEffect, useMemo, useRef } from 'react';
 import { ActionNode, ConditionNode, DelayNode, TriggerNode, WaitNode } from '@/components/nodes';
+import { DeletableEdge } from '@/components/edges';
 import { useDarkMode } from '@/hooks/useDarkMode';
 import { useFlowStore } from '@/store/flow-store';
 
@@ -21,6 +23,10 @@ const nodeTypes: NodeTypes = {
   action: ActionNode,
   delay: DelayNode,
   wait: WaitNode,
+};
+
+const edgeTypes: EdgeTypes = {
+  deletable: DeletableEdge,
 };
 
 export function FlowCanvas() {
@@ -153,12 +159,13 @@ export function FlowCanvas() {
 
       return {
         ...edge,
+        type: 'deletable',
         animated: isActiveInSimulation || isActiveInTrace,
         style: edgeStyle,
         markerEnd,
       };
     });
-  }, [edges, isSimulating, executionPath, isShowingTrace, traceExecutionPath, selectedNodeId]);
+  }, [edges, isSimulating, executionPath, isShowingTrace, traceExecutionPath, selectedNodeId, isDarkMode]);
 
   return (
     <div className="h-full w-full" ref={reactFlowWrapper}>
@@ -173,8 +180,9 @@ export function FlowCanvas() {
         onDragOver={onDragOver}
         onDrop={onDrop}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         defaultEdgeOptions={{
-          type: 'smoothstep',
+          type: 'deletable',
           style: { strokeWidth: 2, stroke: isDarkMode ? '#94a3b8' : '#64748b' },
           markerEnd: {
             type: MarkerType.ArrowClosed,

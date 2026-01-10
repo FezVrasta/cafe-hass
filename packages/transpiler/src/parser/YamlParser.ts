@@ -35,6 +35,61 @@ export interface ParseResult {
 }
 
 /**
+ * Valid condition types for Home Assistant
+ */
+const VALID_CONDITION_TYPES = [
+  'state',
+  'numeric_state',
+  'template',
+  'time',
+  'sun',
+  'zone',
+  'and',
+  'or',
+  'not',
+  'device',
+  'trigger',
+] as const;
+
+type ValidConditionType = (typeof VALID_CONDITION_TYPES)[number];
+
+/**
+ * Nested condition type (limited to one level per schema)
+ */
+type NestedCondition = NonNullable<ConditionNode['data']['conditions']>[number];
+
+/**
+ * Transform Home Assistant condition format to internal nested condition format
+ * HA uses 'condition' field, internal schema uses 'condition_type'
+ * Note: Nested conditions are limited to one level per the schema
+ */
+function transformToNestedCondition(condition: Record<string, unknown>): NestedCondition {
+  const conditionType = (condition.condition as string) || 'template';
+  const validatedType = VALID_CONDITION_TYPES.includes(conditionType as ValidConditionType)
+    ? (conditionType as ValidConditionType)
+    : 'template';
+
+  return {
+    condition_type: validatedType,
+    entity_id: condition.entity_id as string | undefined,
+    state: condition.state as string | string[] | undefined,
+    above: condition.above as number | string | undefined,
+    below: condition.below as number | string | undefined,
+    attribute: condition.attribute as string | undefined,
+    template: (condition.template as string) || (condition.value_template as string) || undefined,
+    value_template: condition.value_template as string | undefined,
+    zone: condition.zone as string | undefined,
+  };
+}
+
+/**
+ * Transform an array of Home Assistant conditions to internal format
+ */
+function transformConditions(conditions: unknown[]): NestedCondition[] {
+  return conditions.map((c) => transformToNestedCondition(c as Record<string, unknown>));
+}
+
+/**
  * Parser for converting Home Assistant YAML back to FlowGraph
  */
 export class YamlParser {
@@ -328,14 +383,21 @@ export class YamlParser {
               condition_type: condition.condition || 'state',
               entity_id: condition.entity_id,
               state: condition.state,
-              template: condition.template,
+              // Support both 'template' and 'value_template' (Home Assistant uses value_template)
+              template: condition.template || condition.value_template,
+              value_template: condition.value_template,
               after: condition.after,
               before: condition.before,
               weekday: condition.weekday,
               after_offset: condition.after_offset,
               before_offset: condition.before_offset,
               zone: condition.zone,
-              conditions: condition.conditions,
+              conditions: Array.isArray(condition.conditions)
+                ? transformConditions(condition.conditions)
+                : undefined,
+              above: condition.above,
+              below: condition.below,
+              attribute: condition.attribute,
             },
           };
 
@@ -511,14 +573,35 @@ export class YamlParser {
     choices.forEach((choice: any) => {
       if (choice.conditions) {
         const conditionId = getNextNodeId('condition');
+        // choice.conditions can be an array of conditions or a single condition object
+        const conditionsArray = Array.isArray(choice.conditions)
+          ? choice.conditions
+          : [choice.conditions];
+        // Use the first condition to determine the type and extract properties
+        const firstCondition = conditionsArray[0] || {};
         const conditionNode: ConditionNode = {
           id: conditionId,
           type: 'condition',
           position: { x: 0, y: 0 },
           data: {
             alias: choice.alias,
-            condition_type: choice.conditions.condition || 'template',
-            ...choice.conditions,
+            condition_type: firstCondition.condition || 'template',
+            entity_id: firstCondition.entity_id,
+            state: firstCondition.state,
+            // Support both 'template' and 'value_template' (Home Assistant uses value_template)
+            template: firstCondition.template || firstCondition.value_template,
+            value_template: firstCondition.value_template,
+            above: firstCondition.above,
+            below: firstCondition.below,
+            attribute: firstCondition.attribute,
+            zone: firstCondition.zone,
+            // Store all conditions if there are multiple
+            conditions:
+              conditionsArray.length > 1
+                ? transformConditions(conditionsArray)
+                : Array.isArray(firstCondition.conditions)
+                  ? transformConditions(firstCondition.conditions)
+                  : undefined,
           },
         };
 
@@ -602,24 +685,14 @@ export class YamlParser {
     const firstCondition = ifConditions[0] as Record<string, unknown> | undefined;
     const rawConditionType = (firstCondition?.condition as string) || 'numeric_state';
     // Validate condition type against known types
-    const validConditionTypes = [
-      'state',
-      'numeric_state',
-      'template',
-      'time',
-      'sun',
-      'zone',
-      'and',
-      'or',
-      'not',
-      'device',
-      'trigger',
-    ] as const;
-    const conditionType = validConditionTypes.includes(
-      rawConditionType as (typeof validConditionTypes)[number]
-    )
-      ? (rawConditionType as (typeof validConditionTypes)[number])
+    const conditionType = VALID_CONDITION_TYPES.includes(rawConditionType as ValidConditionType)
+      ? (rawConditionType as ValidConditionType)
       : 'template';
+
+    // Extract template value (Home Assistant uses value_template)
+    const templateValue =
+      (firstCondition?.template as string | undefined) ||
+      (firstCondition?.value_template as string | undefined);
 
     const conditionNode: ConditionNode = {
       id: conditionId,
@@ -633,6 +706,14 @@ export class YamlParser {
         above: firstCondition?.above as number | undefined,
         below: firstCondition?.below as number | undefined,
         attribute: firstCondition?.attribute as string | undefined,
+        template: templateValue,
+        value_template: firstCondition?.value_template as string | undefined,
+        zone: firstCondition?.zone as string | undefined,
+        // Store all conditions if there are multiple
+        conditions:
+          ifConditions.length > 1
+            ? transformConditions(ifConditions)
+            : undefined,
       },
     };
 

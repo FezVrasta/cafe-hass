@@ -17,12 +17,16 @@ import { TimeConditionFields } from './TimeConditionFields';
 import { TriggerConditionFields } from './TriggerConditionFields';
 import { ZoneConditionFields } from './ZoneConditionFields';
 import { ConditionGroupEditor } from '@/components/nodes/ConditionGroupEditor';
+import type { ConditionNodeData } from '@/store/flow-store';
 
 interface ConditionFieldsProps {
   node: FlowNode;
   onChange: (key: string, value: unknown) => void;
   entities: HassEntity[];
 }
+
+// Logical group types that use the ConditionGroupEditor
+const GROUP_TYPES = ['and', 'or', 'not'];
 
 /**
  * Condition node field component.
@@ -31,6 +35,9 @@ interface ConditionFieldsProps {
  */
 export function ConditionFields({ node, onChange, entities }: ConditionFieldsProps) {
   const conditionType = getNodeDataString(node, 'condition_type', 'state');
+  const nodeData = node.data as Record<string, unknown>;
+  const hasNestedConditions = Array.isArray(nodeData.conditions) && nodeData.conditions.length > 0;
+  const isGroupType = GROUP_TYPES.includes(conditionType);
 
   const renderConditionFields = () => {
     switch (conditionType) {
@@ -51,24 +58,8 @@ export function ConditionFields({ node, onChange, entities }: ConditionFieldsPro
       case 'and':
       case 'or':
       case 'not':
-        // Render the group editor for logical group conditions
-        // Only pass conditions if node.data is a group condition
-        // Type guard for condition node
-        const isConditionNode =
-          node.type === 'condition' &&
-          typeof (node.data as any).condition_type === 'string';
-        const groupConditions =
-          isConditionNode && ['and', 'or', 'not'].includes((node.data as any).condition_type) &&
-          Array.isArray((node.data as any).conditions)
-            ? (node.data as any).conditions
-            : [];
-        return (
-          <ConditionGroupEditor
-            conditions={groupConditions}
-            onChange={conds => onChange('conditions', conds)}
-            parentType={conditionType as 'and' | 'or' | 'not'}
-          />
-        );
+        // For group types, only render the group editor (no type-specific fields)
+        return null;
       default:
         return null;
     }
@@ -90,14 +81,25 @@ export function ConditionFields({ node, onChange, entities }: ConditionFieldsPro
             <SelectItem value="zone">Zone</SelectItem>
             <SelectItem value="device">Device</SelectItem>
             <SelectItem value="trigger">Trigger</SelectItem>
-            <SelectItem value="and">AND</SelectItem>
-            <SelectItem value="or">OR</SelectItem>
+            <SelectItem value="and">AND (All)</SelectItem>
+            <SelectItem value="or">OR (Any)</SelectItem>
             <SelectItem value="not">NOT</SelectItem>
           </SelectContent>
         </Select>
       </FormField>
 
       {renderConditionFields()}
+
+      {/* Render nested conditions if they exist (for group types or when parsed from YAML with multiple conditions) */}
+      {(isGroupType || hasNestedConditions) && (
+        <FormField label="Nested Conditions">
+          <ConditionGroupEditor
+            conditions={(nodeData.conditions as ConditionNodeData[]) || []}
+            onChange={(conds) => onChange('conditions', conds)}
+            parentType={isGroupType ? (conditionType as 'and' | 'or' | 'not') : 'and'}
+          />
+        </FormField>
+      )}
     </>
   );
 }

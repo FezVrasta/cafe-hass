@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { useHass } from '@/hooks/useHass';
+import { useHass, type HassEntity } from '@/hooks/useHass';
 import { EntitySelector } from '@/components/ui/EntitySelector';
 import type { ConditionNodeData } from '@/store/flow-store';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Trash2, Plus } from 'lucide-react';
 
 interface ConditionGroupEditorProps {
   conditions: ConditionNodeData[];
@@ -22,107 +24,290 @@ interface ConditionGroupEditorProps {
 
 const CONDITION_TYPES = [
   { value: 'state', label: 'State' },
-  { value: 'and', label: 'AND' },
-  { value: 'or', label: 'OR' },
+  { value: 'numeric_state', label: 'Numeric State' },
+  { value: 'template', label: 'Template' },
+  { value: 'trigger', label: 'Trigger' },
+  { value: 'zone', label: 'Zone' },
+  { value: 'time', label: 'Time' },
+  { value: 'and', label: 'AND (All)' },
+  { value: 'or', label: 'OR (Any)' },
   { value: 'not', label: 'NOT' },
-  // Add more types as needed
 ];
+
+// Logical group types that can have nested conditions
+const GROUP_TYPES = ['and', 'or', 'not'];
+
+/**
+ * Renders fields specific to each condition type in a vertical layout
+ */
+function ConditionTypeFields({
+  cond,
+  onUpdate,
+  entities,
+}: {
+  cond: ConditionNodeData;
+  onUpdate: (newCond: ConditionNodeData) => void;
+  entities: HassEntity[];
+}) {
+  const condType = cond.condition_type || 'state';
+
+  switch (condType) {
+    case 'state':
+      return (
+        <div className="space-y-2">
+          <EntitySelector
+            value={cond.entity_id || ''}
+            onChange={(val) => onUpdate({ ...cond, entity_id: val })}
+            entities={entities}
+            placeholder="Select entity..."
+            className="w-full"
+          />
+          <Input
+            value={typeof cond.state === 'string' ? cond.state : ''}
+            onChange={(e) => onUpdate({ ...cond, state: e.target.value })}
+            placeholder="State value (e.g., on, off, home)"
+          />
+        </div>
+      );
+
+    case 'numeric_state':
+      return (
+        <div className="space-y-2">
+          <EntitySelector
+            value={cond.entity_id || ''}
+            onChange={(val) => onUpdate({ ...cond, entity_id: val })}
+            entities={entities}
+            placeholder="Select entity..."
+            className="w-full"
+          />
+          <div className="grid grid-cols-2 gap-2">
+            <Input
+              value={cond.above !== undefined ? String(cond.above) : ''}
+              onChange={(e) =>
+                onUpdate({ ...cond, above: e.target.value ? Number(e.target.value) : undefined })
+              }
+              placeholder="Above"
+              type="number"
+            />
+            <Input
+              value={cond.below !== undefined ? String(cond.below) : ''}
+              onChange={(e) =>
+                onUpdate({ ...cond, below: e.target.value ? Number(e.target.value) : undefined })
+              }
+              placeholder="Below"
+              type="number"
+            />
+          </div>
+        </div>
+      );
+
+    case 'template':
+      return (
+        <Textarea
+          className="font-mono text-xs min-h-[80px] w-full"
+          value={cond.template || cond.value_template || ''}
+          onChange={(e) =>
+            onUpdate({ ...cond, template: e.target.value, value_template: e.target.value })
+          }
+          placeholder="{{ states('sensor.example') == 'on' }}"
+        />
+      );
+
+    case 'trigger':
+      return (
+        <Input
+          value={(cond as Record<string, unknown>).id as string || ''}
+          onChange={(e) => onUpdate({ ...cond, id: e.target.value } as ConditionNodeData)}
+          placeholder="Trigger ID (e.g., arriving, leaving)"
+        />
+      );
+
+    case 'zone':
+      return (
+        <div className="space-y-2">
+          <EntitySelector
+            value={cond.entity_id || ''}
+            onChange={(val) => onUpdate({ ...cond, entity_id: val })}
+            entities={entities.filter((e) => e.entity_id.startsWith('person.'))}
+            placeholder="Select person..."
+            className="w-full"
+          />
+          <EntitySelector
+            value={cond.zone || ''}
+            onChange={(val) => onUpdate({ ...cond, zone: val })}
+            entities={entities.filter((e) => e.entity_id.startsWith('zone.'))}
+            placeholder="Select zone..."
+            className="w-full"
+          />
+        </div>
+      );
+
+    case 'time':
+      return (
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block">After</label>
+            <Input
+              value={cond.after || ''}
+              onChange={(e) => onUpdate({ ...cond, after: e.target.value })}
+              placeholder="HH:MM"
+              type="time"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block">Before</label>
+            <Input
+              value={cond.before || ''}
+              onChange={(e) => onUpdate({ ...cond, before: e.target.value })}
+              placeholder="HH:MM"
+              type="time"
+            />
+          </div>
+        </div>
+      );
+
+    default:
+      return (
+        <div className="space-y-2">
+          <EntitySelector
+            value={cond.entity_id || ''}
+            onChange={(val) => onUpdate({ ...cond, entity_id: val })}
+            entities={entities}
+            placeholder="Select entity..."
+            className="w-full"
+          />
+          <Input
+            value={typeof cond.state === 'string' ? cond.state : ''}
+            onChange={(e) => onUpdate({ ...cond, state: e.target.value })}
+            placeholder="State value"
+          />
+        </div>
+      );
+  }
+}
+
+/**
+ * Single condition item card
+ */
+function ConditionCard({
+  cond,
+  onUpdate,
+  onRemove,
+  entities,
+  depth,
+}: {
+  cond: ConditionNodeData;
+  onUpdate: (newCond: ConditionNodeData) => void;
+  onRemove: () => void;
+  entities: HassEntity[];
+  depth: number;
+}) {
+  const isGroup = GROUP_TYPES.includes(cond.condition_type || '');
+
+  const handleTypeChange = (val: string) => {
+    if (GROUP_TYPES.includes(val)) {
+      onUpdate({ condition_type: val, conditions: [] });
+    } else if (val === 'template') {
+      onUpdate({ condition_type: val, template: '', value_template: '' });
+    } else if (val === 'trigger') {
+      onUpdate({ condition_type: val, id: '' } as ConditionNodeData);
+    } else if (val === 'numeric_state') {
+      onUpdate({ condition_type: val, entity_id: '' });
+    } else {
+      onUpdate({ condition_type: val, entity_id: '', state: '' });
+    }
+  };
+
+  return (
+    <div
+      className={cn(
+        'rounded-md border bg-card p-3 space-y-3',
+        depth > 0 && 'bg-muted/30'
+      )}
+    >
+      {/* Header row: type selector and delete button */}
+      <div className="flex items-center justify-between gap-2">
+        <Select value={cond.condition_type || 'state'} onValueChange={handleTypeChange}>
+          <SelectTrigger className="w-full max-w-[180px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {CONDITION_TYPES.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button
+          size="icon"
+          variant="ghost"
+          onClick={onRemove}
+          className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0"
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </div>
+
+      {/* Condition-specific fields */}
+      {isGroup ? (
+        <ConditionGroupEditor
+          conditions={(cond.conditions as ConditionNodeData[]) || []}
+          onChange={(newConds) => onUpdate({ ...cond, conditions: newConds })}
+          parentType={cond.condition_type as 'and' | 'or' | 'not'}
+          depth={depth + 1}
+        />
+      ) : (
+        <ConditionTypeFields cond={cond} onUpdate={onUpdate} entities={entities} />
+      )}
+    </div>
+  );
+}
 
 export const ConditionGroupEditor = memo(function ConditionGroupEditor({
   conditions,
   onChange,
   depth = 0,
 }: ConditionGroupEditorProps) {
-  // Add a new empty condition
+  const { hass } = useHass();
+  const entities = hass ? Object.values(hass.states) : [];
+
   const handleAdd = () => {
     onChange([...conditions, { condition_type: 'state', entity_id: '', state: '' }]);
   };
 
-  // Remove a condition at index
   const handleRemove = (idx: number) => {
     onChange(conditions.filter((_, i) => i !== idx));
   };
 
-  // Update a nested condition
   const handleUpdate = (idx: number, newCond: ConditionNodeData) => {
     onChange(conditions.map((c, i) => (i === idx ? newCond : c)));
   };
 
   return (
-    <div className={cn('ml-2 border-l pl-2 space-y-2', depth > 0 && 'mt-2')}>
-      {conditions.map((cond, idx) => (
-        <div key={idx} className="flex gap-2 items-center">
-          {/* Recursive: if this is a group, render another ConditionGroupEditor */}
-          {typeof cond.condition_type === 'string' &&
-          ['and', 'or', 'not'].includes(cond.condition_type) &&
-          Array.isArray(cond.conditions) ? (
-            <div className="flex-1">
-              <div className="font-semibold text-xs mb-1">{cond.condition_type.toUpperCase()}</div>
-              <ConditionGroupEditor
-                conditions={cond.conditions as ConditionNodeData[]}
-                onChange={(newConds) => handleUpdate(idx, { ...cond, conditions: newConds })}
-                parentType={cond.condition_type as 'and' | 'or' | 'not'}
-                depth={depth + 1}
-              />
-            </div>
-          ) : (
-            <div className="flex-1 flex gap-1 items-center">
-              <Select
-                value={cond.condition_type || 'state'}
-                onValueChange={(val) => {
-                  if (['and', 'or', 'not'].includes(val)) {
-                    handleUpdate(idx, {
-                      condition_type: val,
-                      conditions: Array.isArray(cond.conditions) ? cond.conditions : [],
-                    });
-                  } else {
-                    handleUpdate(idx, { condition_type: val, entity_id: '', state: '' });
-                  }
-                }}
-              >
-                <SelectTrigger className="w-20">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {CONDITION_TYPES.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {/* If not a group, show entity_id/state fields */}
-              {typeof cond.condition_type !== 'string' ||
-              !['and', 'or', 'not'].includes(cond.condition_type) ? (
-                <>
-                  {/* EntitySelector for entity_id */}
-                  <EntitySelector
-                    value={cond.entity_id || ''}
-                    onChange={(val) => handleUpdate(idx, { ...cond, entity_id: val })}
-                    entities={useHass().hass ? Object.values(useHass().hass.states) : []}
-                    placeholder="Select entity"
-                    className="min-w-36 mr-1 flex-1"
-                  />
-                  {/* shadcn Input for state */}
-                  <Input
-                    className="w-24 text-xs"
-                    value={cond.state || ''}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      handleUpdate(idx, { ...cond, state: e.target.value })
-                    }
-                    placeholder="state"
-                  />
-                </>
-              ) : null}
-            </div>
-          )}
-          <Button size="sm" variant="outline" onClick={() => handleRemove(idx)}>
-            -
-          </Button>
-        </div>
-      ))}
-      <Button size="sm" variant="outline" onClick={handleAdd} className="mt-1">
-        + Add Condition
+    <div className={cn('space-y-2', depth > 0 && 'pl-2 border-l-2 border-muted')}>
+      {conditions.length === 0 ? (
+        <p className="text-xs text-muted-foreground italic py-2">No conditions added yet</p>
+      ) : (
+        conditions.map((cond, idx) => (
+          <ConditionCard
+            key={idx}
+            cond={cond}
+            onUpdate={(newCond) => handleUpdate(idx, newCond)}
+            onRemove={() => handleRemove(idx)}
+            entities={entities}
+            depth={depth}
+          />
+        ))
+      )}
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={handleAdd}
+        className="w-full"
+      >
+        <Plus className="h-4 w-4 mr-1" />
+        Add Condition
       </Button>
     </div>
   );
