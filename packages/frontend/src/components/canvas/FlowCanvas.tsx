@@ -11,7 +11,9 @@ import {
   ReactFlow,
   useReactFlow,
 } from '@xyflow/react';
-import { type DragEvent, useCallback, useEffect, useMemo, useRef } from 'react';
+import { type DragEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { ReactFlowInstance } from '@xyflow/react';
+import { useCopyPaste } from '@/hooks/useCopyPaste';
 import { DeletableEdge } from '@/components/edges';
 import { ActionNode, ConditionNode, DelayNode, TriggerNode, WaitNode } from '@/components/nodes';
 import { useDarkMode } from '@/hooks/useDarkMode';
@@ -48,6 +50,9 @@ export function FlowCanvas() {
 
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const { screenToFlowPosition, setViewport } = useReactFlow();
+  const [rfInstance, setRfInstance] = useState<ReactFlowInstance | null>(null);
+  // Enable copy/paste support
+  useCopyPaste(rfInstance);
 
   // Set initial zoom level
   useEffect(() => {
@@ -178,6 +183,7 @@ export function FlowCanvas() {
   return (
     <div className="h-full w-full" ref={reactFlowWrapper}>
       <ReactFlow
+        onInit={setRfInstance}
         colorMode={isDarkMode ? 'dark' : 'light'}
         nodes={nodes}
         edges={styledEdges}
