@@ -744,32 +744,34 @@ export function parseStateMachineChooseBlock(
 
     // Check for variables action (sets next node)
     if (seqItem.variables) {
-      const nextInfo = extractNextNodeFromVariables(seqItem);
-      if (nextInfo) {
-        // If we have both true and false targets, this is a condition node
-        if (nextInfo.falseTarget) {
-          nodeType = 'condition';
+      const variables = seqItem.variables as Record<string, unknown>;
+      const currentNodeTemplate = variables.current_node as string;
+      const conditionExpr =
+        typeof currentNodeTemplate === 'string'
+          ? extractConditionFromVariablesTemplate(currentNodeTemplate)
+          : null;
+
+      // If a condition expression is present, this is a condition node
+      if (conditionExpr) {
+        nodeType = 'condition';
+        const nextInfo = extractNextNodeFromVariables(seqItem);
+        if (nextInfo) {
           trueTarget = nextInfo.trueTarget === 'END' ? null : nextInfo.trueTarget;
           falseTarget = nextInfo.falseTarget === 'END' ? null : nextInfo.falseTarget;
-
-          // Extract condition data from the Jinja template
-          const variables = seqItem.variables as Record<string, unknown>;
-          const currentNodeTemplate = variables.current_node;
-          if (typeof currentNodeTemplate === 'string') {
-            const conditionExpr = extractConditionFromVariablesTemplate(currentNodeTemplate);
-            if (conditionExpr) {
-              const conditionData = parseJinjaConditionTemplate(conditionExpr);
-              Object.assign(data, conditionData);
-            }
-          }
-        } else {
+        }
+        const conditionData = parseJinjaConditionTemplate(conditionExpr);
+        Object.assign(data, conditionData);
+      } else {
+        // Otherwise, it's a simple transition
+        const nextInfo = extractNextNodeFromVariables(seqItem);
+        if (nextInfo) {
           trueTarget = nextInfo.trueTarget === 'END' ? null : nextInfo.trueTarget;
         }
+      }
 
-        // Copy alias from the variables action if it's a condition (Check: pattern)
-        if (seqItem.alias && typeof seqItem.alias === 'string') {
-          data.alias = seqItem.alias;
-        }
+      // Copy alias from the variables action if it's a condition (Check: pattern)
+      if (seqItem.alias && typeof seqItem.alias === 'string') {
+        data.alias = seqItem.alias;
       }
     }
     // Check for delay action
@@ -999,7 +1001,7 @@ function convertStateMachineFromYaml(
       edgesToCreate.push({
         source: nodeId,
         target: info.trueTarget,
-        sourceHandle: info.falseTarget ? 'true' : null,
+        sourceHandle: info.nodeType === 'condition' ? 'true' : null,
       });
     }
     if (info.falseTarget && info.falseTarget !== 'END') {

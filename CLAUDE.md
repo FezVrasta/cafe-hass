@@ -33,7 +33,7 @@ hflow/
 - Yarn 4 workspaces + Turbo for orchestration
 - TypeScript 5.7 with strict mode
 - Vite for frontend builds
-- Vitest for testing
+- Vitest for testing, make sure to use the --run flag to avoid issues with watch mode
 - Biome for linting, and for formatting
 
 # Coding Conventions
