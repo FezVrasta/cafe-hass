@@ -334,29 +334,21 @@ export const useFlowStore = create<FlowState>((set, get) => ({
         ...result.output.automation,
         variables: {
           ...(result.output.automation.variables || {}),
-          cafe_metadata: {
-            node_positions: graph.nodes.reduce(
+          _cafe_metadata: {
+            version: 1,
+            strategy: 'native' as const,
+            nodes: graph.nodes.reduce(
               (acc, node) => {
                 acc[node.id] = {
                   x: node.position.x,
                   y: node.position.y,
-                  type: node.type,
                 };
                 return acc;
               },
-              {} as Record<string, { x: number; y: number; type: string }>
+              {} as Record<string, { x: number; y: number }>
             ),
-            node_mapping: graph.nodes.reduce(
-              (acc, node, index) => {
-                // Create a deterministic mapping based on node type and index
-                const typePrefix = node.type;
-                acc[`${typePrefix}-${index}`] = node.id;
-                return acc;
-              },
-              {} as Record<string, string>
-            ),
-            created_by: 'C.A.F.E.',
-            version: '1.0',
+            graph_id: graph.id,
+            graph_version: 1,
           },
         },
       };
@@ -440,29 +432,21 @@ export const useFlowStore = create<FlowState>((set, get) => ({
         ...result.output.automation,
         variables: {
           ...(result.output.automation.variables || {}),
-          cafe_metadata: {
-            node_positions: graph.nodes.reduce(
+          _cafe_metadata: {
+            version: 1,
+            strategy: 'native' as const,
+            nodes: graph.nodes.reduce(
               (acc, node) => {
                 acc[node.id] = {
                   x: node.position.x,
                   y: node.position.y,
-                  type: node.type,
                 };
                 return acc;
               },
-              {} as Record<string, { x: number; y: number; type: string }>
+              {} as Record<string, { x: number; y: number }>
             ),
-            node_mapping: graph.nodes.reduce(
-              (acc, node, index) => {
-                // Create a deterministic mapping based on node type and index
-                const typePrefix = node.type;
-                acc[`${typePrefix}-${index}`] = node.id;
-                return acc;
-              },
-              {} as Record<string, string>
-            ),
-            created_by: 'C.A.F.E.',
-            version: '1.0',
+            graph_id: graph.id,
+            graph_version: 1,
           },
         },
       };

@@ -40,6 +40,14 @@ export interface HassConfig {
   connection?: HassConnection;
 }
 
+export interface CafeMetadata {
+  version: number;
+  strategy: 'native' | 'state-machine';
+  nodes: Record<string, unknown>;
+  graph_id: string;
+  graph_version: number;
+}
+
 export interface AutomationConfig {
   id?: string;
   alias?: string;
@@ -52,7 +60,11 @@ export interface AutomationConfig {
   action?: Record<string, unknown>[];
   mode?: string;
   max?: number;
-  variables?: Record<string, unknown>;
+  variables?: {
+    _cafe_metadata?: CafeMetadata;
+    cafe_metadata?: CafeMetadata;
+    [key: string]: unknown;
+  };
 }
 
 export interface TraceStep {

@@ -275,6 +275,7 @@ describe('State Machine Converter', () => {
             },
             graph_id: 'test-graph-id',
             graph_version: 1,
+            version: 1,
           },
         },
       };
@@ -388,6 +389,7 @@ describe('State Machine Converter', () => {
             },
             graph_id: 'test-graph-id',
             graph_version: 1,
+            version: 1,
           },
         },
       };
@@ -454,6 +456,7 @@ describe('State Machine Converter', () => {
             },
             graph_id: 'test-graph-id',
             graph_version: 1,
+            version: 1,
           },
         },
       };
@@ -531,6 +534,7 @@ describe('State Machine Converter', () => {
             nodes: {},
             graph_id: 'test-graph-id',
             graph_version: 1,
+            version: 1,
           },
         },
       };
@@ -608,6 +612,7 @@ describe('State Machine Converter', () => {
             nodes: {},
             graph_id: 'test-graph-id',
             graph_version: 1,
+            version: 1,
           },
         },
       };

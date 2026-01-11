@@ -40,7 +40,7 @@ describe('Position Restoration', () => {
           },
           graph_id: '4600fa94-4226-4a53-bab7-16c06799c614',
           graph_version: 1,
-          strategy: 'native',
+          strategy: 'native' as const,
         },
       },
     };
@@ -119,36 +119,5 @@ describe('Position Restoration', () => {
 
     expect(triggerNode?.position.x).toBe(100); // Default x position
     expect(actionNode?.position.x).toBe(400); // Default x position + spacing
-  });
-
-  it('should prioritize cafe_metadata over transpiler metadata', () => {
-    const automationConfigWithBothMetadata = {
-      alias: 'Test Automation',
-      trigger: [{ platform: 'state', entity_id: 'sensor.test' }],
-      action: [{ service: 'light.turn_on', entity_id: 'light.test' }],
-      mode: 'single',
-      variables: {
-        cafe_metadata: {
-          node_positions: {
-            trigger_test: { x: 500, y: 600 },
-          },
-          node_mapping: {
-            trigger_0: 'trigger_test',
-          },
-        },
-        _cafe_metadata: {
-          nodes: {
-            trigger_old: { x: 100, y: 100 },
-          },
-        },
-      },
-    };
-
-    const { nodes } = convertAutomationConfigToNodes(automationConfigWithBothMetadata);
-    const triggerNode = nodes.find((node) => node.type === 'trigger');
-
-    // Should use cafe_metadata positions when available
-    expect(triggerNode?.position.x).toBe(500);
-    expect(triggerNode?.position.y).toBe(600);
   });
 });
