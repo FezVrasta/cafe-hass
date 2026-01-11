@@ -1,7 +1,7 @@
 // import type { Node, Edge } from '@xyflow/react';
 // import type { FlowNodeData } from '@/store/flow-store';
 
-import type { AutomationConfig } from './ha-api';
+import type { AutomationConfig, CafeMetadata } from './ha-api';
 
 // Define automation action types
 export interface BaseAction {
@@ -136,14 +136,8 @@ export function convertAutomationConfigToNodes(config: AutomationConfig): {
   nodes: NodeToCreate[];
   edges: Array<{ source: string; target: string; sourceHandle: string | null }>;
 } {
-  type CafeMetadata = { strategy?: string };
-  type TranspilerMetadata = { strategy?: string };
-  const cafeMetadata = (config.variables?.cafe_metadata ?? {}) as CafeMetadata;
-  const transpilerMetadata = (config.variables?._cafe_metadata ?? {}) as TranspilerMetadata;
-  const strategy =
-    (typeof cafeMetadata.strategy === 'string' && cafeMetadata.strategy) ||
-    (typeof transpilerMetadata.strategy === 'string' && transpilerMetadata.strategy) ||
-    'native';
+  const cafeMetadata = (config.variables?._cafe_metadata ?? {}) as CafeMetadata;
+  const strategy = cafeMetadata.strategy || 'native';
 
   switch (strategy) {
     case 'state-machine': {
@@ -164,18 +158,17 @@ export function convertNativeAutomationConfigToNodes(config: AutomationConfig): 
 
   // Check for CAFE metadata for node positions - use existing transpiler metadata
   type CafeMetadata = {
-    node_positions?: Record<string, { x: number; y: number }>;
-    node_mapping?: Record<string, string>;
+    version?: number;
     strategy?: string;
+    nodes?: Record<string, { x: number; y: number }>;
   };
   type TranspilerMetadata = {
     nodes?: Record<string, { x: number; y: number }>;
     strategy?: string;
   };
-  const cafeMetadata = (config.variables?.cafe_metadata ?? {}) as CafeMetadata;
+  const cafeMetadata = (config.variables?._cafe_metadata ?? {}) as CafeMetadata;
   const transpilerMetadata = (config.variables?._cafe_metadata ?? {}) as TranspilerMetadata;
-  const savedPositions = cafeMetadata.node_positions || transpilerMetadata.nodes || {};
-  const nodeMapping = cafeMetadata.node_mapping || {};
+  const savedPositions = cafeMetadata.nodes || transpilerMetadata.nodes || {};
   const strategy = cafeMetadata.strategy || transpilerMetadata.strategy || 'native';
 
   console.log('C.A.F.E.: Loading automation with metadata:', {
@@ -183,9 +176,7 @@ export function convertNativeAutomationConfigToNodes(config: AutomationConfig): 
     hasTranspilerMetadata: !!transpilerMetadata,
     strategy: strategy,
     savedPositionsCount: Object.keys(savedPositions).length,
-    nodeMappingCount: Object.keys(nodeMapping).length,
     savedPositions,
-    nodeMapping,
   });
 
   let xOffset = 100;
@@ -195,7 +186,7 @@ export function convertNativeAutomationConfigToNodes(config: AutomationConfig): 
   let previousNodeId: string | null = null;
 
   // Track global node index for mapping (like in save process)
-  let globalNodeIndex = 0;
+  // globalNodeIndex removed (was only used for node_mapping)
 
   // Helper to get position for a node (use saved position if available, otherwise calculate)
   const getNodePosition = (nodeId: string, defaultX: number, defaultY: number) => {
@@ -238,11 +229,7 @@ export function convertNativeAutomationConfigToNodes(config: AutomationConfig): 
       if (!triggerRaw || typeof triggerRaw !== 'object') continue;
       const trigger = triggerRaw as Record<string, unknown>;
       let nodeId: string;
-      const mappingKey = `trigger_${globalNodeIndex}`;
-      if (nodeMapping[mappingKey]) {
-        nodeId = nodeMapping[mappingKey];
-        console.log(`C.A.F.E.: Found trigger mapping ${mappingKey} -> ${nodeId}`);
-      } else if (transpilerMetadata?.nodes) {
+      if (transpilerMetadata?.nodes) {
         const triggerKeys = Object.keys(transpilerMetadata.nodes).filter((key) =>
           key.startsWith('trigger_')
         );
@@ -273,7 +260,6 @@ export function convertNativeAutomationConfigToNodes(config: AutomationConfig): 
       });
 
       triggerNodes.push(nodeId);
-      globalNodeIndex++; // Increment global index for each node created
     }
   }
 
@@ -289,9 +275,7 @@ export function convertNativeAutomationConfigToNodes(config: AutomationConfig): 
 
     for (const [index, condition] of conditions.entries()) {
       if (!condition || typeof condition !== 'object') continue;
-      const mappingKey = `condition-${index}`;
-      const originalId = nodeMapping[mappingKey];
-      const nodeId = originalId || `condition-${Date.now()}-${index}`;
+      const nodeId = `condition-${Date.now()}-${index}`;
       const cond = condition as Record<string, unknown>;
       nodesToCreate.push({
         id: nodeId,
@@ -353,12 +337,7 @@ export function convertNativeAutomationConfigToNodes(config: AutomationConfig): 
 
       let nodeId = typeof action._conditionId === 'string' ? action._conditionId : undefined;
       if (!nodeId) {
-        // Try to get node ID from CAFE metadata node mapping first
-        const mappingKey = `action_${globalNodeIndex}`; // Use global index
-        if (nodeMapping[mappingKey]) {
-          nodeId = nodeMapping[mappingKey];
-          console.log(`C.A.F.E.: Found action mapping ${mappingKey} -> ${nodeId}`);
-        } else if (transpilerMetadata?.nodes) {
+        if (transpilerMetadata?.nodes) {
           // Fallback to transpiler metadata
           const actionKeys = Object.keys(transpilerMetadata.nodes).filter((key) =>
             key.startsWith('action_')
@@ -539,7 +518,7 @@ export function convertNativeAutomationConfigToNodes(config: AutomationConfig): 
       }
 
       previousNodeId = nodeId;
-      globalNodeIndex++; // Increment global index for each action node created
+
       xOffset += nodeSpacing;
     }
   }
