@@ -127,6 +127,16 @@
           }
         }
       }
+    },
+    {
+      "includes": ["packages/**/*.test.tsx"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noExplicitAny": "off"
+          }
+        }
+      }
     }
   ],
   "files": {

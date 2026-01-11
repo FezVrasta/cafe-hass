@@ -30,8 +30,13 @@ type HassInstance =
 export interface HassConfig {
   entities?: Record<string, HassEntity>;
   states?: Record<string, HassEntity>;
-  callApi?: (method: string, path: string, parameters?: any) => Promise<any>;
-  callService?: (domain: string, service: string, serviceData?: any, target?: any) => Promise<any>;
+  callApi?: (method: string, path: string, parameters?: Record<string, unknown>) => Promise<void>;
+  callService?: (
+    domain: string,
+    service: string,
+    serviceData?: Record<string, unknown>,
+    target?: Record<string, unknown>
+  ) => Promise<void>;
   connection?: HassConnection;
 }
 
@@ -39,25 +44,25 @@ export interface AutomationConfig {
   id?: string;
   alias?: string;
   description?: string;
-  triggers?: any[];
-  trigger?: any[];
-  conditions?: any[];
-  condition?: any[];
-  actions?: any[];
-  action?: any[];
+  triggers?: Record<string, unknown>[];
+  trigger?: Record<string, unknown>[];
+  conditions?: Record<string, unknown>[];
+  condition?: Record<string, unknown>[];
+  actions?: Record<string, unknown>[];
+  action?: Record<string, unknown>[];
   mode?: string;
   max?: number;
-  variables?: Record<string, any>;
+  variables?: Record<string, unknown>;
 }
 
 export interface TraceStep {
   path: string;
   timestamp: string;
-  changed_variables?: Record<string, any>;
+  changed_variables?: Record<string, unknown>;
   result?: {
     result?: boolean;
-    state?: any;
-    params?: Record<string, any>;
+    state?: Record<string, unknown>;
+    params?: Record<string, unknown>;
     delay?: number;
     done?: boolean;
   };
@@ -192,7 +197,7 @@ export class HomeAssistantAPI {
   /**
    * Send a websocket message
    */
-  async sendMessage(message: any): Promise<any> {
+  async sendMessage(message: Record<string, unknown> & { type: string }): Promise<unknown> {
     if (!this.connection) {
       throw new Error('No Home Assistant connection available');
     }
@@ -208,7 +213,7 @@ export class HomeAssistantAPI {
     service: string,
     serviceData?: Record<string, unknown>,
     target?: Record<string, unknown>
-  ): Promise<void> {
+  ): Promise<unknown> {
     if (this.hass?.callService) {
       // Use built-in service calling (custom panel mode)
       // Combine serviceData and target into data object for the interface
@@ -231,7 +236,7 @@ export class HomeAssistantAPI {
   /**
    * Call Home Assistant REST API
    */
-  async callAPI(method: string, path: string, data?: any): Promise<any> {
+  async callAPI(method: string, path: string, data?: Record<string, unknown>): Promise<unknown> {
     if (this.hass?.callApi) {
       // Use built-in API calling (custom panel mode)
       return await this.hass.callApi(method, path, data);
@@ -246,7 +251,11 @@ export class HomeAssistantAPI {
    * Fetch data from Home Assistant REST API
    * Uses built-in callApi in embedded mode, or direct fetch in remote mode
    */
-  private async fetchRestAPI(path: string, method = 'GET', body?: any): Promise<any> {
+  private async fetchRestAPI(
+    path: string,
+    method = 'GET',
+    body?: Record<string, unknown>
+  ): Promise<unknown> {
     if (this.hass?.callApi) {
       // Embedded mode - use built-in callApi
 
@@ -288,7 +297,7 @@ export class HomeAssistantAPI {
   async getAutomationConfigs(): Promise<AutomationConfig[]> {
     try {
       // First try websocket approach
-      if ((this.hass as any)?.callWS) {
+      if (this.hass && 'callWS' in this.hass) {
         try {
           const result = await (this.hass as any).callWS({
             type: 'config/automation/list',
@@ -324,7 +333,7 @@ export class HomeAssistantAPI {
   async getAutomationConfig(automationId: string): Promise<AutomationConfig | null> {
     try {
       // Try websocket approach first
-      if ((this.hass as any)?.callWS) {
+      if (this.hass && 'callWS' in this.hass) {
         try {
           const config = await (this.hass as any).callWS({
             type: 'config/automation/get',
@@ -369,7 +378,7 @@ export class HomeAssistantAPI {
   /**
    * Get automation trace (fallback method for getting config)
    */
-  async getAutomationTrace(automationId: string): Promise<any> {
+  async getAutomationTrace(automationId: string): Promise<unknown | null> {
     try {
       const result = await this.sendMessage({
         type: 'automation/trace/get',
@@ -469,7 +478,7 @@ export class HomeAssistantAPI {
         }
       }
 
-      if ((this.hass as any)?.callWS) {
+      if (this.hass && 'callWS' in this.hass) {
         try {
           await (this.hass as any).callWS({
             type: 'call_service',
@@ -610,7 +619,7 @@ export class HomeAssistantAPI {
   /**
    * Get areas
    */
-  async getAreas(): Promise<any[]> {
+  async getAreas(): Promise<unknown | []> {
     try {
       return await this.sendMessage({ type: 'config/area_registry/list' });
     } catch (error) {
@@ -622,7 +631,7 @@ export class HomeAssistantAPI {
   /**
    * Get devices
    */
-  async getDevices(): Promise<any[]> {
+  async getDevices(): Promise<unknown | []> {
     try {
       return await this.sendMessage({ type: 'config/device_registry/list' });
     } catch (error) {
@@ -634,7 +643,7 @@ export class HomeAssistantAPI {
   /**
    * Get entities registry
    */
-  async getEntities(): Promise<any[]> {
+  async getEntities(): Promise<unknown | []> {
     try {
       return await this.sendMessage({ type: 'config/entity_registry/list' });
     } catch (error) {
@@ -646,7 +655,7 @@ export class HomeAssistantAPI {
   /**
    * Get services
    */
-  async getServices(): Promise<any> {
+  async getServices(): Promise<unknown | []> {
     try {
       return await this.sendMessage({ type: 'get_services' });
     } catch (error) {
@@ -659,10 +668,10 @@ export class HomeAssistantAPI {
    * Validate automation config
    */
   async validateAutomationConfig(config: {
-    trigger?: any;
-    condition?: any;
-    action?: any;
-  }): Promise<any> {
+    trigger?: Record<string, unknown>[];
+    condition?: Record<string, unknown>[];
+    action?: Record<string, unknown>[];
+  }): Promise<unknown> {
     try {
       return await this.sendMessage({
         type: 'validate_config',
@@ -679,11 +688,12 @@ export class HomeAssistantAPI {
    */
   async getAutomationTraces(automationId: string): Promise<TraceListItem[]> {
     try {
-      return await this.sendMessage({
+      const result = await this.sendMessage({
         type: 'trace/list',
         domain: 'automation',
         item_id: automationId,
       });
+      return (Array.isArray(result) ? result : []) as TraceListItem[];
     } catch (error) {
       console.error('Failed to get automation traces:', error);
       return [];
@@ -698,12 +708,13 @@ export class HomeAssistantAPI {
     runId: string
   ): Promise<AutomationTrace | null> {
     try {
-      return await this.sendMessage({
+      const result = await this.sendMessage({
         type: 'trace/get',
         domain: 'automation',
         item_id: automationId,
         run_id: runId,
       });
+      return (result as AutomationTrace) || null;
     } catch (error) {
       console.error('Failed to get automation trace details:', error);
       return null;
@@ -731,8 +742,6 @@ export function getHomeAssistantAPI(
 
     if (shouldUpdate) {
       haAPI.updateHass(hass ?? null, config);
-    } else if (hass) {
-    } else {
     }
   }
   return haAPI;

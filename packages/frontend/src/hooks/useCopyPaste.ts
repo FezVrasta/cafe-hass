@@ -1,5 +1,5 @@
+import type { Node, ReactFlowInstance } from '@xyflow/react';
 import { useCallback, useEffect } from 'react';
-import type { ReactFlowInstance, Node } from '@xyflow/react';
 
 /**
  * Hook to support copy and paste of nodes in a ReactFlow instance.
@@ -10,9 +10,7 @@ export function useCopyPaste(rfInstance: ReactFlowInstance | null) {
     (event: ClipboardEvent) => {
       if (!rfInstance) return;
       event.preventDefault();
-      const nodes = JSON.stringify(
-        rfInstance.getNodes().filter((n) => n.selected)
-      );
+      const nodes = JSON.stringify(rfInstance.getNodes().filter((n) => n.selected));
       event.clipboardData?.setData('flowchart:nodes', nodes);
     },
     [rfInstance]
@@ -22,9 +20,9 @@ export function useCopyPaste(rfInstance: ReactFlowInstance | null) {
     (event: ClipboardEvent) => {
       if (!rfInstance) return;
       event.preventDefault();
-      const nodes = JSON.parse(
-        event.clipboardData?.getData('flowchart:nodes') || '[]'
-      ) as Node[] | undefined;
+      const nodes = JSON.parse(event.clipboardData?.getData('flowchart:nodes') || '[]') as
+        | Node[]
+        | undefined;
       if (nodes && nodes.length > 0) {
         const randomId = () => Math.random().toString(16).slice(2);
         rfInstance.setNodes([
