@@ -1,13 +1,7 @@
 import type { FlowNode } from '@cafe/shared';
 import { FormField } from '@/components/forms/FormField';
+import { Combobox } from '@/components/ui/Combobox';
 import { EntitySelector } from '@/components/ui/EntitySelector';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import type { HassEntity } from '@/hooks/useHass';
 import { useHass } from '@/hooks/useHass';
 import { getNodeDataObject, getNodeDataString } from '@/utils/nodeData';
@@ -57,18 +51,15 @@ export function ActionFields({ node, onChange, entities }: ActionFieldsProps) {
   return (
     <>
       <FormField label="Service" required>
-        <Select value={serviceName} onValueChange={handleServiceChange}>
-          <SelectTrigger>
-            <SelectValue placeholder="Select service..." />
-          </SelectTrigger>
-          <SelectContent>
-            {getAllServices().map(({ domain, service }) => (
-              <SelectItem key={`${domain}.${service}`} value={`${domain}.${service}`}>
-                {domain}.{service}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Combobox
+          options={getAllServices().map(({ domain, service }) => ({
+            value: `${domain}.${service}`,
+            label: `${domain}.${service}`,
+          }))}
+          value={serviceName}
+          onChange={handleServiceChange}
+          placeholder="Select service..."
+        />
       </FormField>
 
       {/* Target Entity */}
