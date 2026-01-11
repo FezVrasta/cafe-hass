@@ -1,20 +1,21 @@
+import { Plus, Trash2 } from 'lucide-react';
 import { memo } from 'react';
-import { useHass, type HassEntity } from '@/hooks/useHass';
-import { EntitySelector } from '@/components/ui/EntitySelector';
-import { MultiEntitySelector } from '@/components/ui/MultiEntitySelector';
-import type { ConditionNodeData } from '@/store/flow-store';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { EntitySelector } from '@/components/ui/EntitySelector';
+import { Input } from '@/components/ui/input';
+import { MultiEntitySelector } from '@/components/ui/MultiEntitySelector';
 import {
   Select,
-  SelectTrigger,
   SelectContent,
   SelectItem,
+  SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Trash2, Plus } from 'lucide-react';
+import { type HassEntity, useHass } from '@/hooks/useHass';
+import { cn } from '@/lib/utils';
+import type { ConditionNodeData } from '@/store/flow-store';
+import { Label } from '../../ui/label';
 
 interface ConditionGroupEditorProps {
   conditions: ConditionNodeData[];
@@ -164,24 +165,24 @@ function ConditionTypeFields({
     case 'time':
       return (
         <div className="grid grid-cols-2 gap-2">
-          <div>
-            <label className="mb-1 block text-muted-foreground text-xs">After</label>
+          <Label>
+            <div className="mb-1 block text-muted-foreground text-xs">After</div>
             <Input
               value={cond.after || ''}
               onChange={(e) => onUpdate({ ...cond, after: e.target.value })}
               placeholder="HH:MM"
               type="time"
             />
-          </div>
-          <div>
-            <label className="mb-1 block text-muted-foreground text-xs">Before</label>
+          </Label>
+          <Label>
+            <div className="mb-1 block text-muted-foreground text-xs">Before</div>
             <Input
               value={cond.before || ''}
               onChange={(e) => onUpdate({ ...cond, before: e.target.value })}
               placeholder="HH:MM"
               type="time"
             />
-          </div>
+          </Label>
         </div>
       );
 

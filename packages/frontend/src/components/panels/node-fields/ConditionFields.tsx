@@ -1,5 +1,6 @@
 import type { FlowNode } from '@cafe/shared';
 import { FormField } from '@/components/forms/FormField';
+import { ConditionGroupEditor } from '@/components/panels/node-fields/ConditionGroupEditor';
 import {
   Select,
   SelectContent,
@@ -8,6 +9,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import type { HassEntity } from '@/hooks/useHass';
+import type { ConditionNodeData } from '@/store/flow-store';
 import { getNodeDataString } from '@/utils/nodeData';
 import { DeviceConditionFields } from './DeviceConditionFields';
 import { NumericStateConditionFields } from './NumericStateConditionFields';
@@ -16,8 +18,6 @@ import { TemplateConditionFields } from './TemplateConditionFields';
 import { TimeConditionFields } from './TimeConditionFields';
 import { TriggerConditionFields } from './TriggerConditionFields';
 import { ZoneConditionFields } from './ZoneConditionFields';
-import { ConditionGroupEditor } from '@/components/nodes/ConditionGroupEditor';
-import type { ConditionNodeData } from '@/store/flow-store';
 
 interface ConditionFieldsProps {
   node: FlowNode;

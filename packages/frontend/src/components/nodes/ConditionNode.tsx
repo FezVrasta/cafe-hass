@@ -123,10 +123,10 @@ export const ConditionNode = memo(function ConditionNode({
       />
 
       {/* Labels for handles */}
-      <div className="absolute top-[30%] right-[-35px] -translate-y-1/2 transform rounded border border-green-200 bg-white px-1 py-0.5 font-medium text-[10px] text-green-700 shadow-sm">
+      <div className="absolute top-[30%] right-[-40px] -translate-y-1/2 transform rounded border border-green-200 bg-white px-1 py-0.5 font-medium text-[10px] text-green-700 shadow-sm">
         Yes
       </div>
-      <div className="absolute top-[70%] right-[-30px] -translate-y-1/2 transform rounded border border-red-200 bg-white px-1 py-0.5 font-medium text-[10px] text-red-700 shadow-sm">
+      <div className="absolute top-[70%] right-[-36px] -translate-y-1/2 transform rounded border border-red-200 bg-white px-1 py-0.5 font-medium text-[10px] text-red-700 shadow-sm">
         No
       </div>
     </div>
