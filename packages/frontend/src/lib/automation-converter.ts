@@ -548,6 +548,118 @@ export function extractNodeIdFromCondition(condition: Record<string, unknown>): 
 }
 
 /**
+ * Parse a Jinja2 condition template back to condition data
+ * This reverses the buildConditionTemplate logic from the transpiler
+ */
+export function parseJinjaConditionTemplate(template: string): Record<string, unknown> {
+  // Try to match is_state('entity', 'value')
+  const isStateMatch = template.match(/is_state\(['"]([^'"]+)['"],\s*['"]([^'"]+)['"]\)/);
+  if (isStateMatch) {
+    return {
+      condition_type: 'state',
+      entity_id: isStateMatch[1],
+      state: isStateMatch[2],
+    };
+  }
+
+  // Try to match states('entity') in [list] (array state check)
+  const statesInMatch = template.match(/states\(['"]([^'"]+)['"]\)\s+in\s+\[([^\]]+)\]/);
+  if (statesInMatch) {
+    const states = statesInMatch[2]
+      .split(',')
+      .map((s) => s.trim().replace(/^['"]|['"]$/g, ''));
+    return {
+      condition_type: 'state',
+      entity_id: statesInMatch[1],
+      state: states,
+    };
+  }
+
+  // Try to match state_attr checks with attribute
+  const stateAttrMatch = template.match(
+    /state_attr\(['"]([^'"]+)['"],\s*['"]([^'"]+)['"]\)\s*==\s*['"]([^'"]+)['"]/
+  );
+  if (stateAttrMatch) {
+    return {
+      condition_type: 'state',
+      entity_id: stateAttrMatch[1],
+      attribute: stateAttrMatch[2],
+      state: stateAttrMatch[3],
+    };
+  }
+
+  // Try to match numeric state conditions: states('entity') | float > N
+  const numericMatch = template.match(
+    /states\(['"]([^'"]+)['"]\)\s*\|\s*float\s*([><]=?)\s*([\d.]+)/
+  );
+  if (numericMatch) {
+    const result: Record<string, unknown> = {
+      condition_type: 'numeric_state',
+      entity_id: numericMatch[1],
+    };
+    const op = numericMatch[2];
+    const value = parseFloat(numericMatch[3]);
+    if (op === '>' || op === '>=') {
+      result.above = value;
+    } else if (op === '<' || op === '<=') {
+      result.below = value;
+    }
+    return result;
+  }
+
+  // Try to match state_attr numeric conditions
+  const numericAttrMatch = template.match(
+    /state_attr\(['"]([^'"]+)['"],\s*['"]([^'"]+)['"]\)\s*\|\s*float\s*([><]=?)\s*([\d.]+)/
+  );
+  if (numericAttrMatch) {
+    const result: Record<string, unknown> = {
+      condition_type: 'numeric_state',
+      entity_id: numericAttrMatch[1],
+      attribute: numericAttrMatch[2],
+    };
+    const op = numericAttrMatch[3];
+    const value = parseFloat(numericAttrMatch[4]);
+    if (op === '>' || op === '>=') {
+      result.above = value;
+    } else if (op === '<' || op === '<=') {
+      result.below = value;
+    }
+    return result;
+  }
+
+  // Try to match sun conditions
+  if (template.includes("is_state('sun.sun', 'above_horizon')")) {
+    return {
+      condition_type: 'sun',
+      after: 'sunrise',
+      before: 'sunset',
+    };
+  }
+  if (template.includes("is_state('sun.sun', 'below_horizon')")) {
+    return {
+      condition_type: 'sun',
+      after: 'sunset',
+      before: 'sunrise',
+    };
+  }
+
+  // Default to template condition - wrap the expression in {{ }}
+  return {
+    condition_type: 'template',
+    template: `{{ ${template} }}`,
+  };
+}
+
+/**
+ * Extract condition expression from state-machine variables template
+ * E.g., '{% if is_state(...) %}"node1"{% else %}"node2"{% endif %}' -> 'is_state(...)'
+ */
+export function extractConditionFromVariablesTemplate(template: string): string | null {
+  const match = template.match(/\{%\s*if\s+(.+?)\s*%\}/);
+  return match ? match[1].trim() : null;
+}
+
+/**
  * Extract next node(s) from a variables action setting current_node
  * Returns { trueTarget, falseTarget } for conditional transitions
  */
@@ -626,6 +738,17 @@ export function parseStateMachineChooseBlock(
           nodeType = 'condition';
           trueTarget = nextInfo.trueTarget === 'END' ? null : nextInfo.trueTarget;
           falseTarget = nextInfo.falseTarget === 'END' ? null : nextInfo.falseTarget;
+
+          // Extract condition data from the Jinja template
+          const variables = seqItem.variables as Record<string, unknown>;
+          const currentNodeTemplate = variables.current_node;
+          if (typeof currentNodeTemplate === 'string') {
+            const conditionExpr = extractConditionFromVariablesTemplate(currentNodeTemplate);
+            if (conditionExpr) {
+              const conditionData = parseJinjaConditionTemplate(conditionExpr);
+              Object.assign(data, conditionData);
+            }
+          }
         } else {
           trueTarget = nextInfo.trueTarget === 'END' ? null : nextInfo.trueTarget;
         }
@@ -673,20 +796,58 @@ export function parseStateMachineChooseBlock(
 
 /**
  * Convert a state-machine automation config to nodes and edges
+ *
  * State-machine automations have a specific structure:
  * - A variables action initializing current_node
  * - A repeat loop with choose blocks for each node
+ *
+ * All data is parsed from the YAML structure:
+ * - Node data is in each choose block's sequence
+ * - Edges are in the variables transitions (current_node assignments)
+ * - Node positions are restored from metadata.nodes
  */
 export function convertStateMachineAutomationConfigToNodes(config: AutomationConfig): {
+  nodes: NodeToCreate[];
+  edges: Array<{ source: string; target: string; sourceHandle: string | null }>;
+} {
+  const transpilerMetadata = config.variables?._cafe_metadata;
+
+  // Parse the state-machine YAML structure
+  // Node data is in each choose block's sequence
+  // Edges are in the variables transitions (current_node assignments)
+  // Positions are stored in metadata
+  return convertStateMachineFromYaml(config, transpilerMetadata);
+}
+
+/**
+ * Convert state-machine by parsing the YAML structure
+ *
+ * Node data is extracted from each choose block's sequence:
+ * - Action nodes: service, target, data, alias fields
+ * - Condition nodes: Jinja template in variables.current_node
+ * - Delay nodes: delay field
+ * - Wait nodes: wait_template field
+ *
+ * Edges are extracted from the variables transitions:
+ * - Simple: current_node: "next-node-id"
+ * - Conditional: current_node: "{% if ... %}\"node-a\"{% else %}\"node-b\"{% endif %}"
+ *
+ * Positions are restored from metadata.nodes
+ */
+function convertStateMachineFromYaml(
+  config: AutomationConfig,
+  transpilerMetadata: Record<string, unknown> | undefined
+): {
   nodes: NodeToCreate[];
   edges: Array<{ source: string; target: string; sourceHandle: string | null }>;
 } {
   const nodesToCreate: NodeToCreate[] = [];
   const edgesToCreate: Array<{ source: string; target: string; sourceHandle: string | null }> = [];
 
-  // Get metadata for positions
-  const transpilerMetadata = config.variables?._cafe_metadata;
-  const savedPositions = transpilerMetadata?.nodes || {};
+  const savedPositions = (transpilerMetadata?.nodes || {}) as Record<
+    string,
+    { x: number; y: number }
+  >;
 
   // Helper to get position for a node
   const getNodePosition = (nodeId: string, defaultX: number, defaultY: number) => {
@@ -713,8 +874,8 @@ export function convertStateMachineAutomationConfigToNodes(config: AutomationCon
     // Try to find trigger ID from metadata
     let nodeId: string | undefined;
     if (transpilerMetadata?.nodes) {
-      const triggerKeys = Object.keys(transpilerMetadata.nodes).filter((key) =>
-        key.startsWith('trigger')
+      const triggerKeys = Object.keys(transpilerMetadata.nodes as Record<string, unknown>).filter(
+        (key) => key.startsWith('trigger')
       );
       nodeId = triggerKeys[index];
     }

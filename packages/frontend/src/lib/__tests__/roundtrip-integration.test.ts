@@ -13,7 +13,6 @@ describe('Roundtrip Import/Export Tests', () => {
 
   // Get all YAML files from fixtures directory
   const yamlFiles = readdirSync(fixturesDir)
-    .filter((file) => file.includes('11-state-machine'))
     .filter((file) => file.endsWith('.yaml') || file.endsWith('.yml'))
     .sort(); // Sort to ensure consistent test order
 
@@ -207,6 +206,7 @@ describe('Roundtrip Import/Export Tests', () => {
           | Record<string, Record<string, unknown>>
           | undefined;
         expect(variables?._cafe_metadata).toBeDefined();
+        // All exports use version 1 metadata (positions only - node data and edges are in the YAML structure)
         expect(variables?._cafe_metadata.version).toBe(1);
         // Strategy can be 'native' or 'state-machine' depending on complexity
         expect(['native', 'state-machine']).toContain(variables?._cafe_metadata.strategy);

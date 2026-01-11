@@ -225,6 +225,12 @@ export class FlowTranspiler {
 
   /**
    * Generate C.A.F.E. metadata for position persistence
+   *
+   * Note: We only store node positions in metadata. Node data and edges are already
+   * encoded in the YAML structure itself:
+   * - Node data is in each choose block's sequence
+   * - Edges are in the variables transitions (current_node assignments)
+   * - Node IDs are in the choose block conditions
    */
   private generateFlowAutomatorMetadata(
     flow: FlowGraph,
@@ -245,7 +251,7 @@ export class FlowTranspiler {
       nodes: nodePositions,
       graph_id: flow.id,
       graph_version: flow.version,
-      strategy: strategy.name, // Store which strategy was used for export
+      strategy: strategy.name,
     };
   }
 }
