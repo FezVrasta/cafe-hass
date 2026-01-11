@@ -7,8 +7,8 @@ import { useHass } from './useHass';
  * Uses the hass.themes.darkMode property
  */
 export function useDarkMode() {
-  const [isDarkMode, setIsDarkMode] = useState(false);
   const { hass } = useHass();
+  const [isDarkMode, setIsDarkMode] = useState(hass?.themes?.darkMode ?? false);
 
   useEffect(() => {
     logger.debug('[C.A.F.E.] useDarkMode effect running', {

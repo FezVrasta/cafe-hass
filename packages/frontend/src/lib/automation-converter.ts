@@ -145,7 +145,6 @@ export function convertAutomationConfigToNodes(config: AutomationConfig): {
     case 'state-machine': {
       return convertStateMachineAutomationConfigToNodes(config);
     }
-    case 'native':
     default: {
       return convertNativeAutomationConfigToNodes(config);
     }
