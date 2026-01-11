@@ -129,7 +129,7 @@
       }
     },
     {
-      "includes": ["packages/**/*.test.tsx"],
+      "includes": ["packages/**/*.test.ts", "packages/**/*.test.tsx"],
       "linter": {
         "rules": {
           "suspicious": {
