@@ -133,7 +133,7 @@
 }
 
 .react-flow__handle {
-  @apply w-3 h-3 !important;
+  @apply size-4 !important;
 }
 
 .react-flow__edge-path {
