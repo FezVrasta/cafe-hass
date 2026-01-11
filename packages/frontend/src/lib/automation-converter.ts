@@ -136,10 +136,14 @@ export function convertAutomationConfigToNodes(config: AutomationConfig): {
   nodes: NodeToCreate[];
   edges: Array<{ source: string; target: string; sourceHandle: string | null }>;
 } {
-  const cafeMetadata = config.variables?.cafe_metadata;
-  const transpilerMetadata = config.variables?._cafe_metadata;
-
-  const strategy = cafeMetadata?.strategy || transpilerMetadata?.strategy || 'native';
+  type CafeMetadata = { strategy?: string };
+  type TranspilerMetadata = { strategy?: string };
+  const cafeMetadata = (config.variables?.cafe_metadata ?? {}) as CafeMetadata;
+  const transpilerMetadata = (config.variables?._cafe_metadata ?? {}) as TranspilerMetadata;
+  const strategy =
+    (typeof cafeMetadata.strategy === 'string' && cafeMetadata.strategy) ||
+    (typeof transpilerMetadata.strategy === 'string' && transpilerMetadata.strategy) ||
+    'native';
 
   switch (strategy) {
     case 'state-machine': {
@@ -159,11 +163,20 @@ export function convertNativeAutomationConfigToNodes(config: AutomationConfig): 
   const edgesToCreate: Array<{ source: string; target: string; sourceHandle: string | null }> = [];
 
   // Check for CAFE metadata for node positions - use existing transpiler metadata
-  const cafeMetadata = config.variables?.cafe_metadata;
-  const transpilerMetadata = config.variables?._cafe_metadata;
-  const savedPositions = cafeMetadata?.node_positions || transpilerMetadata?.nodes || {};
-  const nodeMapping = cafeMetadata?.node_mapping || {};
-  const strategy = cafeMetadata?.strategy || transpilerMetadata?.strategy || 'native';
+  type CafeMetadata = {
+    node_positions?: Record<string, { x: number; y: number }>;
+    node_mapping?: Record<string, string>;
+    strategy?: string;
+  };
+  type TranspilerMetadata = {
+    nodes?: Record<string, { x: number; y: number }>;
+    strategy?: string;
+  };
+  const cafeMetadata = (config.variables?.cafe_metadata ?? {}) as CafeMetadata;
+  const transpilerMetadata = (config.variables?._cafe_metadata ?? {}) as TranspilerMetadata;
+  const savedPositions = cafeMetadata.node_positions || transpilerMetadata.nodes || {};
+  const nodeMapping = cafeMetadata.node_mapping || {};
+  const strategy = cafeMetadata.strategy || transpilerMetadata.strategy || 'native';
 
   console.log('C.A.F.E.: Loading automation with metadata:', {
     hasCafeMetadata: !!cafeMetadata,
@@ -221,43 +234,41 @@ export function convertNativeAutomationConfigToNodes(config: AutomationConfig): 
         ? config.trigger
         : [config.trigger];
 
-    for (const [index, trigger] of triggers.entries()) {
-      // Try to get node ID from CAFE metadata node mapping first
+    for (const [index, triggerRaw] of triggers.entries()) {
+      if (!triggerRaw || typeof triggerRaw !== 'object') continue;
+      const trigger = triggerRaw as Record<string, unknown>;
       let nodeId: string;
-      const mappingKey = `trigger_${globalNodeIndex}`; // Use global index, not trigger index
+      const mappingKey = `trigger_${globalNodeIndex}`;
       if (nodeMapping[mappingKey]) {
         nodeId = nodeMapping[mappingKey];
         console.log(`C.A.F.E.: Found trigger mapping ${mappingKey} -> ${nodeId}`);
       } else if (transpilerMetadata?.nodes) {
-        // Fallback to transpiler metadata
         const triggerKeys = Object.keys(transpilerMetadata.nodes).filter((key) =>
           key.startsWith('trigger_')
         );
         nodeId = triggerKeys[index];
         console.log(`C.A.F.E.: Using transpiler metadata for trigger ${index} -> ${nodeId}`);
       } else {
-        // Generate new ID as final fallback
         nodeId = `trigger_${Date.now()}_${index}`;
         console.log(`C.A.F.E.: Generated new trigger ID: ${nodeId}`);
       }
-
       const defaultPosition = { x: xOffset, y: baseYOffset + index * 120 };
-
-      // Clean up conflicting fields - remove 'trigger' field if 'platform' exists or will be set
       const cleanedTrigger = { ...trigger };
-      delete cleanedTrigger.trigger; // Remove conflicting 'trigger' field
-      // Keep 'domain' field for device triggers as it's needed by DeviceTriggerFields
-
+      delete cleanedTrigger.trigger;
       nodesToCreate.push({
         id: nodeId,
         type: 'trigger',
         position: getNodePosition(nodeId, defaultPosition.x, defaultPosition.y),
         data: {
           ...cleanedTrigger,
-          alias: trigger.alias || `Trigger ${index + 1}`,
-          platform: trigger.device_id
-            ? 'device' // If device_id exists, this is definitely a device trigger
-            : trigger.platform || trigger.trigger || trigger.domain || 'state', // Otherwise derive from available fields
+          alias: typeof trigger.alias === 'string' ? trigger.alias : `Trigger ${index + 1}`,
+          platform:
+            typeof trigger.device_id === 'string'
+              ? 'device'
+              : (typeof trigger.platform === 'string' && trigger.platform) ||
+                (typeof trigger.trigger === 'string' && trigger.trigger) ||
+                (typeof trigger.domain === 'string' && trigger.domain) ||
+                'state',
         },
       });
 
@@ -277,20 +288,24 @@ export function convertNativeAutomationConfigToNodes(config: AutomationConfig): 
         : [config.condition];
 
     for (const [index, condition] of conditions.entries()) {
+      if (!condition || typeof condition !== 'object') continue;
       const mappingKey = `condition-${index}`;
       const originalId = nodeMapping[mappingKey];
       const nodeId = originalId || `condition-${Date.now()}-${index}`;
-
+      const cond = condition as Record<string, unknown>;
       nodesToCreate.push({
         id: nodeId,
         type: 'condition',
         position: getNodePosition(nodeId, xOffset, baseYOffset),
         data: {
-          alias: condition.alias || `Condition ${index + 1}`,
-          condition_type: condition.condition || condition.platform || 'unknown',
-          entity_id: condition.entity_id,
-          state: condition.state,
-          ...condition,
+          alias: typeof cond.alias === 'string' ? cond.alias : `Condition ${index + 1}`,
+          condition_type:
+            (typeof cond.condition === 'string' && cond.condition) ||
+            (typeof cond.platform === 'string' && cond.platform) ||
+            'unknown',
+          entity_id: cond.entity_id,
+          state: cond.state,
+          ...cond,
         },
       });
 
@@ -316,7 +331,7 @@ export function convertNativeAutomationConfigToNodes(config: AutomationConfig): 
         ? config.action
         : [config.action];
 
-    const processedActions = processActions(actions);
+    const processedActions = processActions((actions ?? []) as AutomationAction[]);
 
     // Check if there are both 'then' and 'else' branches to determine if vertical offset should be applied
     const hasThenBranch = processedActions.some((action) => action.branch === 'then');
@@ -482,14 +497,17 @@ export function convertNativeAutomationConfigToNodes(config: AutomationConfig): 
         Array.isArray(nodesToCreate[nodesToCreate.length - 1].data.wait_for_trigger)
       ) {
         const lastNode = nodesToCreate[nodesToCreate.length - 1];
-        lastNode.data.wait_for_trigger = (lastNode.data.wait_for_trigger as any[]).map((t: any) => {
-          const trigger = { ...t };
-          if (trigger.trigger) {
-            trigger.platform = trigger.trigger;
-            delete trigger.trigger;
-          }
-          return trigger;
-        });
+        if (Array.isArray(lastNode.data.wait_for_trigger)) {
+          lastNode.data.wait_for_trigger = lastNode.data.wait_for_trigger.map((t) => {
+            if (typeof t !== 'object' || t === null) return t;
+            const trigger = { ...(t as Record<string, unknown>) };
+            if ('trigger' in trigger && typeof trigger.trigger === 'string') {
+              trigger.platform = trigger.trigger;
+              delete trigger.trigger;
+            }
+            return trigger;
+          });
+        }
       }
 
       // Connect to parent condition with proper sourceHandle
@@ -501,7 +519,8 @@ export function convertNativeAutomationConfigToNodes(config: AutomationConfig): 
         if (!conditionChildrenMap.has(parentConditionId)) {
           conditionChildrenMap.set(parentConditionId, {});
         }
-        const childrenInfo = conditionChildrenMap.get(parentConditionId)!;
+        const childrenInfo = conditionChildrenMap.get(parentConditionId);
+        if (!childrenInfo) continue;
         if (branch === 'then' && !childrenInfo.thenChild) {
           childrenInfo.thenChild = nodeId;
         } else if (branch === 'else' && !childrenInfo.elseChild) {
@@ -786,15 +805,17 @@ export function parseStateMachineChooseBlock(
       if (seqItem.wait_template !== undefined) {
         data.wait_template = seqItem.wait_template;
       } else if (seqItem.wait_for_trigger !== undefined) {
-        const waitForTrigger = seqItem.wait_for_trigger as any[];
-        data.wait_for_trigger = waitForTrigger.map((t) => {
-          const trigger = { ...t };
-          if (trigger.trigger) {
-            trigger.platform = trigger.trigger;
-            delete trigger.trigger;
-          }
-          return trigger;
-        });
+        if (Array.isArray(seqItem.wait_for_trigger)) {
+          data.wait_for_trigger = seqItem.wait_for_trigger.map((t) => {
+            if (typeof t !== 'object' || t === null) return t;
+            const trigger = { ...(t as Record<string, unknown>) };
+            if ('trigger' in trigger && typeof trigger.trigger === 'string') {
+              trigger.platform = trigger.trigger;
+              delete trigger.trigger;
+            }
+            return trigger;
+          });
+        }
       }
       if (seqItem.timeout) data.timeout = seqItem.timeout;
       if (seqItem.continue_on_timeout !== undefined) {
@@ -843,7 +864,10 @@ export function convertStateMachineAutomationConfigToNodes(config: AutomationCon
   // Node data is in each choose block's sequence
   // Edges are in the variables transitions (current_node assignments)
   // Positions are stored in metadata
-  return convertStateMachineFromYaml(config, transpilerMetadata);
+  return convertStateMachineFromYaml(
+    config,
+    transpilerMetadata as Record<string, unknown> | undefined
+  );
 }
 
 /**
