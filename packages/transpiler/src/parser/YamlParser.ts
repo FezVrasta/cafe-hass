@@ -180,7 +180,7 @@ export class YamlParser {
               nodeInfo = `Node index ${idx} (id: ${node?.id}, type: ${node?.type})\nData: ${JSON.stringify(node?.data, null, 2)}`;
             }
           }
-          return `Schema path: ${e.path.join('.')}\nMessage: ${e.message}${nodeInfo ? '\n' + nodeInfo : ''}`;
+          return `Schema path: ${e.path.join('.')}\nMessage: ${e.message}${nodeInfo ? `\n${nodeInfo}` : ''}`;
         });
         // Also log to console for debugging
         console.error('Zod validation error details:', errorDetails);
