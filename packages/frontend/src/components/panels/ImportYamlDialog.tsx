@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
+import logger from '@/lib/logger';
 import { useFlowStore } from '@/store/flow-store';
 
 interface ImportYamlDialogProps {
@@ -47,6 +48,7 @@ export function ImportYamlDialog({ isOpen, onClose, onImportSuccess }: ImportYam
 
       // Set warnings if any
       if (result.warnings.length > 0) {
+        logger.warn('Import warnings:', result.warnings);
         setWarnings(result.warnings);
       }
 
