@@ -51,7 +51,6 @@ export const HAConditionSchema = z
     };
   });
 
-
 const HAPlatformEnum = z.enum([
   'event',
   'template',
