@@ -439,7 +439,6 @@ function App({ hass: externalHass, narrow = false, route, panel }: AppProps = {}
                 {/* Footer */}
                 <footer className="flex h-8 items-center justify-between border-border border-t bg-card px-4 text-muted-foreground text-xs">
                   <div className="flex items-center gap-4">
-                    <span>C.A.F.E. v0.1.8</span>
                     {actualIsRemote && config.url && (
                       <span className="text-green-600">
                         Connected to {new URL(config.url).hostname}
