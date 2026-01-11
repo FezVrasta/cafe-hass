@@ -67,6 +67,7 @@ export function DeletableEdge({
               className="flex h-6 w-6 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow-md transition-transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-destructive focus:ring-offset-2"
               title="Delete connection"
               aria-label="Delete connection"
+              type="button"
             >
               <X className="h-3.5 w-3.5" />
             </button>

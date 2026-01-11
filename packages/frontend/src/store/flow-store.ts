@@ -10,6 +10,7 @@ import {
   type NodeChange,
 } from '@xyflow/react';
 import { create } from 'zustand';
+import type { AutomationTrace } from '@/lib/ha-api';
 import { generateUUID } from '@/lib/utils';
 
 /**
@@ -125,7 +126,7 @@ interface FlowState {
 
   // Trace state
   isShowingTrace: boolean;
-  traceData: any | null;
+  traceData: AutomationTrace | null;
   traceExecutionPath: string[];
   traceTimestamps: Record<string, string>;
 
@@ -164,7 +165,7 @@ interface FlowState {
   clearExecutionPath: () => void;
 
   // Trace
-  showTrace: (traceData: any) => void;
+  showTrace: (traceData: AutomationTrace) => void;
   hideTrace: () => void;
   clearTraceExecutionPath: () => void;
 
@@ -495,7 +496,7 @@ export const useFlowStore = create<FlowState>((set, get) => ({
     if (traceData?.trace) {
       // Get current flow nodes grouped by type and sorted by position
       const state = get();
-      const nodesByType: Record<string, any[]> = {
+      const nodesByType: Record<string, Node<FlowNodeData>[]> = {
         trigger: [],
         condition: [],
         action: [],
@@ -520,7 +521,7 @@ export const useFlowStore = create<FlowState>((set, get) => ({
       const sortedSteps = Object.entries(traceData.trace)
         .flatMap(([path, steps]) => {
           if (Array.isArray(steps)) {
-            return steps.map((step) => ({ path, ...step }));
+            return steps.map((step) => ({ ...step, path }));
           }
           return [];
         })

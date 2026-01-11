@@ -6,14 +6,18 @@ import { useDarkMode } from '@/hooks/useDarkMode';
  */
 export function CSSInjector({ children }: { children?: React.ReactNode }) {
   // Get the CSS from the window object set by vite-plugin-css-injected-by-js
-  const cssCode = typeof window !== 'undefined' ? (window as any).__CAFE_CSS__ : '';
+  const cssCode =
+    typeof window !== 'undefined'
+      ? (window as Window & { __CAFE_CSS__?: string }).__CAFE_CSS__
+      : '';
   const isDarkMode = useDarkMode();
 
   return (
     <div className={isDarkMode ? 'dark contents' : 'contents'}>
       <style
         data-cafe-injected="true"
-        dangerouslySetInnerHTML={{ __html: cssCode?.replace(':root', ':host') }}
+        // biome-ignore lint/security/noDangerouslySetInnerHtml: Need to inject CSS dynamically
+        dangerouslySetInnerHTML={{ __html: cssCode?.replace(':root', ':host') ?? '' }}
       />
       {children}
     </div>

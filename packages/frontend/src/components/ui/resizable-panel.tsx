@@ -66,6 +66,7 @@ export function ResizablePanel({
   return (
     <div ref={panelRef} className={cn('relative flex flex-col', className)} style={{ width }}>
       {/* Resize handle */}
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: this element is intentionally interactive */}
       <div
         onMouseDown={handleMouseDown}
         className={cn(

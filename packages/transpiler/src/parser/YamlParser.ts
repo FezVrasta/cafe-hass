@@ -107,7 +107,7 @@ export class YamlParser {
 
     try {
       // Step 1: Parse YAML string
-      const parsed = yamlLoad(yamlString) as any;
+      const parsed = yamlLoad(yamlString) as Record<string, unknown>;
 
       if (!parsed || typeof parsed !== 'object') {
         return {
