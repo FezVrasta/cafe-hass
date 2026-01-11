@@ -9,6 +9,7 @@ import type {
 } from '@cafe/shared';
 import type { TopologyAnalysis } from '../analyzer/topology';
 import { BaseStrategy, type HAYamlOutput } from './base';
+import { R } from 'vitest/dist/chunks/environment.LoooBwUu.js';
 
 /**
  * Native strategy for simple tree-shaped automations
@@ -220,7 +221,7 @@ export class NativeStrategy extends BaseStrategy {
    */
   private buildCondition(node: ConditionNode): Record<string, unknown> {
     // Helper to recursively map condition_type to condition
-    function mapCondition(data: any): any {
+    function mapCondition(data: Record<string, unknown>): Record<string, unknown> {
       if (!data || typeof data !== 'object') return data;
       const { condition_type, conditions, alias, ...rest } = data;
       const out: Record<string, unknown> = {

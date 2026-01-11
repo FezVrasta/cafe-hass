@@ -136,6 +136,25 @@ export function convertAutomationConfigToNodes(config: AutomationConfig): {
   nodes: NodeToCreate[];
   edges: Array<{ source: string; target: string; sourceHandle: string | null }>;
 } {
+  const cafeMetadata = config.variables?.cafe_metadata;
+  const transpilerMetadata = config.variables?._cafe_metadata;
+
+  const strategy = cafeMetadata?.strategy || transpilerMetadata?.strategy || 'native';
+
+  switch (strategy) {
+    case 'state-machine': {
+      return convertStateMachineAutomationConfigToNodes(config);
+    }
+    default: {
+      return convertNativeAutomationConfigToNodes(config);
+    }
+  }
+}
+
+export function convertNativeAutomationConfigToNodes(config: AutomationConfig): {
+  nodes: NodeToCreate[];
+  edges: Array<{ source: string; target: string; sourceHandle: string | null }>;
+} {
   const nodesToCreate: NodeToCreate[] = [];
   const edgesToCreate: Array<{ source: string; target: string; sourceHandle: string | null }> = [];
 
@@ -229,7 +248,7 @@ export function convertAutomationConfigToNodes(config: AutomationConfig): {
           key.startsWith('trigger_')
         );
         nodeId = triggerKeys[index];
-        if (nodeId == undefined) {
+        if (nodeId === undefined) {
           nodeId = `trigger_${Date.now()}_${index}`;
           console.log(`C.A.F.E.: Generated new trigger ID: ${nodeId}`);
         }
@@ -358,15 +377,6 @@ export function convertAutomationConfigToNodes(config: AutomationConfig): {
           nodeId = `action_${Date.now()}_${index}`;
           console.log(`C.A.F.E.: Generated new action ID: ${nodeId}`);
         }
-      }
-
-      // Skip actions without valid node IDs when using state machine strategy
-      // This happens with state machine wrappers that aren't actual flow nodes
-      if (strategy === 'state-machine' && !nodeId) {
-        console.log(
-          `C.A.F.E.: Skipping action ${index} - no valid node ID for state machine strategy`
-        );
-        continue;
       }
 
       // Ensure nodeId is a string at this point
@@ -519,6 +529,484 @@ export function convertAutomationConfigToNodes(config: AutomationConfig): {
       previousNodeId = nodeId;
       globalNodeIndex++; // Increment global index for each action node created
       xOffset += nodeSpacing;
+    }
+  }
+
+  return { nodes: nodesToCreate, edges: edgesToCreate };
+}
+
+// ============================================
+// STATE MACHINE CONVERTER
+// ============================================
+
+/**
+ * Result of parsing a state-machine choose block
+ */
+export interface StateMachineNodeInfo {
+  nodeId: string;
+  nodeType: 'trigger' | 'condition' | 'action' | 'delay' | 'wait';
+  data: Record<string, unknown>;
+  trueTarget: string | null;
+  falseTarget: string | null;
+}
+
+/**
+ * Extract node ID from a state-machine condition template
+ * E.g., '{{ current_node == "action-1" }}' -> 'action-1'
+ */
+export function extractNodeIdFromCondition(condition: Record<string, unknown>): string | null {
+  if (condition.condition !== 'template') {
+    return null;
+  }
+
+  const template = condition.value_template;
+  if (typeof template !== 'string') {
+    return null;
+  }
+
+  // Match pattern: current_node == "node-id" or current_node == 'node-id'
+  const match = template.match(/current_node\s*==\s*["']([^"']+)["']/);
+  return match ? match[1] : null;
+}
+
+/**
+ * Parse a Jinja2 condition template back to condition data
+ * This reverses the buildConditionTemplate logic from the transpiler
+ */
+export function parseJinjaConditionTemplate(template: string): Record<string, unknown> {
+  // Try to match is_state('entity', 'value')
+  const isStateMatch = template.match(/is_state\(['"]([^'"]+)['"],\s*['"]([^'"]+)['"]\)/);
+  if (isStateMatch) {
+    return {
+      condition_type: 'state',
+      entity_id: isStateMatch[1],
+      state: isStateMatch[2],
+    };
+  }
+
+  // Try to match states('entity') in [list] (array state check)
+  const statesInMatch = template.match(/states\(['"]([^'"]+)['"]\)\s+in\s+\[([^\]]+)\]/);
+  if (statesInMatch) {
+    const states = statesInMatch[2]
+      .split(',')
+      .map((s) => s.trim().replace(/^['"]|['"]$/g, ''));
+    return {
+      condition_type: 'state',
+      entity_id: statesInMatch[1],
+      state: states,
+    };
+  }
+
+  // Try to match state_attr checks with attribute
+  const stateAttrMatch = template.match(
+    /state_attr\(['"]([^'"]+)['"],\s*['"]([^'"]+)['"]\)\s*==\s*['"]([^'"]+)['"]/
+  );
+  if (stateAttrMatch) {
+    return {
+      condition_type: 'state',
+      entity_id: stateAttrMatch[1],
+      attribute: stateAttrMatch[2],
+      state: stateAttrMatch[3],
+    };
+  }
+
+  // Try to match numeric state conditions: states('entity') | float > N
+  const numericMatch = template.match(
+    /states\(['"]([^'"]+)['"]\)\s*\|\s*float\s*([><]=?)\s*([\d.]+)/
+  );
+  if (numericMatch) {
+    const result: Record<string, unknown> = {
+      condition_type: 'numeric_state',
+      entity_id: numericMatch[1],
+    };
+    const op = numericMatch[2];
+    const value = parseFloat(numericMatch[3]);
+    if (op === '>' || op === '>=') {
+      result.above = value;
+    } else if (op === '<' || op === '<=') {
+      result.below = value;
+    }
+    return result;
+  }
+
+  // Try to match state_attr numeric conditions
+  const numericAttrMatch = template.match(
+    /state_attr\(['"]([^'"]+)['"],\s*['"]([^'"]+)['"]\)\s*\|\s*float\s*([><]=?)\s*([\d.]+)/
+  );
+  if (numericAttrMatch) {
+    const result: Record<string, unknown> = {
+      condition_type: 'numeric_state',
+      entity_id: numericAttrMatch[1],
+      attribute: numericAttrMatch[2],
+    };
+    const op = numericAttrMatch[3];
+    const value = parseFloat(numericAttrMatch[4]);
+    if (op === '>' || op === '>=') {
+      result.above = value;
+    } else if (op === '<' || op === '<=') {
+      result.below = value;
+    }
+    return result;
+  }
+
+  // Try to match sun conditions
+  if (template.includes("is_state('sun.sun', 'above_horizon')")) {
+    return {
+      condition_type: 'sun',
+      after: 'sunrise',
+      before: 'sunset',
+    };
+  }
+  if (template.includes("is_state('sun.sun', 'below_horizon')")) {
+    return {
+      condition_type: 'sun',
+      after: 'sunset',
+      before: 'sunrise',
+    };
+  }
+
+  // Default to template condition - wrap the expression in {{ }}
+  return {
+    condition_type: 'template',
+    template: `{{ ${template} }}`,
+  };
+}
+
+/**
+ * Extract condition expression from state-machine variables template
+ * E.g., '{% if is_state(...) %}"node1"{% else %}"node2"{% endif %}' -> 'is_state(...)'
+ */
+export function extractConditionFromVariablesTemplate(template: string): string | null {
+  const match = template.match(/\{%\s*if\s+(.+?)\s*%\}/);
+  return match ? match[1].trim() : null;
+}
+
+/**
+ * Extract next node(s) from a variables action setting current_node
+ * Returns { trueTarget, falseTarget } for conditional transitions
+ */
+export function extractNextNodeFromVariables(
+  action: Record<string, unknown>
+): { trueTarget: string; falseTarget: string | null } | null {
+  if (!action.variables || typeof action.variables !== 'object') {
+    return null;
+  }
+
+  const variables = action.variables as Record<string, unknown>;
+  const currentNode = variables.current_node;
+
+  if (typeof currentNode !== 'string') {
+    return null;
+  }
+
+  // Check for conditional template: {% if ... %}"node1"{% else %}"node2"{% endif %}
+  const conditionalMatch = currentNode.match(
+    /\{%\s*if\s+.+?\s*%\}\s*["']([^"']+)["']\s*\{%\s*else\s*%\}\s*["']([^"']+)["']\s*\{%\s*endif\s*%\}/
+  );
+
+  if (conditionalMatch) {
+    return {
+      trueTarget: conditionalMatch[1],
+      falseTarget: conditionalMatch[2],
+    };
+  }
+
+  // Simple next node (not a template)
+  return {
+    trueTarget: currentNode,
+    falseTarget: null,
+  };
+}
+
+/**
+ * Parse a single choose block from a state-machine automation
+ * Extracts the node information and transitions
+ */
+export function parseStateMachineChooseBlock(
+  chooseBlock: Record<string, unknown>
+): StateMachineNodeInfo | null {
+  const conditions = chooseBlock.conditions;
+  if (!Array.isArray(conditions) || conditions.length === 0) {
+    return null;
+  }
+
+  // Extract node ID from the first condition
+  const firstCondition = conditions[0] as Record<string, unknown>;
+  const nodeId = extractNodeIdFromCondition(firstCondition);
+  if (!nodeId) {
+    return null;
+  }
+
+  const sequence = chooseBlock.sequence;
+  if (!Array.isArray(sequence) || sequence.length === 0) {
+    return null;
+  }
+
+  // Determine node type and extract data from the sequence
+  let nodeType: StateMachineNodeInfo['nodeType'] = 'action';
+  const data: Record<string, unknown> = {};
+  let trueTarget: string | null = null;
+  let falseTarget: string | null = null;
+
+  for (const item of sequence) {
+    const seqItem = item as Record<string, unknown>;
+
+    // Check for variables action (sets next node)
+    if (seqItem.variables) {
+      const nextInfo = extractNextNodeFromVariables(seqItem);
+      if (nextInfo) {
+        // If we have both true and false targets, this is a condition node
+        if (nextInfo.falseTarget) {
+          nodeType = 'condition';
+          trueTarget = nextInfo.trueTarget === 'END' ? null : nextInfo.trueTarget;
+          falseTarget = nextInfo.falseTarget === 'END' ? null : nextInfo.falseTarget;
+
+          // Extract condition data from the Jinja template
+          const variables = seqItem.variables as Record<string, unknown>;
+          const currentNodeTemplate = variables.current_node;
+          if (typeof currentNodeTemplate === 'string') {
+            const conditionExpr = extractConditionFromVariablesTemplate(currentNodeTemplate);
+            if (conditionExpr) {
+              const conditionData = parseJinjaConditionTemplate(conditionExpr);
+              Object.assign(data, conditionData);
+            }
+          }
+        } else {
+          trueTarget = nextInfo.trueTarget === 'END' ? null : nextInfo.trueTarget;
+        }
+
+        // Copy alias from the variables action if it's a condition (Check: pattern)
+        if (seqItem.alias && typeof seqItem.alias === 'string') {
+          data.alias = seqItem.alias;
+        }
+      }
+    }
+    // Check for delay action
+    else if (seqItem.delay !== undefined) {
+      nodeType = 'delay';
+      data.delay = seqItem.delay;
+      if (seqItem.alias) data.alias = seqItem.alias;
+    }
+    // Check for wait action
+    else if (seqItem.wait_template !== undefined) {
+      nodeType = 'wait';
+      data.wait_template = seqItem.wait_template;
+      if (seqItem.timeout) data.timeout = seqItem.timeout;
+      if (seqItem.continue_on_timeout !== undefined) {
+        data.continue_on_timeout = seqItem.continue_on_timeout;
+      }
+      if (seqItem.alias) data.alias = seqItem.alias;
+    }
+    // Check for service call action
+    else if (seqItem.service || seqItem.action) {
+      nodeType = 'action';
+      data.service = seqItem.service || seqItem.action;
+      if (seqItem.target) data.target = seqItem.target;
+      if (seqItem.data) data.data = seqItem.data;
+      if (seqItem.alias) data.alias = seqItem.alias;
+    }
+  }
+
+  return {
+    nodeId,
+    nodeType,
+    data,
+    trueTarget,
+    falseTarget,
+  };
+}
+
+/**
+ * Convert a state-machine automation config to nodes and edges
+ *
+ * State-machine automations have a specific structure:
+ * - A variables action initializing current_node
+ * - A repeat loop with choose blocks for each node
+ *
+ * All data is parsed from the YAML structure:
+ * - Node data is in each choose block's sequence
+ * - Edges are in the variables transitions (current_node assignments)
+ * - Node positions are restored from metadata.nodes
+ */
+export function convertStateMachineAutomationConfigToNodes(config: AutomationConfig): {
+  nodes: NodeToCreate[];
+  edges: Array<{ source: string; target: string; sourceHandle: string | null }>;
+} {
+  const transpilerMetadata = config.variables?._cafe_metadata;
+
+  // Parse the state-machine YAML structure
+  // Node data is in each choose block's sequence
+  // Edges are in the variables transitions (current_node assignments)
+  // Positions are stored in metadata
+  return convertStateMachineFromYaml(config, transpilerMetadata);
+}
+
+/**
+ * Convert state-machine by parsing the YAML structure
+ *
+ * Node data is extracted from each choose block's sequence:
+ * - Action nodes: service, target, data, alias fields
+ * - Condition nodes: Jinja template in variables.current_node
+ * - Delay nodes: delay field
+ * - Wait nodes: wait_template field
+ *
+ * Edges are extracted from the variables transitions:
+ * - Simple: current_node: "next-node-id"
+ * - Conditional: current_node: "{% if ... %}\"node-a\"{% else %}\"node-b\"{% endif %}"
+ *
+ * Positions are restored from metadata.nodes
+ */
+function convertStateMachineFromYaml(
+  config: AutomationConfig,
+  transpilerMetadata: Record<string, unknown> | undefined
+): {
+  nodes: NodeToCreate[];
+  edges: Array<{ source: string; target: string; sourceHandle: string | null }>;
+} {
+  const nodesToCreate: NodeToCreate[] = [];
+  const edgesToCreate: Array<{ source: string; target: string; sourceHandle: string | null }> = [];
+
+  const savedPositions = (transpilerMetadata?.nodes || {}) as Record<
+    string,
+    { x: number; y: number }
+  >;
+
+  // Helper to get position for a node
+  const getNodePosition = (nodeId: string, defaultX: number, defaultY: number) => {
+    if (savedPositions[nodeId]) {
+      const pos = savedPositions[nodeId];
+      return { x: Number(pos.x), y: Number(pos.y) };
+    }
+    return { x: defaultX, y: defaultY };
+  };
+
+  // Track the entry node (first node after triggers)
+  let entryNodeId: string | null = null;
+
+  // Parse triggers
+  const triggers = config.triggers || config.trigger || [];
+  const triggerArray = Array.isArray(triggers) ? triggers : [triggers];
+  const triggerNodeIds: string[] = [];
+
+  let xOffset = 100;
+  const baseYOffset = 150;
+  const nodeSpacing = 250;
+
+  for (const [index, trigger] of triggerArray.entries()) {
+    // Try to find trigger ID from metadata
+    let nodeId: string | undefined;
+    if (transpilerMetadata?.nodes) {
+      const triggerKeys = Object.keys(transpilerMetadata.nodes as Record<string, unknown>).filter(
+        (key) => key.startsWith('trigger')
+      );
+      nodeId = triggerKeys[index];
+    }
+    if (!nodeId) {
+      nodeId = `trigger_${Date.now()}_${index}`;
+    }
+
+    // Clean up trigger data
+    const cleanedTrigger = { ...trigger };
+    delete cleanedTrigger.trigger;
+
+    nodesToCreate.push({
+      id: nodeId,
+      type: 'trigger',
+      position: getNodePosition(nodeId, xOffset, baseYOffset),
+      data: {
+        ...cleanedTrigger,
+        alias: trigger.alias || `Trigger ${index + 1}`,
+        platform: trigger.device_id
+          ? 'device'
+          : trigger.platform || trigger.trigger || trigger.domain || 'state',
+      },
+    });
+
+    triggerNodeIds.push(nodeId);
+    xOffset += nodeSpacing;
+  }
+
+  // Find the repeat/choose structure in actions
+  const actions = config.actions || config.action || [];
+  const actionArray = Array.isArray(actions) ? actions : [actions];
+
+  // Map to store parsed node info by ID
+  const nodeInfoMap = new Map<string, StateMachineNodeInfo>();
+
+  for (const action of actionArray) {
+    const actionObj = action as Record<string, unknown>;
+
+    // Check for initial variables (to find entry node)
+    if (actionObj.variables && typeof actionObj.variables === 'object') {
+      const vars = actionObj.variables as Record<string, unknown>;
+      if (typeof vars.current_node === 'string' && vars.current_node !== 'END') {
+        entryNodeId = vars.current_node;
+      }
+    }
+
+    // Check for repeat block with choose
+    if (actionObj.repeat && typeof actionObj.repeat === 'object') {
+      const repeat = actionObj.repeat as Record<string, unknown>;
+      const sequence = repeat.sequence;
+
+      if (Array.isArray(sequence)) {
+        for (const seqItem of sequence) {
+          const seqObj = seqItem as Record<string, unknown>;
+
+          // Look for choose block
+          if (Array.isArray(seqObj.choose)) {
+            for (const chooseBlock of seqObj.choose) {
+              const nodeInfo = parseStateMachineChooseBlock(
+                chooseBlock as Record<string, unknown>
+              );
+              if (nodeInfo) {
+                nodeInfoMap.set(nodeInfo.nodeId, nodeInfo);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Create nodes from parsed info
+  for (const [nodeId, info] of nodeInfoMap) {
+    nodesToCreate.push({
+      id: nodeId,
+      type: info.nodeType,
+      position: getNodePosition(nodeId, xOffset, baseYOffset),
+      data: info.data,
+    });
+    xOffset += nodeSpacing;
+  }
+
+  // Create edges
+  // Connect triggers to entry node
+  if (entryNodeId) {
+    for (const triggerId of triggerNodeIds) {
+      edgesToCreate.push({
+        source: triggerId,
+        target: entryNodeId,
+        sourceHandle: null,
+      });
+    }
+  }
+
+  // Create edges between nodes based on transitions
+  for (const [nodeId, info] of nodeInfoMap) {
+    if (info.trueTarget && info.trueTarget !== 'END') {
+      edgesToCreate.push({
+        source: nodeId,
+        target: info.trueTarget,
+        sourceHandle: info.falseTarget ? 'true' : null,
+      });
+    }
+    if (info.falseTarget && info.falseTarget !== 'END') {
+      edgesToCreate.push({
+        source: nodeId,
+        target: info.falseTarget,
+        sourceHandle: 'false',
+      });
     }
   }
 

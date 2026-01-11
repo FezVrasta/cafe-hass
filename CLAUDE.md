@@ -1,6 +1,6 @@
 # Project Overview
 
-**C.A.F.E.** (Complex Automation Flow Editor) is a visual flow editor for Home Assistant automations, inspired by Node-RED. It allows users to design automations as diagrams and transpiles them to 100% native Home Assistant YAML—no vendor lock-in. Automations remain editable in HA’s built-in editor. (Beta status: v0.1.8)
+**C.A.F.E.** (Complex Automation Flow Editor) is a visual flow editor for Home Assistant automations, inspired by Node-RED. It allows users to design automations as diagrams and transpiles them to 100% native Home Assistant YAML—no vendor lock-in. Automations remain editable in HA’s built-in editor.
 
 # Repository Structure
 

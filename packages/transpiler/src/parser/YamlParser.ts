@@ -14,6 +14,9 @@ import { v4 as uuidv4 } from 'uuid';
 
 /**
  * Metadata structure stored in YAML variables._cafe_metadata
+ *
+ * Note: We only store node positions in metadata. Node data and edges are
+ * already encoded in the YAML structure itself (in choose blocks and variables).
  */
 interface FlowAutomatorMetadata {
   version: number;
@@ -126,10 +129,15 @@ export class YamlParser {
       // Step 4: Extract node IDs from metadata if available
       const metadataNodeIds = metadata ? Object.keys(metadata.nodes) : [];
 
-      // Step 5: Parse nodes and edges from YAML structure
-      const { nodes, edges } = this.parseAutomationStructure((content as Record<string, unknown>), warnings, metadataNodeIds);
+      // Step 5: Check if this is a state-machine format automation
+      const isStateMachine = metadata?.strategy === 'state-machine' || this.detectStateMachineFormat(content);
 
-      // Step 6: Apply positions from metadata or generate heuristic layout
+      // Step 6: Parse nodes and edges from YAML structure
+      const { nodes, edges } = isStateMachine
+        ? this.parseStateMachineStructure(content, warnings, metadataNodeIds)
+        : this.parseAutomationStructure(content, warnings, metadataNodeIds);
+
+      // Step 7: Apply positions from metadata or generate heuristic layout
       let nodesWithPositions: FlowNode[];
       if (hadMetadata && metadata) {
         nodesWithPositions = this.applyMetadataPositions(nodes, metadata);
@@ -138,7 +146,7 @@ export class YamlParser {
         nodesWithPositions = this.applyFallbackLayout(nodes);
       }
 
-      // Step 6: Build FlowGraph object
+      // Step 8: Build FlowGraph object
       const graph: FlowGraph = {
         id: metadata?.graph_id || uuidv4(),
         name: (content as Record<string, unknown>).alias as string || 'Imported Automation',
@@ -160,9 +168,25 @@ export class YamlParser {
       const validation = FlowGraphSchema.safeParse(graph);
 
       if (!validation.success) {
+        // Enhanced error logging: show node data and schema path
+        // Zod v4 uses 'issues' instead of 'errors'
+        const errorDetails = validation.error.issues.map((e) => {
+          let nodeInfo = '';
+          if (e.path && e.path.length > 0) {
+            // Try to extract node id/type if error is in nodes array
+            if (e.path[0] === 'nodes' && typeof e.path[1] === 'number') {
+              const idx = e.path[1];
+              const node = graph.nodes[idx];
+              nodeInfo = `Node index ${idx} (id: ${node?.id}, type: ${node?.type})\nData: ${JSON.stringify(node?.data, null, 2)}`;
+            }
+          }
+          return `Schema path: ${e.path.join('.')}\nMessage: ${e.message}${nodeInfo ? `\n${nodeInfo}` : ''}`;
+        });
+        // Also log to console for debugging
+        console.error('Zod validation error details:', errorDetails);
         return {
           success: false,
-          errors: validation.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`),
+          errors: errorDetails,
           warnings,
           hadMetadata,
         };
@@ -187,6 +211,9 @@ export class YamlParser {
         hadMetadata,
       };
     } catch (error) {
+      // Enhanced catch block: log YAML and error
+      console.error('YAML parsing error:', error);
+      console.error('YAML string:', yamlString);
       return {
         success: false,
         errors: [error instanceof Error ? error.message : 'Unknown parsing error'],
@@ -227,13 +254,350 @@ export class YamlParser {
   /**
    * Extract script content from script wrapper
    */
-  private extractScriptContent(parsed: Record<string, unknown>):  unknown {
-    const scriptName = Object.keys((parsed as Record<string, unknown>).script as Record<string, unknown>)[0];
-    return ((parsed as Record<string, unknown>).script as Record<string, unknown>)[scriptName];
+  private extractScriptContent(parsed: Record<string, unknown>): Record<string, unknown> {
+    const script = parsed.script as Record<string, Record<string, unknown>> | undefined;
+    if (!script) return {};
+    const scriptName = Object.keys(script)[0];
+    return script[scriptName] || {};
   }
 
   /**
-   * Parse automation structure into nodes and edges
+   * Detect if automation is in state-machine format
+   * State-machine format has:
+   * - A variables action with current_node and flow_context
+   * - A repeat loop with choose blocks
+   */
+  private detectStateMachineFormat(content: Record<string, unknown>): boolean {
+    const actions = (content.actions || content.action) as unknown[];
+    if (!Array.isArray(actions)) return false;
+
+    let hasCurrentNodeVar = false;
+    let hasRepeatChoose = false;
+
+    for (const action of actions) {
+      const actionObj = action as Record<string, unknown>;
+
+      // Check for variables with current_node
+      if (actionObj.variables) {
+        const vars = actionObj.variables as Record<string, unknown>;
+        if ('current_node' in vars && 'flow_context' in vars) {
+          hasCurrentNodeVar = true;
+        }
+      }
+
+      // Check for repeat with choose
+      if (actionObj.repeat) {
+        const repeat = actionObj.repeat as Record<string, unknown>;
+        const sequence = repeat.sequence as unknown[];
+        if (Array.isArray(sequence)) {
+          for (const seqItem of sequence) {
+            const seqObj = seqItem as Record<string, unknown>;
+            if (Array.isArray(seqObj.choose)) {
+              hasRepeatChoose = true;
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    return hasCurrentNodeVar && hasRepeatChoose;
+  }
+
+  /**
+   * Parse state-machine format automation into nodes and edges
+   *
+   * State-machine format structure:
+   * - Triggers are parsed normally
+   * - Actions contain: variables (current_node init) + repeat/choose blocks
+   * - Each choose block represents a node:
+   *   - condition: {{ current_node == "node-id" }}
+   *   - sequence: [node action, variables: { current_node: "next-node" }]
+   */
+  private parseStateMachineStructure(
+    content: Record<string, unknown>,
+    warnings: string[],
+    metadataNodeIds: string[]
+  ): { nodes: FlowNode[]; edges: FlowEdge[] } {
+    const nodes: FlowNode[] = [];
+    const edges: FlowEdge[] = [];
+    let nodeIdIndex = 0;
+
+    // Helper to get next node ID (from metadata if available, otherwise generate)
+    const getNextNodeId = (type: string): string => {
+      if (nodeIdIndex < metadataNodeIds.length) {
+        return metadataNodeIds[nodeIdIndex++];
+      }
+      return `${type}_${Date.now()}_${nodeIdIndex++}`;
+    };
+
+    // Parse triggers
+    const triggerData = content.triggers || content.trigger;
+    if (!triggerData) {
+      warnings.push('No triggers found in automation');
+      return { nodes, edges };
+    }
+    const triggers = Array.isArray(triggerData) ? triggerData : [triggerData];
+    const triggerNodes = this.parseTriggers(triggers as Record<string, unknown>[], warnings, getNextNodeId);
+    nodes.push(...triggerNodes);
+
+    // Find the entry node and parse the state machine
+    const actions = (content.actions || content.action) as unknown[];
+    if (!Array.isArray(actions)) {
+      warnings.push('No actions found in automation');
+      return { nodes, edges };
+    }
+
+    let entryNodeId: string | null = null;
+    const nodeInfoMap = new Map<string, {
+      nodeId: string;
+      nodeType: 'action' | 'condition' | 'delay' | 'wait';
+      data: Record<string, unknown>;
+      trueTarget: string | null;
+      falseTarget: string | null;
+    }>();
+
+    for (const action of actions) {
+      const actionObj = action as Record<string, unknown>;
+
+      // Find entry node from initial variables
+      if (actionObj.variables) {
+        const vars = actionObj.variables as Record<string, unknown>;
+        if (typeof vars.current_node === 'string' && vars.current_node !== 'END') {
+          entryNodeId = vars.current_node;
+        }
+      }
+
+      // Parse repeat/choose structure
+      if (actionObj.repeat) {
+        const repeat = actionObj.repeat as Record<string, unknown>;
+        const sequence = repeat.sequence as unknown[];
+
+        if (Array.isArray(sequence)) {
+          for (const seqItem of sequence) {
+            const seqObj = seqItem as Record<string, unknown>;
+
+            if (Array.isArray(seqObj.choose)) {
+              for (const chooseBlock of seqObj.choose) {
+                const nodeInfo = this.parseStateMachineChooseBlock(chooseBlock as Record<string, unknown>);
+                if (nodeInfo) {
+                  nodeInfoMap.set(nodeInfo.nodeId, nodeInfo);
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Create nodes from parsed info
+    for (const [nodeId, info] of nodeInfoMap) {
+      const nodeType = info.nodeType;
+
+      switch (nodeType) {
+        case 'condition':
+          nodes.push({
+            id: nodeId,
+            type: 'condition',
+            position: { x: 0, y: 0 },
+            data: info.data as ConditionNode['data'],
+          });
+          break;
+        case 'action':
+          nodes.push({
+            id: nodeId,
+            type: 'action',
+            position: { x: 0, y: 0 },
+            data: info.data as ActionNode['data'],
+          });
+          break;
+        case 'delay':
+          nodes.push({
+            id: nodeId,
+            type: 'delay',
+            position: { x: 0, y: 0 },
+            data: info.data as DelayNode['data'],
+          });
+          break;
+        case 'wait':
+          nodes.push({
+            id: nodeId,
+            type: 'wait',
+            position: { x: 0, y: 0 },
+            data: info.data as WaitNode['data'],
+          });
+          break;
+      }
+    }
+
+    // Create edges
+    // Connect triggers to entry node
+    if (entryNodeId) {
+      for (const trigger of triggerNodes) {
+        edges.push(this.createEdge(trigger.id, entryNodeId));
+      }
+    }
+
+    // Create edges between nodes based on transitions
+    for (const [nodeId, info] of nodeInfoMap) {
+      if (info.trueTarget && info.trueTarget !== 'END') {
+        edges.push({
+          id: `edge-${nodeId}-${info.trueTarget}`,
+          source: nodeId,
+          target: info.trueTarget,
+          sourceHandle: info.falseTarget ? 'true' : undefined,
+        });
+      }
+      if (info.falseTarget && info.falseTarget !== 'END') {
+        edges.push({
+          id: `edge-${nodeId}-${info.falseTarget}`,
+          source: nodeId,
+          target: info.falseTarget,
+          sourceHandle: 'false',
+        });
+      }
+    }
+
+    return { nodes, edges };
+  }
+
+  /**
+   * Parse a single choose block from state-machine format
+   */
+  private parseStateMachineChooseBlock(chooseBlock: Record<string, unknown>): {
+    nodeId: string;
+    nodeType: 'action' | 'condition' | 'delay' | 'wait';
+    data: Record<string, unknown>;
+    trueTarget: string | null;
+    falseTarget: string | null;
+  } | null {
+    const conditions = chooseBlock.conditions;
+    if (!Array.isArray(conditions) || conditions.length === 0) {
+      return null;
+    }
+
+    // Extract node ID from condition: {{ current_node == "node-id" }}
+    const firstCondition = conditions[0] as Record<string, unknown>;
+    const valueTemplate = firstCondition.value_template as string;
+    if (!valueTemplate) return null;
+
+    const match = valueTemplate.match(/current_node\s*==\s*["']([^"']+)["']/);
+    if (!match) return null;
+
+    const nodeId = match[1];
+    const sequence = chooseBlock.sequence;
+    if (!Array.isArray(sequence) || sequence.length === 0) {
+      return null;
+    }
+
+    // Parse sequence to determine node type and data
+    let nodeType: 'action' | 'condition' | 'delay' | 'wait' = 'action';
+    const data: Record<string, unknown> = {};
+    let trueTarget: string | null = null;
+    let falseTarget: string | null = null;
+
+    for (const item of sequence) {
+      const seqItem = item as Record<string, unknown>;
+
+      // Check for variables action (sets next node / edge)
+      if (seqItem.variables) {
+        const vars = seqItem.variables as Record<string, unknown>;
+        const currentNodeValue = vars.current_node;
+
+        if (typeof currentNodeValue === 'string') {
+          // Check if it's a Jinja conditional (condition node)
+          if (currentNodeValue.includes('{%') && currentNodeValue.includes('%}')) {
+            nodeType = 'condition';
+
+            // Extract true and false targets
+            const trueMatch = currentNodeValue.match(/{%\s*if[^%]*%}\s*["']([^"']+)["']/);
+            const falseMatch = currentNodeValue.match(/{%\s*else\s*%}\s*["']([^"']+)["']/);
+
+            trueTarget = trueMatch ? trueMatch[1] : null;
+            falseTarget = falseMatch ? falseMatch[1] : null;
+
+            // Extract condition expression from Jinja template
+            const conditionMatch = currentNodeValue.match(/{%\s*if\s+(.+?)\s*%}/);
+            if (conditionMatch) {
+              const conditionExpr = conditionMatch[1];
+              Object.assign(data, this.parseJinjaCondition(conditionExpr));
+            }
+          } else {
+            // Simple transition
+            trueTarget = currentNodeValue === 'END' ? null : currentNodeValue;
+          }
+        }
+      }
+      // Check for delay action
+      else if (seqItem.delay !== undefined) {
+        nodeType = 'delay';
+        data.delay = seqItem.delay;
+        if (seqItem.alias) data.alias = seqItem.alias;
+      }
+      // Check for wait action
+      else if (seqItem.wait_template !== undefined) {
+        nodeType = 'wait';
+        data.wait_template = seqItem.wait_template;
+        if (seqItem.timeout) data.timeout = seqItem.timeout;
+        if (seqItem.continue_on_timeout !== undefined) {
+          data.continue_on_timeout = seqItem.continue_on_timeout;
+        }
+        if (seqItem.alias) data.alias = seqItem.alias;
+      }
+      // Check for service call action
+      else if (seqItem.service || seqItem.action) {
+        nodeType = 'action';
+        data.service = seqItem.service || seqItem.action;
+        if (seqItem.target) data.target = seqItem.target;
+        if (seqItem.data) data.data = seqItem.data;
+        if (seqItem.alias) data.alias = seqItem.alias;
+      }
+    }
+
+    return { nodeId, nodeType, data, trueTarget, falseTarget };
+  }
+
+  /**
+   * Parse Jinja condition expression to extract condition data
+   */
+  private parseJinjaCondition(expr: string): Record<string, unknown> {
+    // is_state('entity', 'state')
+    const isStateMatch = expr.match(/is_state\s*\(\s*['"]([^'"]+)['"]\s*,\s*['"]([^'"]+)['"]\s*\)/);
+    if (isStateMatch) {
+      const entityId = isStateMatch[1];
+      const state = isStateMatch[2];
+
+      // Check for sun entity
+      if (entityId === 'sun.sun') {
+        if (state === 'above_horizon') {
+          return { condition_type: 'sun', after: 'sunrise', before: 'sunset' };
+        } else if (state === 'below_horizon') {
+          return { condition_type: 'sun', after: 'sunset', before: 'sunrise' };
+        }
+      }
+
+      return { condition_type: 'state', entity_id: entityId, state };
+    }
+
+    // states('entity') | float > number
+    const numericMatch = expr.match(/states\s*\(\s*['"]([^'"]+)['"]\s*\)\s*\|\s*float\s*([<>=]+)\s*(\d+(?:\.\d+)?)/);
+    if (numericMatch) {
+      const entityId = numericMatch[1];
+      const operator = numericMatch[2];
+      const value = parseFloat(numericMatch[3]);
+
+      const result: Record<string, unknown> = { condition_type: 'numeric_state', entity_id: entityId };
+      if (operator.includes('>')) result.above = value;
+      if (operator.includes('<')) result.below = value;
+      return result;
+    }
+
+    // Fallback to template condition
+    return { condition_type: 'template', value_template: `{{ ${expr} }}` };
+  }
+
+  /**
+   * Parse automation structure into nodes and edges (native format)
    */
   private parseAutomationStructure(
     content: Record<string, unknown>,
@@ -828,7 +1192,7 @@ export class YamlParser {
   /**
    * Create an unknown node for unparseable content
    */
-  private createUnknownNode(nodeId: string, originalData: any): ActionNode {
+  private createUnknownNode(nodeId: string, originalData: Record<string, unknown>): ActionNode {
     return {
       id: nodeId,
       type: 'action',

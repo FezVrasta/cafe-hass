@@ -340,6 +340,7 @@ __metadata:
     postcss: "npm:^8.4.0"
     react: "npm:^18.3.0"
     react-dom: "npm:^18.3.0"
+    react-error-boundary: "npm:^6.0.3"
     sonner: "npm:^2.0.7"
     tailwind-merge: "npm:^2.5.0"
     tailwindcss: "npm:^3.4.0"
@@ -357,7 +358,7 @@ __metadata:
   dependencies:
     typescript: "npm:^5.7.0"
     vitest: "npm:^2.1.0"
-    zod: "npm:^3.24.0"
+    zod: "npm:^4.3.5"
   languageName: unknown
   linkType: soft
 
@@ -3703,6 +3704,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"react-error-boundary@npm:^6.0.3":
+  version: 6.0.3
+  resolution: "react-error-boundary@npm:6.0.3"
+  peerDependencies:
+    react: ^18.0.0 || ^19.0.0
+  checksum: 10c0/993f1e31b5dd78ae254e122faee53ef4cb986dc8f029fa670584bea25c713f38f82e9aba870d5083a47802c88aee534758111ebc5d2a2209ba79e1becb8a65f9
+  languageName: node
+  linkType: hard
+
 "react-refresh@npm:^0.17.0":
   version: 0.17.0
   resolution: "react-refresh@npm:0.17.0"
@@ -4622,10 +4632,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"zod@npm:^3.24.0":
-  version: 3.25.76
-  resolution: "zod@npm:3.25.76"
-  checksum: 10c0/5718ec35e3c40b600316c5b4c5e4976f7fee68151bc8f8d90ec18a469be9571f072e1bbaace10f1e85cf8892ea12d90821b200e980ab46916a6166a4260a983c
+"zod@npm:^4.3.5":
+  version: 4.3.5
+  resolution: "zod@npm:4.3.5"
+  checksum: 10c0/5a2db7e59177a3d7e202543f5136cb87b97b047b77c8a3d824098d3fa8b80d3aa40a0a5f296965c3b82dfdccdd05dbbfacce91347f16a39c675680fd7b1ab109
   languageName: node
   linkType: hard
 
