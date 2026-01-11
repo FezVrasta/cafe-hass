@@ -322,18 +322,18 @@ export class HomeAssistantAPI {
   async getAutomationConfigs(): Promise<AutomationConfig[]> {
     try {
       // First try websocket approach
-        if (hasCallWS(this.hass)) {
-          try {
-            const result = await this.hass.callWS({
-              type: 'config/automation/list',
-            });
-            if (Array.isArray(result)) {
-              return result as AutomationConfig[];
-            }
-          } catch (wsError) {
-            console.warn('WebSocket automation list failed, trying alternative:', wsError);
+      if (hasCallWS(this.hass)) {
+        try {
+          const result = await this.hass.callWS({
+            type: 'config/automation/list',
+          });
+          if (Array.isArray(result)) {
+            return result as AutomationConfig[];
           }
+        } catch (wsError) {
+          console.warn('WebSocket automation list failed, trying alternative:', wsError);
         }
+      }
 
       // Alternative: Use automation entity states to get basic info
       const automations = this.getAutomations();
@@ -358,19 +358,19 @@ export class HomeAssistantAPI {
   async getAutomationConfig(automationId: string): Promise<AutomationConfig | null> {
     try {
       // Try websocket approach first
-        if (hasCallWS(this.hass)) {
-          try {
-            const config = await this.hass.callWS({
-              type: 'config/automation/get',
-              automation_id: automationId,
-            });
-            if (config) {
-              return config as AutomationConfig;
-            }
-          } catch (wsError) {
-            console.warn('WebSocket automation get failed:', wsError);
+      if (hasCallWS(this.hass)) {
+        try {
+          const config = await this.hass.callWS({
+            type: 'config/automation/get',
+            automation_id: automationId,
+          });
+          if (config) {
+            return config as AutomationConfig;
           }
+        } catch (wsError) {
+          console.warn('WebSocket automation get failed:', wsError);
         }
+      }
 
       // Try numeric ID with REST API (for automations created via UI)
       if (!automationId.startsWith('automation.') && !Number.isNaN(Number(automationId))) {
@@ -503,18 +503,18 @@ export class HomeAssistantAPI {
         }
       }
 
-        if (hasCallWS(this.hass)) {
-          try {
-            await this.hass.callWS({
-              type: 'call_service',
-              domain: 'automation',
-              service: 'reload',
-            });
-            return automationId;
-          } catch (wsError) {
-            console.error('C.A.F.E.: callWS failed:', wsError);
-          }
+      if (hasCallWS(this.hass)) {
+        try {
+          await this.hass.callWS({
+            type: 'call_service',
+            domain: 'automation',
+            service: 'reload',
+          });
+          return automationId;
+        } catch (wsError) {
+          console.error('C.A.F.E.: callWS failed:', wsError);
         }
+      }
 
       if (this.connection) {
         try {
@@ -577,7 +577,7 @@ export class HomeAssistantAPI {
   async deleteAutomation(automationId: string): Promise<void> {
     try {
       // Use the automation config DELETE endpoint
-        await this.fetchRestAPI(`config/automation/config/${automationId}`, 'DELETE');
+      await this.fetchRestAPI(`config/automation/config/${automationId}`, 'DELETE');
     } catch (error) {
       console.error('C.A.F.E.: Failed to delete automation:', error);
       throw new Error(
