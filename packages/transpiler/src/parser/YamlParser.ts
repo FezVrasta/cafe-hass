@@ -130,7 +130,8 @@ export class YamlParser {
       const metadataNodeIds = metadata ? Object.keys(metadata.nodes) : [];
 
       // Step 5: Check if this is a state-machine format automation
-      const isStateMachine = metadata?.strategy === 'state-machine' || this.detectStateMachineFormat(content);
+      const isStateMachine =
+        metadata?.strategy === 'state-machine' || this.detectStateMachineFormat(content);
 
       // Step 6: Parse nodes and edges from YAML structure
       const { nodes, edges } = isStateMachine
@@ -337,7 +338,11 @@ export class YamlParser {
       return { nodes, edges };
     }
     const triggers = Array.isArray(triggerData) ? triggerData : [triggerData];
-    const triggerNodes = this.parseTriggers(triggers as Record<string, unknown>[], warnings, getNextNodeId);
+    const triggerNodes = this.parseTriggers(
+      triggers as Record<string, unknown>[],
+      warnings,
+      getNextNodeId
+    );
     nodes.push(...triggerNodes);
 
     // Find the entry node and parse the state machine
@@ -348,13 +353,16 @@ export class YamlParser {
     }
 
     let entryNodeId: string | null = null;
-    const nodeInfoMap = new Map<string, {
-      nodeId: string;
-      nodeType: 'action' | 'condition' | 'delay' | 'wait';
-      data: Record<string, unknown>;
-      trueTarget: string | null;
-      falseTarget: string | null;
-    }>();
+    const nodeInfoMap = new Map<
+      string,
+      {
+        nodeId: string;
+        nodeType: 'action' | 'condition' | 'delay' | 'wait';
+        data: Record<string, unknown>;
+        trueTarget: string | null;
+        falseTarget: string | null;
+      }
+    >();
 
     for (const action of actions) {
       const actionObj = action as Record<string, unknown>;
@@ -378,7 +386,9 @@ export class YamlParser {
 
             if (Array.isArray(seqObj.choose)) {
               for (const chooseBlock of seqObj.choose) {
-                const nodeInfo = this.parseStateMachineChooseBlock(chooseBlock as Record<string, unknown>);
+                const nodeInfo = this.parseStateMachineChooseBlock(
+                  chooseBlock as Record<string, unknown>
+                );
                 if (nodeInfo) {
                   nodeInfoMap.set(nodeInfo.nodeId, nodeInfo);
                 }
@@ -579,13 +589,18 @@ export class YamlParser {
     }
 
     // states('entity') | float > number
-    const numericMatch = expr.match(/states\s*\(\s*['"]([^'"]+)['"]\s*\)\s*\|\s*float\s*([<>=]+)\s*(\d+(?:\.\d+)?)/);
+    const numericMatch = expr.match(
+      /states\s*\(\s*['"]([^'"]+)['"]\s*\)\s*\|\s*float\s*([<>=]+)\s*(\d+(?:\.\d+)?)/
+    );
     if (numericMatch) {
       const entityId = numericMatch[1];
       const operator = numericMatch[2];
       const value = parseFloat(numericMatch[3]);
 
-      const result: Record<string, unknown> = { condition_type: 'numeric_state', entity_id: entityId };
+      const result: Record<string, unknown> = {
+        condition_type: 'numeric_state',
+        entity_id: entityId,
+      };
       if (operator.includes('>')) result.above = value;
       if (operator.includes('<')) result.below = value;
       return result;

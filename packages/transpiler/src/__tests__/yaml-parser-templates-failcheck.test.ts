@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { readFileSync } from 'node:fs';
-import { yamlParser } from '../parser/YamlParser';
 import path from 'node:path';
+import { yamlParser } from '../parser/YamlParser';
 
 describe('YamlParser (failure check)', () => {
   it('fails if too many nodes are generated', () => {

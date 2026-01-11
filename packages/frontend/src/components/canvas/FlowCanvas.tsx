@@ -12,8 +12,8 @@ import {
   useReactFlow,
 } from '@xyflow/react';
 import { type DragEvent, useCallback, useEffect, useMemo, useRef } from 'react';
-import { ActionNode, ConditionNode, DelayNode, TriggerNode, WaitNode } from '@/components/nodes';
 import { DeletableEdge } from '@/components/edges';
+import { ActionNode, ConditionNode, DelayNode, TriggerNode, WaitNode } from '@/components/nodes';
 import { useDarkMode } from '@/hooks/useDarkMode';
 import { useFlowStore } from '@/store/flow-store';
 

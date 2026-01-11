@@ -564,9 +564,7 @@ export function parseJinjaConditionTemplate(template: string): Record<string, un
   // Try to match states('entity') in [list] (array state check)
   const statesInMatch = template.match(/states\(['"]([^'"]+)['"]\)\s+in\s+\[([^\]]+)\]/);
   if (statesInMatch) {
-    const states = statesInMatch[2]
-      .split(',')
-      .map((s) => s.trim().replace(/^['"]|['"]$/g, ''));
+    const states = statesInMatch[2].split(',').map((s) => s.trim().replace(/^['"]|['"]$/g, ''));
     return {
       condition_type: 'state',
       entity_id: statesInMatch[1],
@@ -933,9 +931,7 @@ function convertStateMachineFromYaml(
           // Look for choose block
           if (Array.isArray(seqObj.choose)) {
             for (const chooseBlock of seqObj.choose) {
-              const nodeInfo = parseStateMachineChooseBlock(
-                chooseBlock as Record<string, unknown>
-              );
+              const nodeInfo = parseStateMachineChooseBlock(chooseBlock as Record<string, unknown>);
               if (nodeInfo) {
                 nodeInfoMap.set(nodeInfo.nodeId, nodeInfo);
               }

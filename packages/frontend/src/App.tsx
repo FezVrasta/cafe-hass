@@ -13,6 +13,7 @@ import {
   Wifi,
 } from 'lucide-react';
 import { createContext, useContext, useEffect, useState } from 'react';
+import { ErrorBoundary } from 'react-error-boundary';
 import { Toaster } from 'sonner';
 import { CSSInjector } from '@/components/CSSInjector';
 import { FlowCanvas } from '@/components/canvas/FlowCanvas';
@@ -28,8 +29,13 @@ import { SpeedControl } from '@/components/simulator/SpeedControl';
 import { TraceSimulator } from '@/components/simulator/TraceSimulator';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { PortalContainer } from '@/contexts/PortalContainer';
-import { ErrorBoundary } from 'react-error-boundary';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,18 +46,12 @@ import { Input } from '@/components/ui/input';
 import { ResizablePanel } from '@/components/ui/resizable-panel';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { PortalContainer } from '@/contexts/PortalContainer';
 import { type HassAPI, useHass } from '@/hooks/useHass';
 // import { getHomeAssistantAPI } from '@/lib/ha-api';
 import { logger } from '@/lib/logger';
 import { cn } from '@/lib/utils';
 import { useFlowStore } from '@/store/flow-store';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 
 // Home Assistant context for passing data from custom element
 interface HassContextValue {

@@ -1,8 +1,8 @@
 // @vitest-environment node
 import { readFileSync } from 'node:fs';
-import { yamlParser } from '../parser/YamlParser';
 import path from 'node:path';
 import type { ConditionNode } from '@cafe/shared';
+import { yamlParser } from '../parser/YamlParser';
 
 describe('YamlParser', () => {
   it('parses trigger and condition with entity_id as array', () => {

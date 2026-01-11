@@ -2,9 +2,7 @@
   "name": "cafe",
   "private": true,
   "packageManager": "yarn@4.12.0",
-  "workspaces": [
-    "packages/*"
-  ],
+  "workspaces": ["packages/*"],
   "scripts": {
     "dev": "turbo run dev",
     "build": "turbo run build",
@@ -14,13 +12,11 @@
     "lint": "turbo run lint",
     "lint:biome": "biome lint .",
     "lint:fix": "biome lint --write .",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
+    "format": "prettier --write . ; yarn biome format --write .",
+    "format:check": "prettier --check . ; yarn biome format .",
     "format:biome": "biome format --write .",
-    "format:biome:check": "biome format .",
-    "check": "biome check .",
-    "check:fix": "biome check --write --unsafe .",
-    "check:all": "yarn typecheck && yarn lint:biome && yarn format:check",
+    "check": "biome check . ; yarn typecheck ; yarn lint:biome ; yarn format:check",
+    "check:fix": "biome check --write --unsafe . ; yarn lint:fix ; yarn format",
     "typecheck": "turbo run typecheck"
   },
   "devDependencies": {

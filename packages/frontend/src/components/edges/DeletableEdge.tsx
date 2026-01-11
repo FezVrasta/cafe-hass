@@ -1,9 +1,9 @@
 import {
   BaseEdge,
   EdgeLabelRenderer,
+  type EdgeProps,
   getSmoothStepPath,
   useReactFlow,
-  type EdgeProps,
 } from '@xyflow/react';
 import { X } from 'lucide-react';
 import { useFlowStore } from '@/store/flow-store';

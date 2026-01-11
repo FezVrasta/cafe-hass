@@ -9,10 +9,10 @@
  * 5. Compare: Original should match final (semantically)
  */
 
-import type { FlowGraph } from '@cafe/shared';
-import { FlowTranspiler, YamlParser } from '@cafe/transpiler';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import type { FlowGraph } from '@cafe/shared';
+import { FlowTranspiler, YamlParser } from '@cafe/transpiler';
 import * as yaml from 'js-yaml';
 import { describe, expect, it } from 'vitest';
 import { convertStateMachineAutomationConfigToNodes } from '../automation-converter';
@@ -41,7 +41,12 @@ const transpiler = new FlowTranspiler();
  * Helper to convert nodes/edges from automation-converter to a FlowGraph
  */
 function nodesToFlowGraph(
-  nodes: { id: string; type: string; position: { x: number; y: number }; data: Record<string, unknown> }[],
+  nodes: {
+    id: string;
+    type: string;
+    position: { x: number; y: number };
+    data: Record<string, unknown>;
+  }[],
   edges: { source: string; target: string; sourceHandle: string | null }[],
   name: string,
   description: string
@@ -81,9 +86,7 @@ function extractAutomationStructure(yamlContent: string): {
 
   // Extract triggers
   const rawTriggers = (parsed.trigger || parsed.triggers || []) as Record<string, unknown>[];
-  const triggerPlatforms = rawTriggers.map(
-    (t) => (t.platform || t.trigger || 'unknown') as string
-  );
+  const triggerPlatforms = rawTriggers.map((t) => (t.platform || t.trigger || 'unknown') as string);
 
   // Extract actions recursively
   const rawActions = (parsed.action || parsed.actions || []) as Record<string, unknown>[];
@@ -181,7 +184,10 @@ describe('State Machine Roundtrip Tests', () => {
         const smYamlResult = transpiler.transpile(flowGraph1, { forceStrategy: 'state-machine' });
 
         if (!smYamlResult.success || !smYamlResult.yaml) {
-          console.log(`Skipping ${fixtureFile} - state-machine transpilation failed:`, smYamlResult.errors);
+          console.log(
+            `Skipping ${fixtureFile} - state-machine transpilation failed:`,
+            smYamlResult.errors
+          );
           return;
         }
 
@@ -194,7 +200,14 @@ describe('State Machine Roundtrip Tests', () => {
         console.log('Step 3 - Imported state-machine:');
         console.log('  Nodes:', nodes.map((n) => `${n.type}:${n.id}`).join(', '));
         console.log('  Edges:', edges.length);
-        console.log('  Node data:', JSON.stringify(nodes.map((n) => ({ id: n.id, type: n.type, data: n.data })), null, 2));
+        console.log(
+          '  Node data:',
+          JSON.stringify(
+            nodes.map((n) => ({ id: n.id, type: n.type, data: n.data })),
+            null,
+            2
+          )
+        );
 
         // Step 4: Create FlowGraph from imported nodes
         const flowGraph2 = nodesToFlowGraph(
@@ -339,8 +352,14 @@ describe('State Machine Roundtrip Tests', () => {
       const smConfig = yaml.load(smResult.yaml!) as AutomationConfig;
       const { nodes, edges } = convertStateMachineAutomationConfigToNodes(smConfig);
 
-      console.log('Imported nodes:', nodes.map((n) => `${n.type}:${n.id}`));
-      console.log('Imported edges:', edges.map((e) => `${e.source} -[${e.sourceHandle}]-> ${e.target}`));
+      console.log(
+        'Imported nodes:',
+        nodes.map((n) => `${n.type}:${n.id}`)
+      );
+      console.log(
+        'Imported edges:',
+        edges.map((e) => `${e.source} -[${e.sourceHandle}]-> ${e.target}`)
+      );
 
       // Verify condition node exists
       const conditionNode = nodes.find((n) => n.id === 'condition-1');
@@ -463,9 +482,13 @@ describe('State Machine Roundtrip Tests', () => {
       expect(smConfig1.variables?._cafe_metadata?.nodes).toBeDefined();
 
       // Step 3: Import using the converter (parses from YAML structure)
-      const { nodes: nodes1, edges: edges1 } = convertStateMachineAutomationConfigToNodes(smConfig1);
+      const { nodes: nodes1, edges: edges1 } =
+        convertStateMachineAutomationConfigToNodes(smConfig1);
 
-      console.log('Step 3 - Imported nodes:', nodes1.map((n) => ({ id: n.id, type: n.type, service: n.data.service })));
+      console.log(
+        'Step 3 - Imported nodes:',
+        nodes1.map((n) => ({ id: n.id, type: n.type, service: n.data.service }))
+      );
       console.log('Step 3 - Imported edges:', edges1);
 
       // Verify nodes are correctly imported from metadata
@@ -551,8 +574,8 @@ describe('State Machine Roundtrip Tests', () => {
       expect(unknownNodes.length).toBe(0);
 
       // No node should have alias starting with "Unknown:"
-      const unknownAliasNodes = nodes.filter((n) =>
-        typeof n.data.alias === 'string' && n.data.alias.startsWith('Unknown:')
+      const unknownAliasNodes = nodes.filter(
+        (n) => typeof n.data.alias === 'string' && n.data.alias.startsWith('Unknown:')
       );
       expect(unknownAliasNodes.length).toBe(0);
     });
@@ -624,7 +647,9 @@ describe('State Machine Roundtrip Tests', () => {
       expect(importedGraph?.edges[0].target).toBe('action_1768082354230');
 
       // Step 5: Re-export to state-machine and verify it's still correct
-      const smResult2 = transpiler.transpile(importedGraph as FlowGraph, { forceStrategy: 'state-machine' });
+      const smResult2 = transpiler.transpile(importedGraph as FlowGraph, {
+        forceStrategy: 'state-machine',
+      });
       expect(smResult2.success).toBe(true);
 
       // Re-import again

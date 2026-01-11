@@ -1,9 +1,6 @@
 import { ChevronDown, X } from 'lucide-react';
-import { useMemo, useState, useRef } from 'react';
-import type { HassEntity } from '@/hooks/useHass';
-import { cn } from '@/lib/utils';
+import { useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   Command,
   CommandEmpty,
@@ -12,7 +9,10 @@ import {
   CommandItem,
   CommandList,
 } from '@/components/ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { usePortalContainer } from '@/contexts/PortalContainer';
+import type { HassEntity } from '@/hooks/useHass';
+import { cn } from '@/lib/utils';
 
 interface EntitySelectorProps {
   value: string;

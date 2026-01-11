@@ -1,7 +1,7 @@
 import { EntitySelector } from '@/components/ui/EntitySelector';
-import { MultiEntitySelector } from '@/components/ui/MultiEntitySelector';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { MultiEntitySelector } from '@/components/ui/MultiEntitySelector';
 import {
   Select,
   SelectContent,
