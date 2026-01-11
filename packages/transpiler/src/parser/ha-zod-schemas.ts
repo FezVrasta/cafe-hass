@@ -7,7 +7,7 @@ const stringOrNumberSchema = z.union([z.string(), z.number()]);
 /**
  * Metadata injected into the automation YAML to store flow layout and other info.
  */
-export const FlowAutomatorMetadataSchema = z.object({
+export const CafeMetadataSchema = z.object({
   version: z.number(),
   nodes: z.record(
     z.string(),
@@ -20,7 +20,7 @@ export const FlowAutomatorMetadataSchema = z.object({
   graph_version: z.number(),
   strategy: z.enum(['native', 'state-machine']),
 });
-export type FlowAutomatorMetadata = z.infer<typeof FlowAutomatorMetadataSchema>;
+export type CafeMetadata = z.infer<typeof CafeMetadataSchema>;
 
 /**
  * Zod schema for a Home Assistant trigger.
@@ -207,7 +207,7 @@ export const HaAutomationSchema = z.object({
   trace: z.record(z.string(), z.unknown()).optional(),
   variables: z
     .object({
-      _cafe_metadata: FlowAutomatorMetadataSchema.optional(),
+      _cafe_metadata: CafeMetadataSchema.optional(),
     })
     .catchall(z.unknown())
     .optional(),
@@ -227,6 +227,6 @@ export type HaScript = z.infer<typeof HaScriptSchema>;
 /**
  * Type guard for our metadata.
  */
-export const isFlowAutomatorMetadata = (obj: unknown): obj is FlowAutomatorMetadata => {
-  return FlowAutomatorMetadataSchema.safeParse(obj).success;
+export const isCafeMetadata = (obj: unknown): obj is CafeMetadata => {
+  return CafeMetadataSchema.safeParse(obj).success;
 };

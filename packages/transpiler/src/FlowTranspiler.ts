@@ -136,7 +136,7 @@ export class FlowTranspiler {
     let yaml: string;
 
     if (yamlContent && typeof yamlContent === 'object') {
-      const metadata = this.generateFlowAutomatorMetadata(flow, strategy);
+      const metadata = this.generateCafeMetadata(flow, strategy);
       const contentWithMetadata = {
         ...yamlContent,
         variables: {
@@ -232,7 +232,7 @@ export class FlowTranspiler {
    * - Edges are in the variables transitions (current_node assignments)
    * - Node IDs are in the choose block conditions
    */
-  private generateFlowAutomatorMetadata(
+  private generateCafeMetadata(
     flow: FlowGraph,
     strategy: TranspilerStrategy
   ): Record<string, unknown> {

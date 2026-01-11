@@ -1,3 +1,316 @@
+import { z } from 'zod';
+
+// Zod schema for Home Assistant condition objects
+export const HAConditionSchema = z
+  .object({
+    alias: z.string().optional(),
+    condition: z.string().optional(),
+    entity_id: z.union([z.string(), z.array(z.string())]).optional(),
+    state: z.union([z.string(), z.array(z.string())]).optional(),
+    template: z.string().optional(),
+    value_template: z.string().optional(),
+    after: z.string().optional(),
+    before: z.string().optional(),
+    weekday: z.array(z.string()).optional(),
+    after_offset: z.string().optional(),
+    before_offset: z.string().optional(),
+    zone: z.string().optional(),
+    conditions: z.array(z.unknown()).optional(),
+    above: z.union([z.string(), z.number()]).optional(),
+    below: z.union([z.string(), z.number()]).optional(),
+    attribute: z.string().optional(),
+    id: z.string().optional(),
+  })
+  .transform((input) => {
+    // Normalize condition_type and template fields
+    const condition_type = VALID_CONDITION_TYPES.includes(
+      (input.condition as ValidConditionType) ?? 'state'
+    )
+      ? (input.condition as ValidConditionType)
+      : 'template';
+    return {
+      alias: input.alias,
+      condition_type,
+      entity_id: input.entity_id,
+      state: input.state,
+      template: input.template ?? input.value_template,
+      value_template: input.value_template,
+      after: input.after,
+      before: input.before,
+      weekday: toWeekdayArray(input.weekday),
+      after_offset: input.after_offset,
+      before_offset: input.before_offset,
+      zone: input.zone,
+      conditions: Array.isArray(input.conditions)
+        ? transformConditions(input.conditions)
+        : undefined,
+      above: input.above,
+      below: input.below,
+      attribute: input.attribute,
+      ...(input.id ? { id: input.id } : {}),
+    };
+  });
+
+
+const HAPlatformEnum = z.enum([
+  'event',
+  'template',
+  'zone',
+  'state',
+  'time',
+  'time_pattern',
+  'mqtt',
+  'webhook',
+  'sun',
+  'numeric_state',
+  'homeassistant',
+  'device',
+]);
+
+/**
+ * Zod schema for Home Assistant trigger objects
+ */
+
+export const HATriggerSchema = z
+  .object({
+    alias: z.string().optional(),
+    platform: HAPlatformEnum.optional(),
+    trigger: HAPlatformEnum.optional(),
+    entity_id: z.union([z.string(), z.array(z.string())]).optional(),
+    from: z.string().optional(),
+    to: z.string().optional(),
+    for: z
+      .union([
+        z.string(),
+        z.object({
+          hours: z.number().optional(),
+          minutes: z.number().optional(),
+          seconds: z.number().optional(),
+        }),
+      ])
+      .optional(),
+    at: z.string().optional(),
+    event_type: z.string().optional(),
+    event_data: z.record(z.string(), z.unknown()).optional(),
+    above: z.union([z.string(), z.number()]).optional(),
+    below: z.union([z.string(), z.number()]).optional(),
+    value_template: z.string().optional(),
+    template: z.string().optional(),
+    webhook_id: z.string().optional(),
+    zone: z.string().optional(),
+    topic: z.string().optional(),
+    payload: z.string().optional(),
+  })
+  .transform((input) => {
+    // Always output a defined platform property
+    const platform = input.platform ?? input.trigger ?? 'state';
+    return {
+      ...input,
+      platform: platform,
+    };
+  });
+
+/**
+ * Zod schema for FlowGraph metadata block (not C.A.F.E. metadata)
+ */
+export const FlowGraphMetadataSchema = z.object({
+  mode: z.enum(['single', 'restart', 'queued', 'parallel']).default('single'),
+  max: z.number().optional(),
+  max_exceeded: z.enum(['silent', 'warning', 'critical']).optional(),
+  initial_state: z.boolean().default(false),
+  hide_entity: z.boolean().optional(),
+  trace: z.object({ stored_traces: z.number().optional() }).optional(),
+});
+// Type guards for Home Assistant objects
+
+/** Returns true if the action is a delay node */
+function isDelayAction(action: unknown): action is Record<string, unknown> {
+  return (
+    typeof action === 'object' &&
+    action !== null &&
+    'delay' in action &&
+    (typeof (action as Record<string, unknown>).delay === 'string' ||
+      typeof (action as Record<string, unknown>).delay === 'number' ||
+      (typeof (action as Record<string, unknown>).delay === 'object' &&
+        (action as Record<string, unknown>).delay !== null))
+  );
+}
+
+/** Returns true if the action is a wait node */
+function isWaitAction(action: unknown): action is Record<string, unknown> {
+  return (
+    typeof action === 'object' &&
+    action !== null &&
+    typeof (action as Record<string, unknown>).wait_template === 'string'
+  );
+}
+
+/** Returns true if the action is a choose block */
+function isChooseAction(action: unknown): action is Record<string, unknown> {
+  return typeof action === 'object' && action !== null && 'choose' in action;
+}
+
+/** Returns true if the action is an if/then/else block */
+function isIfThenAction(action: unknown): action is Record<string, unknown> {
+  return (
+    typeof action === 'object' &&
+    action !== null &&
+    'if' in action &&
+    Array.isArray((action as Record<string, unknown>).if) &&
+    'then' in action &&
+    Array.isArray((action as Record<string, unknown>).then)
+  );
+}
+
+/** Returns true if the action is a service or action call */
+function isServiceAction(action: unknown): action is Record<string, unknown> {
+  return (
+    typeof action === 'object' &&
+    action !== null &&
+    (typeof (action as Record<string, unknown>).service === 'string' ||
+      typeof (action as Record<string, unknown>).action === 'string')
+  );
+}
+
+/**
+ * Type guard for Home Assistant trigger objects.
+ * Returns true if the object matches the HATrigger shape.
+ */
+function isHATrigger(obj: unknown): obj is HATrigger {
+  return (
+    typeof obj === 'object' &&
+    obj !== null &&
+    ('platform' in obj || 'trigger' in obj || 'entity_id' in obj)
+  );
+}
+
+/**
+ * Type guard for Home Assistant condition objects.
+ * Returns true if the object matches the HACondition shape.
+ */
+function isHACondition(obj: unknown): obj is HACondition {
+  return (
+    typeof obj === 'object' &&
+    obj !== null &&
+    ('condition' in obj || 'entity_id' in obj || 'state' in obj)
+  );
+}
+
+// Weekday type guard and conversion
+/**
+ * List of valid Home Assistant weekday strings.
+ * Used for time-based conditions and triggers.
+ */
+const VALID_WEEKDAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
+
+/**
+ * Type representing a valid Home Assistant weekday.
+ */
+type Weekday = (typeof VALID_WEEKDAYS)[number];
+
+/**
+ * Converts an unknown array to a Weekday[] if all elements are valid weekdays.
+ * Returns undefined if input is not an array or contains invalid values.
+ */
+function toWeekdayArray(arr: unknown): Weekday[] | undefined {
+  if (!Array.isArray(arr)) return undefined;
+  return arr.filter(
+    (d): d is Weekday => typeof d === 'string' && VALID_WEEKDAYS.includes(d as Weekday)
+  );
+}
+/**
+ * Home Assistant Trigger object (partial, for parsing)
+ */
+export interface HATrigger {
+  alias?: string;
+  platform?: string;
+  trigger?: string;
+  entity_id?: string | string[];
+  from?: string;
+  to?: string;
+  for?: string | { hours?: number; minutes?: number; seconds?: number };
+  at?: string;
+  event_type?: string;
+  event_data?: Record<string, unknown>;
+  above?: string | number;
+  below?: string | number;
+  value_template?: string;
+  template?: string;
+  webhook_id?: string;
+  zone?: string;
+  topic?: string;
+  payload?: string;
+}
+
+/**
+ * Home Assistant Condition object (partial, for parsing)
+  alias?: string;
+  delay?: string | { hours?: number; minutes?: number; seconds?: number; milliseconds?: number };
+  wait_template?: string;
+  timeout?: string;
+  continue_on_timeout?: boolean;
+  service?: string;
+  action?: string;
+  target?: { entity_id?: string | string[]; area_id?: string | string[]; device_id?: string | string[] };
+  data?: Record<string, unknown>;
+  data_template?: Record<string, string>;
+  response_variable?: string;
+  continue_on_error?: boolean;
+  enabled?: boolean;
+  choose?: Record<string, unknown>[] | Record<string, unknown>;
+  if?: unknown[];
+  then?: unknown[];
+  else?: unknown[];
+  variables?: Record<string, unknown>;
+  repeat?: unknown;
+  [key: string]: unknown;
+ */
+export interface HACondition {
+  alias?: string;
+  condition?: string;
+  entity_id?: string | string[];
+  state?: string | string[];
+  template?: string;
+  value_template?: string;
+  after?: string;
+  before?: string;
+  weekday?: string[];
+  after_offset?: string;
+  before_offset?: string;
+  zone?: string;
+  conditions?: HACondition[];
+  above?: number | string;
+  below?: number | string;
+  attribute?: string;
+  id?: string;
+}
+
+/**
+ * Home Assistant Action object (partial, for parsing)
+ */
+export interface HAAction {
+  alias?: string;
+  delay?: string | number | { hours?: number; minutes?: number; seconds?: number };
+  wait_template?: string;
+  timeout?: string | number;
+  continue_on_timeout?: boolean;
+  service?: string;
+  action?: string;
+  target?: unknown;
+  data?: unknown;
+  data_template?: unknown;
+  response_variable?: string;
+  continue_on_error?: boolean;
+  enabled?: boolean;
+  choose?: Record<string, unknown>[] | Record<string, unknown>;
+  if?: unknown[];
+  then?: unknown[];
+  else?: unknown[];
+  variables?: Record<string, unknown>;
+  repeat?: unknown;
+  [key: string]: unknown;
+}
+
 import type {
   ActionNode,
   ConditionNode,
@@ -11,20 +324,7 @@ import type {
 import { FlowGraphSchema, validateGraphStructure } from '@cafe/shared';
 import { load as yamlLoad } from 'js-yaml';
 import { v4 as uuidv4 } from 'uuid';
-
-/**
- * Metadata structure stored in YAML variables._cafe_metadata
- *
- * Note: We only store node positions in metadata. Node data and edges are
- * already encoded in the YAML structure itself (in choose blocks and variables).
- */
-interface FlowAutomatorMetadata {
-  version: number;
-  nodes: Record<string, { x: number; y: number }>;
-  graph_id?: string;
-  graph_version?: number;
-  strategy?: string; // Which strategy was used for export (native or state-machine)
-}
+import { type CafeMetadata, CafeMetadataSchema } from './ha-zod-schemas';
 
 /**
  * Result of parsing YAML
@@ -122,9 +422,17 @@ export class YamlParser {
       const metadata = this.extractMetadata(parsed);
       const hadMetadata = metadata !== null;
 
-      // Step 3: Detect format (automation vs script)
-      const isScript = !!parsed.script;
-      const content = isScript ? this.extractScriptContent(parsed) : parsed;
+      // Step 3: Only support automation format (no script import)
+      const content = parsed;
+      // Defensive: ensure content is Record<string, unknown>
+      if (typeof content !== 'object' || content === null) {
+        return {
+          success: false,
+          errors: ['Invalid YAML content structure'],
+          warnings,
+          hadMetadata,
+        };
+      }
 
       // Step 4: Extract node IDs from metadata if available
       const metadataNodeIds = metadata ? Object.keys(metadata.nodes) : [];
@@ -148,20 +456,27 @@ export class YamlParser {
       }
 
       // Step 8: Build FlowGraph object
+      // Validate and parse metadata block using FlowGraphMetadataSchema
+      const rawMetadata = {
+        mode: content.mode,
+        max: content.max,
+        max_exceeded: content.max_exceeded,
+        initial_state: content.initial_state,
+        hide_entity: content.hide_entity,
+        trace: content.trace,
+      };
+      const metadataResult = FlowGraphMetadataSchema.safeParse(rawMetadata);
+      const metadataBlock = metadataResult.success
+        ? metadataResult.data
+        : FlowGraphMetadataSchema.parse({});
+
       const graph: FlowGraph = {
         id: metadata?.graph_id || uuidv4(),
-        name: content.alias || 'Imported Automation',
-        description: content.description || '',
+        name: typeof content.alias === 'string' ? content.alias : 'Imported Automation',
+        description: typeof content.description === 'string' ? content.description : '',
         nodes: nodesWithPositions,
         edges,
-        metadata: {
-          mode: content.mode || 'single',
-          max: content.max,
-          max_exceeded: content.max_exceeded,
-          initial_state: content.initial_state,
-          hide_entity: content.hide_entity,
-          trace: content.trace,
-        },
+        metadata: metadataBlock,
         version: 1 as const,
       };
 
@@ -227,38 +542,33 @@ export class YamlParser {
   /**
    * Extract C.A.F.E. metadata from variables section
    */
-  private extractMetadata(parsed: any): FlowAutomatorMetadata | null {
+  /**
+   * Extract and validate C.A.F.E. metadata from variables section using Zod schema.
+   * Returns CafeMetadata if valid, otherwise null.
+   */
+  private extractMetadata(parsed: Record<string, unknown>): CafeMetadata | null {
     try {
-      const variables =
-        parsed.variables || parsed.script?.[Object.keys(parsed.script)[0]]?.variables;
-
-      if (variables?._cafe_metadata) {
-        const metadata = variables._cafe_metadata;
-        // Validate metadata structure
-        if (
-          typeof metadata === 'object' &&
-          metadata !== null &&
-          typeof metadata.nodes === 'object' &&
-          metadata.nodes !== null
-        ) {
-          return metadata as FlowAutomatorMetadata;
+      let variables: unknown;
+      if (typeof parsed.variables === 'object' && parsed.variables !== null) {
+        variables = parsed.variables;
+      }
+      if (
+        variables &&
+        typeof variables === 'object' &&
+        '_cafe_metadata' in variables &&
+        typeof (variables as Record<string, unknown>)._cafe_metadata === 'object' &&
+        (variables as Record<string, unknown>)._cafe_metadata !== null
+      ) {
+        const metadata = (variables as Record<string, unknown>)._cafe_metadata;
+        const result = CafeMetadataSchema.safeParse(metadata);
+        if (result.success) {
+          return result.data;
         }
       }
     } catch {
       // Metadata not present or malformed
     }
-
     return null;
-  }
-
-  /**
-   * Extract script content from script wrapper
-   */
-  private extractScriptContent(parsed: Record<string, unknown>): Record<string, unknown> {
-    const script = parsed.script as Record<string, Record<string, unknown>> | undefined;
-    if (!script) return {};
-    const scriptName = Object.keys(script)[0];
-    return script[scriptName] || {};
   }
 
   /**
@@ -614,7 +924,7 @@ export class YamlParser {
    * Parse automation structure into nodes and edges (native format)
    */
   private parseAutomationStructure(
-    content: any,
+    content: Record<string, unknown>,
     warnings: string[],
     metadataNodeIds: string[]
   ): { nodes: FlowNode[]; edges: FlowEdge[] } {
@@ -692,57 +1002,41 @@ export class YamlParser {
    * Parse trigger configurations
    */
   private parseTriggers(
-    triggers: any[],
+    triggers: unknown[],
     warnings: string[],
     getNextNodeId: (type: string) => string
   ): FlowNode[] {
-    return triggers
-      .filter((t) => t && typeof t === 'object')
-      .map((trigger, index) => {
-        const nodeId = getNextNodeId('trigger');
-
-        try {
-          // Support both old format (platform) and new format (trigger)
-          const platform = trigger.platform || trigger.trigger || 'state';
-
-          const node: TriggerNode = {
-            id: nodeId,
-            type: 'trigger',
-            position: { x: 0, y: 0 }, // Will be positioned later
-            data: {
-              alias: trigger.alias,
-              platform: platform as any,
-              entity_id: trigger.entity_id,
-              from: trigger.from,
-              to: trigger.to,
-              for: trigger.for,
-              at: trigger.at,
-              event_type: trigger.event_type,
-              event_data: trigger.event_data,
-              above: trigger.above,
-              below: trigger.below,
-              value_template: trigger.value_template,
-              template: trigger.template,
-              webhook_id: trigger.webhook_id,
-              zone: trigger.zone,
-              topic: trigger.topic,
-              payload: trigger.payload,
-            },
-          };
-
-          return node;
-        } catch (error) {
-          warnings.push(`Failed to parse trigger ${index}: ${error}`);
+    return triggers.filter(isHATrigger).map((trigger, index) => {
+      const nodeId = getNextNodeId('trigger');
+      try {
+        // Validate and parse trigger using HATriggerSchema
+        const result = HATriggerSchema.safeParse(trigger);
+        if (!result.success) {
+          warnings.push(
+            `Trigger ${index} failed schema validation: ${JSON.stringify(result.error.issues)}`
+          );
           return this.createUnknownNode(nodeId, trigger);
         }
-      });
+        // Use platform directly from validated schema
+        const node: TriggerNode = {
+          id: nodeId,
+          type: 'trigger',
+          position: { x: 0, y: 0 },
+          data: result.data,
+        };
+        return node;
+      } catch (error) {
+        warnings.push(`Failed to parse trigger ${index}: ${error}`);
+        return this.createUnknownNode(nodeId, trigger);
+      }
+    });
   }
 
   /**
    * Parse condition configurations
    */
   private parseConditions(
-    conditions: any[],
+    conditions: unknown[],
     warnings: string[],
     getNextNodeId: (type: string) => string
   ): { nodes: ConditionNode[]; edges: FlowEdge[]; outputNodeIds: string[] } {
@@ -750,62 +1044,49 @@ export class YamlParser {
     const edges: FlowEdge[] = [];
     const outputNodeIds: string[] = [];
 
-    conditions
-      .filter((c) => c && typeof c === 'object')
-      .forEach((condition, index) => {
-        const nodeId = getNextNodeId('condition');
-
-        try {
-          // Extract id for trigger condition type
-          const conditionType = condition.condition || 'state';
-          // entity_id can be string or string[]
-          let entity_id: string | string[] | undefined;
-          if (Array.isArray(condition.entity_id)) {
-            entity_id = condition.entity_id.slice();
-          } else if (typeof condition.entity_id === 'string') {
-            entity_id = condition.entity_id;
-          }
-          // id only for trigger condition type
-          let id: string | undefined;
-          if (conditionType === 'trigger' && typeof condition.id === 'string') {
-            id = condition.id;
-          }
-          const node: ConditionNode = {
+    conditions.filter(isHACondition).forEach((condition, index) => {
+      const nodeId = getNextNodeId('condition');
+      try {
+        const result = HAConditionSchema.safeParse(condition);
+        if (!result.success) {
+          warnings.push(
+            `Condition ${index} failed schema validation: ${JSON.stringify(result.error.issues)}`
+          );
+          nodes.push({
             id: nodeId,
             type: 'condition',
             position: { x: 0, y: 0 },
             data: {
-              alias: condition.alias,
-              condition_type: conditionType,
-              entity_id,
-              state: condition.state,
-              template: condition.template || condition.value_template,
-              value_template: condition.value_template,
-              after: condition.after,
-              before: condition.before,
-              weekday: condition.weekday,
-              after_offset: condition.after_offset,
-              before_offset: condition.before_offset,
-              zone: condition.zone,
-              conditions: Array.isArray(condition.conditions)
-                ? transformConditions(condition.conditions)
-                : undefined,
-              above: condition.above,
-              below: condition.below,
-              attribute: condition.attribute,
-              ...(id ? { id } : {}),
+              condition_type: 'template',
+              alias: 'Unknown Condition',
+              value_template: JSON.stringify(condition),
             },
-          };
-
-          nodes.push(node);
-          outputNodeIds.push(nodeId);
-        } catch (error) {
-          warnings.push(`Failed to parse condition ${index}: ${error}`);
-          const unknownNode = this.createUnknownNode(nodeId, condition);
-          nodes.push(unknownNode as any);
+          });
+          return;
         }
-      });
-
+        const node: ConditionNode = {
+          id: nodeId,
+          type: 'condition',
+          position: { x: 0, y: 0 },
+          data: result.data,
+        };
+        nodes.push(node);
+        outputNodeIds.push(nodeId);
+      } catch (error) {
+        warnings.push(`Failed to parse condition ${index}: ${error}`);
+        // Create a minimal valid unknown condition node
+        nodes.push({
+          id: nodeId,
+          type: 'condition',
+          position: { x: 0, y: 0 },
+          data: {
+            condition_type: 'template',
+            alias: 'Unknown Condition',
+            value_template: JSON.stringify(condition),
+          },
+        });
+      }
+    });
     return { nodes, edges, outputNodeIds };
   }
 
@@ -813,7 +1094,7 @@ export class YamlParser {
    * Parse action sequences (including choose blocks, delays, etc.)
    */
   private parseActions(
-    actions: any[],
+    actions: Record<string, unknown>[],
     warnings: string[],
     previousNodeIds: string[],
     getNextNodeId: (type: string) => string,
@@ -823,126 +1104,187 @@ export class YamlParser {
     const edges: FlowEdge[] = [];
     let currentNodeIds = previousNodeIds;
 
-    actions
-      .filter((a) => a && typeof a === 'object')
-      .forEach((action, index) => {
-        // Handle different action types
-        if (action.delay) {
-          const nodeId = getNextNodeId('delay');
-          const delayNode: DelayNode = {
-            id: nodeId,
-            type: 'delay',
-            position: { x: 0, y: 0 },
-            data: {
-              alias: action.alias,
-              delay: action.delay,
-            },
-          };
-
-          nodes.push(delayNode);
-
-          // Connect from previous nodes
-          for (const prevId of currentNodeIds) {
-            const sourceHandle = conditionNodeIds.has(prevId) ? 'true' : undefined;
-            edges.push(this.createEdge(prevId, nodeId, sourceHandle));
-          }
-
-          currentNodeIds = [nodeId];
-        } else if (action.wait_template) {
-          const nodeId = getNextNodeId('wait');
-          const waitNode: WaitNode = {
-            id: nodeId,
-            type: 'wait',
-            position: { x: 0, y: 0 },
-            data: {
-              alias: action.alias,
-              wait_template: action.wait_template,
-              timeout: action.timeout,
-              continue_on_timeout: action.continue_on_timeout,
-            },
-          };
-
-          nodes.push(waitNode);
-
-          for (const prevId of currentNodeIds) {
-            const sourceHandle = conditionNodeIds.has(prevId) ? 'true' : undefined;
-            edges.push(this.createEdge(prevId, nodeId, sourceHandle));
-          }
-
-          currentNodeIds = [nodeId];
-        } else if (action.choose) {
-          // Handle condition branching (choose blocks)
-          const chooseResult = this.parseChooseBlock(
-            action,
-            warnings,
-            currentNodeIds,
-            getNextNodeId,
-            conditionNodeIds
-          );
-          nodes.push(...chooseResult.nodes);
-          edges.push(...chooseResult.edges);
-          currentNodeIds = chooseResult.outputNodeIds;
-        } else if (action.if) {
-          // Handle if/then/else blocks
-          const ifResult = this.parseIfBlock(
-            action,
-            warnings,
-            currentNodeIds,
-            getNextNodeId,
-            conditionNodeIds
-          );
-          nodes.push(...ifResult.nodes);
-          edges.push(...ifResult.edges);
-          currentNodeIds = ifResult.outputNodeIds;
-        } else if (action.service || action.action) {
-          // Regular service call action (support both 'service' and 'action' fields)
-          const nodeId = getNextNodeId('action');
-
-          try {
-            const actionNode: ActionNode = {
-              id: nodeId,
-              type: 'action',
-              position: { x: 0, y: 0 },
-              data: {
-                alias: action.alias,
-                service: action.service || action.action,
-                target: action.target,
-                data: action.data,
-                data_template: action.data_template,
-                response_variable: action.response_variable,
-                continue_on_error: action.continue_on_error,
-                enabled: action.enabled,
-              },
-            };
-
-            nodes.push(actionNode);
-
-            for (const prevId of currentNodeIds) {
-              const sourceHandle = conditionNodeIds.has(prevId) ? 'true' : undefined;
-              edges.push(this.createEdge(prevId, nodeId, sourceHandle));
-            }
-
-            currentNodeIds = [nodeId];
-          } catch (error) {
-            warnings.push(`Failed to parse action ${index}: ${error}`);
-            const unknownNode = this.createUnknownNode(nodeId, action);
-            nodes.push(unknownNode as any);
-          }
-        } else {
-          // Unknown action type - create unknown node
-          warnings.push(`Unknown action type at index ${index}`);
-          const nodeId = getNextNodeId('unknown');
-          const unknownNode = this.createUnknownNode(nodeId, action);
-          nodes.push(unknownNode as any);
-
-          for (const prevId of currentNodeIds) {
-            const sourceHandle = conditionNodeIds.has(prevId) ? 'true' : undefined;
-            edges.push(this.createEdge(prevId, nodeId, sourceHandle));
-          }
-
-          currentNodeIds = [nodeId];
+    actions.forEach((action, index) => {
+      if (!action || typeof action !== 'object') {
+        // Unknown action type - create unknown node
+        warnings.push(`Unknown action type at index ${index}`);
+        const nodeId = getNextNodeId('unknown');
+        nodes.push({
+          id: nodeId,
+          type: 'action',
+          position: { x: 0, y: 0 },
+          data: {
+            alias: 'Unknown Node',
+            service: 'unknown.unknown',
+            data: action as Record<string, unknown>,
+          },
+        });
+        for (const prevId of currentNodeIds) {
+          const sourceHandle = conditionNodeIds.has(prevId) ? 'true' : undefined;
+          edges.push(this.createEdge(prevId, nodeId, sourceHandle));
         }
-      });
+        currentNodeIds = [nodeId];
+        return;
+      }
+      // Handle different action types
+      if (isDelayAction(action)) {
+        const nodeId = getNextNodeId('delay');
+        const act = action as Record<string, unknown>;
+        const delayValue = act.delay;
+        const delayNode: DelayNode = {
+          id: nodeId,
+          type: 'delay',
+          position: { x: 0, y: 0 },
+          data: {
+            alias: typeof act.alias === 'string' ? act.alias : undefined,
+            delay:
+              typeof delayValue === 'string'
+                ? delayValue
+                : typeof delayValue === 'object' && delayValue !== null
+                  ? (delayValue as {
+                      hours?: number;
+                      minutes?: number;
+                      seconds?: number;
+                      milliseconds?: number;
+                    })
+                  : '',
+          },
+        };
+        nodes.push(delayNode);
+        for (const prevId of currentNodeIds) {
+          const sourceHandle = conditionNodeIds.has(prevId) ? 'true' : undefined;
+          edges.push(this.createEdge(prevId, nodeId, sourceHandle));
+        }
+        currentNodeIds = [nodeId];
+      } else if (isWaitAction(action)) {
+        const nodeId = getNextNodeId('wait');
+        const act = action as Record<string, unknown>;
+        const waitTemplate = act.wait_template;
+        const timeoutValue = act.timeout;
+        const continueOnTimeoutValue = act.continue_on_timeout;
+        const waitNode: WaitNode = {
+          id: nodeId,
+          type: 'wait',
+          position: { x: 0, y: 0 },
+          data: {
+            alias: typeof act.alias === 'string' ? act.alias : undefined,
+            wait_template: typeof waitTemplate === 'string' ? waitTemplate : '',
+            timeout: typeof timeoutValue === 'string' ? timeoutValue : undefined,
+            continue_on_timeout:
+              typeof continueOnTimeoutValue === 'boolean' ? continueOnTimeoutValue : undefined,
+          },
+        };
+        nodes.push(waitNode);
+        for (const prevId of currentNodeIds) {
+          const sourceHandle = conditionNodeIds.has(prevId) ? 'true' : undefined;
+          edges.push(this.createEdge(prevId, nodeId, sourceHandle));
+        }
+        currentNodeIds = [nodeId];
+      } else if (isChooseAction(action)) {
+        // Handle condition branching (choose blocks)
+        const chooseResult = this.parseChooseBlock(
+          action as Record<string, unknown>,
+          warnings,
+          currentNodeIds,
+          getNextNodeId,
+          conditionNodeIds
+        );
+        nodes.push(...chooseResult.nodes);
+        edges.push(...chooseResult.edges);
+        currentNodeIds = chooseResult.outputNodeIds;
+      } else if (isIfThenAction(action)) {
+        // Handle if/then/else blocks
+        const act = action as Record<string, unknown>;
+        const ifArr = Array.isArray(act.if) ? act.if : [];
+        const thenArr = Array.isArray(act.then) ? act.then : [];
+        const elseArr = Array.isArray(act.else) ? act.else : undefined;
+        const ifAction = {
+          if: ifArr,
+          then: thenArr,
+          else: elseArr,
+          alias: typeof act.alias === 'string' ? act.alias : undefined,
+        };
+        const ifResult = this.parseIfBlock(
+          ifAction,
+          warnings,
+          currentNodeIds,
+          getNextNodeId,
+          conditionNodeIds
+        );
+        nodes.push(...ifResult.nodes);
+        edges.push(...ifResult.edges);
+        currentNodeIds = ifResult.outputNodeIds;
+      } else if (isServiceAction(action)) {
+        // Regular service call action (support both 'service' and 'action' fields)
+        const nodeId = getNextNodeId('action');
+        try {
+          const act = action as Record<string, unknown>;
+          const actionNode: ActionNode = {
+            id: nodeId,
+            type: 'action',
+            position: { x: 0, y: 0 },
+            data: {
+              alias: typeof act.alias === 'string' ? act.alias : undefined,
+              service:
+                typeof act.service === 'string'
+                  ? act.service
+                  : typeof act.action === 'string'
+                    ? act.action
+                    : undefined,
+              target:
+                typeof act.target === 'object' && act.target !== null
+                  ? (act.target as {
+                      entity_id?: string | string[];
+                      area_id?: string | string[];
+                      device_id?: string | string[];
+                    })
+                  : undefined,
+              data:
+                typeof act.data === 'object' && act.data !== null
+                  ? (act.data as Record<string, unknown>)
+                  : undefined,
+              data_template:
+                typeof act.data_template === 'object' && act.data_template !== null
+                  ? (act.data_template as Record<string, string>)
+                  : undefined,
+              response_variable:
+                typeof act.response_variable === 'string' ? act.response_variable : undefined,
+              continue_on_error:
+                typeof act.continue_on_error === 'boolean' ? act.continue_on_error : undefined,
+              enabled: typeof act.enabled === 'boolean' ? act.enabled : undefined,
+            },
+          };
+          nodes.push(actionNode);
+          for (const prevId of currentNodeIds) {
+            const sourceHandle = conditionNodeIds.has(prevId) ? 'true' : undefined;
+            edges.push(this.createEdge(prevId, nodeId, sourceHandle));
+          }
+          currentNodeIds = [nodeId];
+        } catch (error) {
+          warnings.push(`Failed to parse action ${index}: ${error}`);
+          nodes.push(this.createUnknownNode(nodeId, action));
+        }
+      } else {
+        // Unknown action type - create unknown node
+        warnings.push(`Unknown action type at index ${index}`);
+        const nodeId = getNextNodeId('unknown');
+        nodes.push({
+          id: nodeId,
+          type: 'action',
+          position: { x: 0, y: 0 },
+          data: {
+            alias: 'Unknown Node',
+            service: 'unknown.unknown',
+            data: action as Record<string, unknown>,
+          },
+        });
+        for (const prevId of currentNodeIds) {
+          const sourceHandle = conditionNodeIds.has(prevId) ? 'true' : undefined;
+          edges.push(this.createEdge(prevId, nodeId, sourceHandle));
+        }
+        currentNodeIds = [nodeId];
+      }
+    });
 
     return { nodes, edges };
   }
@@ -951,7 +1293,7 @@ export class YamlParser {
    * Parse choose block (condition branching in actions)
    */
   private parseChooseBlock(
-    chooseAction: any,
+    chooseAction: Record<string, unknown>,
     warnings: string[],
     previousNodeIds: string[],
     getNextNodeId: (type: string) => string,
@@ -966,7 +1308,8 @@ export class YamlParser {
       ? chooseAction.choose
       : [chooseAction.choose];
 
-    choices.forEach((choice: any) => {
+    choices.forEach((choice) => {
+      if (typeof choice !== 'object' || choice === null) return;
       if (choice.conditions) {
         const conditionId = getNextNodeId('condition');
         // choice.conditions can be an array of conditions or a single condition object
@@ -1126,7 +1469,9 @@ export class YamlParser {
     if (ifAction.then) {
       const thenSequence = Array.isArray(ifAction.then) ? ifAction.then : [ifAction.then];
       const thenResult = this.parseActions(
-        thenSequence,
+        thenSequence.filter(
+          (a): a is Record<string, unknown> => typeof a === 'object' && a !== null
+        ),
         warnings,
         [conditionId],
         getNextNodeId,
@@ -1155,7 +1500,9 @@ export class YamlParser {
       const elseSequence = Array.isArray(ifAction.else) ? ifAction.else : [ifAction.else];
       // For else branch, we need to connect from condition with 'false' handle
       const elseResult = this.parseActions(
-        elseSequence,
+        elseSequence.filter(
+          (a): a is Record<string, unknown> => typeof a === 'object' && a !== null
+        ),
         warnings,
         [conditionId],
         getNextNodeId,
@@ -1214,7 +1561,7 @@ export class YamlParser {
   /**
    * Apply positions from metadata
    */
-  private applyMetadataPositions(nodes: FlowNode[], metadata: FlowAutomatorMetadata): FlowNode[] {
+  private applyMetadataPositions(nodes: FlowNode[], metadata: CafeMetadata): FlowNode[] {
     return nodes.map((node) => ({
       ...node,
       position: metadata.nodes[node.id] || node.position,
