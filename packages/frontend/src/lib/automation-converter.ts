@@ -229,7 +229,13 @@ export function convertAutomationConfigToNodes(config: AutomationConfig): {
           key.startsWith('trigger_')
         );
         nodeId = triggerKeys[index];
-        console.log(`C.A.F.E.: Using transpiler metadata for trigger ${index} -> ${nodeId}`);
+        if (nodeId == undefined) {
+          nodeId = `trigger_${Date.now()}_${index}`;
+          console.log(`C.A.F.E.: Generated new trigger ID: ${nodeId}`);
+        }
+        else{
+          console.log(`C.A.F.E.: Using transpiler metadata for trigger ${index} -> ${nodeId}`);
+        }
       } else {
         // Generate new ID as final fallback
         nodeId = `trigger_${Date.now()}_${index}`;
@@ -274,7 +280,7 @@ export function convertAutomationConfigToNodes(config: AutomationConfig): {
     for (const [index, condition] of conditions.entries()) {
       if (!condition) continue; // Skip undefined conditions
       const mappingKey = `condition-${index}`;
-      const originalId = nodeMapping[mappingKey] as string | undefined;
+      const originalId = nodeMapping[mappingKey] as string;
       const nodeId = originalId || `condition-${Date.now()}-${index}`;
 
       nodesToCreate.push({
@@ -505,6 +511,7 @@ export function convertAutomationConfigToNodes(config: AutomationConfig): {
         createEdge(previousNodeId, nodeId, sourceHandle);
       }
       // If no previous node and it's the first action, connect all triggers to it
+      
       else if (index === 0 && triggerNodes.length > 0 && !parentConditionId) {
         connectTriggersToNode(nodeId);
       }
