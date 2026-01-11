@@ -1,10 +1,10 @@
-import type { Node, ReactFlowInstance } from "@xyflow/react";
-import { useCallback, useEffect } from "react";
+import type { Node, ReactFlowInstance } from '@xyflow/react';
+import { useCallback, useEffect } from 'react';
 
 function isEditableElement(el: Element | null): boolean {
   if (!el) return false;
   const tag = el.tagName.toLowerCase();
-  if (tag === "input" || tag === "textarea") return true;
+  if (tag === 'input' || tag === 'textarea') return true;
   if ((el as HTMLElement).isContentEditable) return true;
   return false;
 }
@@ -20,10 +20,8 @@ export function useCopyPaste(rfInstance: ReactFlowInstance | null) {
       const active = document.activeElement;
       if (isEditableElement(active)) return; // allow normal copy in fields
       event.preventDefault();
-      const nodes = JSON.stringify(
-        rfInstance.getNodes().filter((n) => n.selected)
-      );
-      event.clipboardData?.setData("flowchart:nodes", nodes);
+      const nodes = JSON.stringify(rfInstance.getNodes().filter((n) => n.selected));
+      event.clipboardData?.setData('flowchart:nodes', nodes);
     },
     [rfInstance]
   );
@@ -34,9 +32,9 @@ export function useCopyPaste(rfInstance: ReactFlowInstance | null) {
       const active = document.activeElement;
       if (isEditableElement(active)) return; // allow normal paste in fields
       event.preventDefault();
-      const nodes = JSON.parse(
-        event.clipboardData?.getData("flowchart:nodes") || "[]"
-      ) as Node[] | undefined;
+      const nodes = JSON.parse(event.clipboardData?.getData('flowchart:nodes') || '[]') as
+        | Node[]
+        | undefined;
       if (nodes && nodes.length > 0) {
         const randomId = () => Math.random().toString(16).slice(2);
         rfInstance.setNodes([
@@ -54,16 +52,16 @@ export function useCopyPaste(rfInstance: ReactFlowInstance | null) {
   );
 
   useEffect(() => {
-    window.addEventListener("copy", onCopyCapture);
+    window.addEventListener('copy', onCopyCapture);
     return () => {
-      window.removeEventListener("copy", onCopyCapture);
+      window.removeEventListener('copy', onCopyCapture);
     };
   }, [onCopyCapture]);
 
   useEffect(() => {
-    window.addEventListener("paste", onPasteCapture);
+    window.addEventListener('paste', onPasteCapture);
     return () => {
-      window.removeEventListener("paste", onPasteCapture);
+      window.removeEventListener('paste', onPasteCapture);
     };
   }, [onPasteCapture]);
 }

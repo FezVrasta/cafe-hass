@@ -81,7 +81,7 @@ export const HANDLED_PROPERTIES = {
   delay: ['delay'],
 
   // Wait properties handled by WaitFields component
-  wait: ['wait_template', 'timeout'],
+  wait: ['wait_template', 'timeout', 'wait_for_trigger'],
 } as const;
 
 /**

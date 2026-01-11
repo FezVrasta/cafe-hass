@@ -247,14 +247,26 @@ export type DelayNode = z.infer<typeof DelayNodeSchema>;
 // ============================================
 
 /**
- * Data schema for wait nodes (wait_template)
+ * Data schema for wait nodes (wait_template or wait_for_trigger)
  */
-export const WaitDataSchema = z.object({
-  alias: z.string().optional(),
-  wait_template: z.string().optional(),
-  timeout: z.string().optional(),
-  continue_on_timeout: z.boolean().optional(),
-});
+export const WaitDataSchema = z
+  .object({
+    alias: z.string().optional(),
+    wait_template: z.string().optional(),
+    wait_for_trigger: z.array(TriggerDataSchema).optional(),
+    timeout: z.string().optional(),
+    continue_on_timeout: z.boolean().optional(),
+  })
+  .passthrough()
+  .refine(
+    (data) => {
+      return data.wait_template === undefined || data.wait_for_trigger === undefined;
+    },
+    {
+      message: 'Provide either `wait_template` or `wait_for_trigger`, but not both.',
+      path: ['wait_template'],
+    }
+  );
 export type WaitData = z.infer<typeof WaitDataSchema>;
 
 export const WaitNodeSchema = z.object({

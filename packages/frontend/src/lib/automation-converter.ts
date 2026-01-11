@@ -476,6 +476,22 @@ export function convertNativeAutomationConfigToNodes(config: AutomationConfig): 
         });
       }
 
+      if (
+        nodeType === 'wait' &&
+        nodesToCreate[nodesToCreate.length - 1].data.wait_for_trigger &&
+        Array.isArray(nodesToCreate[nodesToCreate.length - 1].data.wait_for_trigger)
+      ) {
+        const lastNode = nodesToCreate[nodesToCreate.length - 1];
+        lastNode.data.wait_for_trigger = (lastNode.data.wait_for_trigger as any[]).map((t: any) => {
+          const trigger = { ...t };
+          if (trigger.trigger) {
+            trigger.platform = trigger.trigger;
+            delete trigger.trigger;
+          }
+          return trigger;
+        });
+      }
+
       // Connect to parent condition with proper sourceHandle
       if (parentConditionId) {
         const sourceHandle = branch === 'then' ? 'true' : branch === 'else' ? 'false' : null;
@@ -763,9 +779,21 @@ export function parseStateMachineChooseBlock(
       if (seqItem.alias) data.alias = seqItem.alias;
     }
     // Check for wait action
-    else if (seqItem.wait_template !== undefined) {
+    else if (seqItem.wait_template !== undefined || seqItem.wait_for_trigger !== undefined) {
       nodeType = 'wait';
-      data.wait_template = seqItem.wait_template;
+      if (seqItem.wait_template !== undefined) {
+        data.wait_template = seqItem.wait_template;
+      } else if (seqItem.wait_for_trigger !== undefined) {
+        const waitForTrigger = seqItem.wait_for_trigger as any[];
+        data.wait_for_trigger = waitForTrigger.map((t) => {
+          const trigger = { ...t };
+          if (trigger.trigger) {
+            trigger.platform = trigger.trigger;
+            delete trigger.trigger;
+          }
+          return trigger;
+        });
+      }
       if (seqItem.timeout) data.timeout = seqItem.timeout;
       if (seqItem.continue_on_timeout !== undefined) {
         data.continue_on_timeout = seqItem.continue_on_timeout;

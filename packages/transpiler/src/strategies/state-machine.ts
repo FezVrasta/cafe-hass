@@ -347,6 +347,15 @@ export class StateMachineStrategy extends BaseStrategy {
 
     if (node.data.wait_template) {
       waitAction.wait_template = node.data.wait_template;
+    } else if (node.data.wait_for_trigger) {
+      waitAction.wait_for_trigger = node.data.wait_for_trigger.map((triggerData) => {
+        const trigger = { ...triggerData };
+        // Don't include alias in the trigger definition itself
+        delete trigger.alias;
+        return Object.fromEntries(
+          Object.entries(trigger).filter(([, v]) => v !== undefined && v !== '' && v !== null)
+        );
+      });
     }
 
     if (node.data.timeout) {

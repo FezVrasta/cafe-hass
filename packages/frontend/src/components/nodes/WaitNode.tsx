@@ -48,6 +48,11 @@ export const WaitNode = memo(function WaitNode({ id, data, selected }: WaitNodeP
             {data.wait_template.slice(0, 30)}...
           </div>
         )}
+        {data.wait_for_trigger && (
+          <div className="truncate text-[10px] opacity-75">
+            Waits for {data.wait_for_trigger.length} trigger(s)
+          </div>
+        )}
         {data.timeout && <div className="opacity-75">Timeout: {data.timeout}</div>}
       </div>
 

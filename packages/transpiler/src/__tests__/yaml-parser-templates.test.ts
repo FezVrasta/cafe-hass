@@ -215,4 +215,49 @@ actions:
       "{{ states('input_boolean.enabled') == 'on' }}"
     );
   });
+
+  it('parses wait_for_trigger action', () => {
+    const yaml = `
+alias: Wait for Trigger Test
+trigger:
+  - platform: state
+    entity_id: input_boolean.start_test
+    to: 'on'
+action:
+  - service: light.turn_on
+    target:
+      entity_id: light.test_light
+  - wait_for_trigger:
+      - platform: state
+        entity_id: binary_sensor.door
+        to: 'on'
+      - platform: event
+        event_type: my_custom_event
+    timeout: '00:00:10'
+  - service: light.turn_off
+    target:
+      entity_id: light.test_light
+`;
+    const result = yamlParser.parse(yaml);
+    expect(result.success).toBe(true);
+    expect(result.graph).toBeDefined();
+
+    const waitNode = result.graph?.nodes.find((n) => n.type === 'wait');
+    expect(waitNode).toBeDefined();
+
+    const waitData = waitNode?.data as any;
+    expect(waitData.wait_for_trigger).toBeDefined();
+    expect(Array.isArray(waitData.wait_for_trigger)).toBe(true);
+    expect(waitData.wait_for_trigger.length).toBe(2);
+    expect(waitData.timeout).toBe('00:00:10');
+
+    const firstTrigger = waitData.wait_for_trigger[0];
+    expect(firstTrigger.platform).toBe('state');
+    expect(firstTrigger.entity_id).toBe('binary_sensor.door');
+    expect(firstTrigger.to).toBe('on');
+
+    const secondTrigger = waitData.wait_for_trigger[1];
+    expect(secondTrigger.platform).toBe('event');
+    expect(secondTrigger.event_type).toBe('my_custom_event');
+  });
 });

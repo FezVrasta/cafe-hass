@@ -140,7 +140,7 @@ function isWaitAction(action: unknown): action is Record<string, unknown> {
   return (
     typeof action === 'object' &&
     action !== null &&
-    typeof (action as Record<string, unknown>).wait_template === 'string'
+    ('wait_template' in action || 'wait_for_trigger' in action)
   );
 }
 
@@ -1159,20 +1159,41 @@ export class YamlParser {
         const nodeId = getNextNodeId('wait');
         const act = action as Record<string, unknown>;
         const waitTemplate = act.wait_template;
+        const waitForTrigger = act.wait_for_trigger;
         const timeoutValue = act.timeout;
         const continueOnTimeoutValue = act.continue_on_timeout;
+
+        const waitData: WaitNode['data'] = {
+          alias: typeof act.alias === 'string' ? act.alias : undefined,
+          timeout: typeof timeoutValue === 'string' ? timeoutValue : undefined,
+          continue_on_timeout:
+            typeof continueOnTimeoutValue === 'boolean' ? continueOnTimeoutValue : undefined,
+        };
+
+        if (typeof waitTemplate === 'string') {
+          waitData.wait_template = waitTemplate;
+        } else if (Array.isArray(waitForTrigger)) {
+          const parsedTriggers = [];
+          for (const trigger of waitForTrigger) {
+            const result = HATriggerSchema.safeParse(trigger);
+            if (result.success) {
+              parsedTriggers.push(result.data);
+            } else {
+              warnings.push(
+                `Failed to parse a trigger inside wait_for_trigger: ${result.error.message}`
+              );
+            }
+          }
+          waitData.wait_for_trigger = parsedTriggers;
+        }
+
         const waitNode: WaitNode = {
           id: nodeId,
           type: 'wait',
           position: { x: 0, y: 0 },
-          data: {
-            alias: typeof act.alias === 'string' ? act.alias : undefined,
-            wait_template: typeof waitTemplate === 'string' ? waitTemplate : '',
-            timeout: typeof timeoutValue === 'string' ? timeoutValue : undefined,
-            continue_on_timeout:
-              typeof continueOnTimeoutValue === 'boolean' ? continueOnTimeoutValue : undefined,
-          },
+          data: waitData,
         };
+
         nodes.push(waitNode);
         for (const prevId of currentNodeIds) {
           const sourceHandle = conditionNodeIds.has(prevId) ? 'true' : undefined;
