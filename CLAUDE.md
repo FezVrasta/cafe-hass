@@ -34,7 +34,7 @@ hflow/
 - TypeScript 5.7 with strict mode
 - Vite for frontend builds
 - Vitest for testing
-- Biome for linting, Prettier for formatting
+- Biome for linting, and for formatting
 
 # Coding Conventions
 
