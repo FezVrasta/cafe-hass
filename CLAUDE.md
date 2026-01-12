@@ -126,18 +126,18 @@ To cut a new release, follow these steps:
      ```
 
 2. **Create a new git tag**
-   - Use semantic versioning (e.g., v0.1.9). For pre-1.x.x, all releases are considered pre-release.
+   - Use semantic versioning (e.g., v0.1.9). For 1.x.x.
    - Example:
      ```bash
      git tag v0.1.9
      git push origin v0.1.9
      ```
 
-3. **Create a GitHub release (pre-release)**
-   - Use the GitHub CLI (`gh`) to create a release. Mark as pre-release until 1.x.x.
+3. **Create a GitHub release**
+   - Use the GitHub CLI (`gh`) to create a release.
    - Example:
      ```bash
-     gh release create v0.1.9 --prerelease --title "C.A.F.E. v0.1.9" --notes "<release notes>"
+     gh release create v0.1.9 --title "C.A.F.E. v0.1.9" --notes "<release notes>"
      ```
 
 4. **Verify release on GitHub**
