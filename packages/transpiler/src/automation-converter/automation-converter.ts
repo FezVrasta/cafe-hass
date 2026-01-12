@@ -72,7 +72,7 @@ export function processActions(
         action: {
           type: 'condition',
           condition: action.if,
-          ...(typeof action.alias === 'string' ? { alias: action.alias } : {}),
+          alias: action.alias,
           _conditionId: conditionId,
         },
         branch,
@@ -273,10 +273,11 @@ export function convertNativeAutomationConfigToNodes(config: AutomationConfig): 
           platform:
             typeof triggerData.platform === 'string'
               ? triggerData.platform
-              : (typeof triggerData.device_id === 'string' ? 'device' :
-                (typeof triggerData.trigger === 'string' && triggerData.trigger) ||
-                (typeof triggerData.domain === 'string' && triggerData.domain) ||
-                'state'),
+              : typeof triggerData.device_id === 'string'
+                ? 'device'
+                : (typeof triggerData.trigger === 'string' && triggerData.trigger) ||
+                  (typeof triggerData.domain === 'string' && triggerData.domain) ||
+                  'state',
         },
       });
       triggerNodes.push(nodeId);

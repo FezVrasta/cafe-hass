@@ -30,21 +30,6 @@ describe('YAML round-trip (fixtures)', () => {
       const inputObj = yaml.load(inputYaml);
       const outputObj = yaml.load(outputYaml);
 
-        // KNX-specific logging
-        if (fixture.includes('knx')) {
-          // Log input triggers
-          const inputTriggers = inputObj.triggers || inputObj.trigger;
-          console.log('KNX input triggers:', JSON.stringify(inputTriggers, null, 2));
-          // Log output triggers
-          const outputTriggers = outputObj.triggers || outputObj.trigger;
-          console.log('KNX output triggers:', JSON.stringify(outputTriggers, null, 2));
-          // Log parsed FlowGraph nodes
-          if (parseResult.graph) {
-            const triggerNodes = parseResult.graph.nodes.filter((n: any) => n.type === 'trigger');
-            console.log('KNX parsed FlowGraph trigger nodes:', JSON.stringify(triggerNodes, null, 2));
-          }
-      }
-
       function stripCafeMetadata(obj: any): any {
         if (!obj || typeof obj !== 'object') return obj;
         const clone = Array.isArray(obj) ? obj.map(stripCafeMetadata) : { ...obj };
@@ -66,6 +51,7 @@ describe('YAML round-trip (fixtures)', () => {
 
       const inputStripped = stripCafeMetadata(inputObj);
       const outputStripped = stripCafeMetadata(outputObj);
+
       expect(outputStripped).toEqual(inputStripped);
     });
   }

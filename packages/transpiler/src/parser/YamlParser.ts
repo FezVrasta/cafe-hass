@@ -386,6 +386,10 @@ function transformToNestedCondition(condition: Record<string, unknown>): NestedC
     template: (condition.template as string) || (condition.value_template as string) || undefined,
     value_template: condition.value_template as string | undefined,
     zone: condition.zone as string | undefined,
+    after: condition.after as string | undefined,
+    before: condition.before as string | undefined,
+    after_offset: condition.after_offset as string | undefined,
+    before_offset: condition.before_offset as string | undefined,
   };
 }
 
@@ -1473,8 +1477,12 @@ export class YamlParser {
         template: templateValue,
         value_template: firstCondition?.value_template as string | undefined,
         zone: firstCondition?.zone as string | undefined,
-        // Store all conditions if there are multiple
-        conditions: ifConditions.length > 1 ? transformConditions(ifConditions) : undefined,
+        // Store all conditions if there are multiple, or if there are nested conditions in the first condition
+        conditions: Array.isArray(firstCondition?.conditions)
+          ? transformConditions(firstCondition.conditions)
+          : ifConditions.length > 1
+            ? transformConditions(ifConditions)
+            : undefined,
       },
     };
 

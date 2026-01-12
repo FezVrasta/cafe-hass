@@ -223,6 +223,7 @@ export class StateMachineStrategy extends BaseStrategy {
     const currentNodeId = node.id;
 
     const actionCall: Record<string, unknown> = {
+      alias: node.data.alias,
       service: node.data.service,
     };
 
@@ -290,6 +291,7 @@ export class StateMachineStrategy extends BaseStrategy {
       ],
       sequence: [
         {
+          alias: node.data.alias,
           variables: {
             current_node: `{% if ${conditionTemplate} %}"${trueTarget}"{% else %}"${falseTarget}"{% endif %}`,
           },
@@ -315,6 +317,7 @@ export class StateMachineStrategy extends BaseStrategy {
       ],
       sequence: [
         {
+          alias: node.data.alias,
           delay: node.data.delay,
         },
         {
@@ -334,7 +337,9 @@ export class StateMachineStrategy extends BaseStrategy {
     const nextNode = nextNodeId === 'END' ? 'END' : nextNodeId;
     const currentNodeId = node.id;
 
-    const waitAction: Record<string, unknown> = {};
+    const waitAction: Record<string, unknown> = {
+      alias: node.data.alias,
+    };
 
     if (node.data.wait_template) {
       waitAction.wait_template = node.data.wait_template;
