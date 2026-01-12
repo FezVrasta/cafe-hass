@@ -13,13 +13,15 @@ import {
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { useFlowStore } from '@/store/flow-store';
+import { YamlEditor } from './YamlEditor';
 
 export function YamlPreview() {
-  const toFlowGraph = useFlowStore((s) => s.toFlowGraph);
   const nodes = useFlowStore((s) => s.nodes);
+  const toFlowGraph = useFlowStore((s) => s.toFlowGraph);
   const [copied, setCopied] = useState(false);
   const [forceStrategy, setForceStrategy] = useState<'auto' | 'native' | 'state-machine'>('auto');
 
+  // Compute YAML from nodes (canvas → YAML)
   const { yaml, warnings, errors, strategy } = useMemo(() => {
     if (nodes.length === 0) {
       return {
@@ -29,15 +31,12 @@ export function YamlPreview() {
         strategy: null,
       };
     }
-
     try {
       const flowGraph = toFlowGraph();
       const transpiler = new FlowTranspiler();
-
       const result = transpiler.transpile(flowGraph, {
         forceStrategy: forceStrategy === 'auto' ? undefined : forceStrategy,
       });
-
       if (!result.success) {
         return {
           yaml: '',
@@ -46,7 +45,6 @@ export function YamlPreview() {
           strategy: null,
         };
       }
-
       return {
         yaml: result.yaml || '',
         warnings: result.warnings,
@@ -140,9 +138,7 @@ export function YamlPreview() {
       </div>
 
       <div className="flex-1 overflow-auto">
-        <pre className="whitespace-pre-wrap p-3 font-mono text-foreground text-xs">
-          {yaml || (errors.length > 0 ? '# Fix errors above to generate YAML' : '')}
-        </pre>
+        <YamlEditor yaml={yaml} errors={errors} />
       </div>
     </div>
   );

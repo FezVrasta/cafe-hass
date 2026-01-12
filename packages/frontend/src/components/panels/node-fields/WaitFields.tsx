@@ -91,7 +91,6 @@ export function WaitFields({ node, onChange }: WaitFieldsProps) {
           <div className="space-y-2">
             <h3 className="font-medium">Triggers</h3>
             {waitForTrigger?.map((trigger, index) => (
-              // biome-ignore lint/suspicious/noArrayIndexKey: no other way here
               <div key={index} className="space-y-3 rounded-md border p-3">
                 <div className="flex items-center justify-between">
                   <p className="font-semibold text-sm capitalize">
