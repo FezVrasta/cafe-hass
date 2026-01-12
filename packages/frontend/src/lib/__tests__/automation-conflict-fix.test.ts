@@ -2,8 +2,8 @@
  * Test to verify that platform/trigger conflict is resolved
  */
 
+import { convertAutomationConfigToNodes } from '@cafe/transpiler';
 import { describe, expect, it } from 'vitest';
-import { convertAutomationConfigToNodes } from '../automation-converter';
 
 describe('Platform/Trigger Conflict Fix', () => {
   it('should not create nodes with both platform and trigger fields', () => {

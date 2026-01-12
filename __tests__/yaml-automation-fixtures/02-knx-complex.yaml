@@ -1,0 +1,39 @@
+alias: KNX Night/Morning Automation
+description: Handle KNX button presses for night/morning scenes
+trigger:
+  - alias: KNX Button Press
+    platform: device
+    domain: knx
+    device_id: ee504a40b987814032d9ec9c29b1a43f
+    type: telegram
+    trigger: device
+    group_value_write: true
+    group_value_response: true
+    group_value_read: true
+    incoming: true
+    outgoing: false
+    destination:
+      - "2/0/11"
+      - "2/0/5"
+action:
+  - alias: Time-based Scene Selection
+    if:
+      - condition: or
+        conditions:
+          - condition: sun
+            after: sunset
+            after_offset: "-03:00:00"
+          - condition: sun
+            before: sunrise
+            before_offset: "-03:00:00"
+    then:
+      - alias: Night Scene
+        service: script.turn_on
+        target:
+          entity_id: script.buonanotte
+    else:
+      - alias: Morning Scene
+        service: script.turn_on
+        target:
+          entity_id: script.buongiorno
+mode: single

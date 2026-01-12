@@ -1,11 +1,11 @@
-import { describe, expect, it } from 'vitest';
 import {
+  type AutomationConfig,
   convertStateMachineAutomationConfigToNodes,
   extractNextNodeFromVariables,
   extractNodeIdFromCondition,
   parseStateMachineChooseBlock,
-} from '../automation-converter';
-import type { AutomationConfig } from '../ha-api';
+} from '@cafe/transpiler';
+import { describe, expect, it } from 'vitest';
 
 describe('State Machine Converter', () => {
   describe('extractNodeIdFromCondition', () => {

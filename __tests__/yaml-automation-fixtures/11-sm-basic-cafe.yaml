@@ -1,0 +1,54 @@
+alias: Position Test
+description: ""
+trigger:
+  - platform: state
+    entity_id: switch.test
+action:
+  - variables:
+      current_node: action-sm-1
+      flow_context: {}
+  - alias: State Machine Loop
+    repeat:
+      until: '{{ current_node == "END" }}'
+      sequence:
+        - choose:
+            - conditions:
+                - condition: template
+                  value_template: '{{ current_node == "action-sm-1" }}'
+              sequence:
+                - alias: "Action: switch.turn_on"
+                  service: switch.turn_on
+                - variables:
+                    current_node: action-sm-2
+            - conditions:
+                - condition: template
+                  value_template: '{{ current_node == "action-sm-2" }}'
+              sequence:
+                - alias: "Action: switch.turn_off"
+                  service: switch.turn_off
+                - variables:
+                    current_node: action-sm-1
+          default:
+            - service: system_log.write
+              data:
+                message: 'C.A.F.E.: Unknown state "{{ current_node }}", ending flow'
+                level: warning
+            - variables:
+                current_node: END
+mode: single
+variables:
+  _cafe_metadata:
+    version: 1
+    nodes:
+      trigger-sm:
+        x: 250
+        "y": 100
+      action-sm-1:
+        x: 255
+        "y": 240
+      action-sm-2:
+        x: 150
+        "y": 405
+    graph_id: 624cf5ff-0ab9-4881-b6c4-c2359635230f
+    graph_version: 1
+    strategy: state-machine

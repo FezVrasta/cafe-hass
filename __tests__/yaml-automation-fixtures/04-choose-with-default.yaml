@@ -1,0 +1,44 @@
+alias: Climate Control Based on Presence
+description: Adjust temperature based on occupancy and time
+trigger:
+  - platform: state
+    entity_id: binary_sensor.occupancy
+    for: "00:05:00"
+action:
+  - choose:
+      - conditions:
+          - condition: and
+            conditions:
+              - condition: state
+                entity_id: binary_sensor.occupancy
+                state: "on"
+              - condition: time
+                after: "08:00:00"
+                before: "22:00:00"
+        sequence:
+          - service: climate.set_temperature
+            target:
+              entity_id: climate.main
+            data:
+              temperature: 22
+      - conditions:
+          - condition: and
+            conditions:
+              - condition: state
+                entity_id: binary_sensor.occupancy
+                state: "on"
+              - condition: time
+                after: "22:00:00"
+        sequence:
+          - service: climate.set_temperature
+            target:
+              entity_id: climate.main
+            data:
+              temperature: 20
+    default:
+      - service: climate.set_temperature
+        target:
+          entity_id: climate.main
+        data:
+          temperature: 18
+mode: restart

@@ -1,0 +1,47 @@
+alias: CAFE
+description: ""
+trigger:
+  - platform: state
+    entity_id: alarm_control_panel.allarme
+    alias: Trigger 1
+action:
+  - variables:
+      current_node: action_1767904379001_0
+      flow_context: {}
+  - alias: State Machine Loop
+    repeat:
+      until: '{{ current_node == "END" }}'
+      sequence:
+        - choose:
+            - conditions:
+                - condition: template
+                  value_template: '{{ current_node == "action_1767904379001_0" }}'
+              sequence:
+                - alias: "Action: light.turn_on"
+                  service: light.turn_on
+                  target:
+                    entity_id: light.studio
+                  data: {}
+                - variables:
+                    current_node: END
+          default:
+            - service: system_log.write
+              data:
+                message: 'C.A.F.E.: Unknown state "{{ current_node }}", ending flow'
+                level: warning
+            - variables:
+                current_node: END
+mode: single
+variables:
+  _cafe_metadata:
+    version: 1
+    nodes:
+      trigger_1767901134917_0:
+        x: 100
+        "y": 401
+      action_1767904379001_0:
+        x: 195
+        "y": 180
+    graph_id: 15198922-f25d-427a-bcfa-958e7a85d62b
+    graph_version: 1
+    strategy: state-machine

@@ -2,8 +2,8 @@
  * Test to verify that transpiler doesn't generate conflicting platform/trigger fields
  */
 
+import { convertAutomationConfigToNodes } from '@cafe/transpiler';
 import { describe, expect, it } from 'vitest';
-import { convertAutomationConfigToNodes } from '../automation-converter';
 
 describe('Transpiler Platform/Trigger Fix', () => {
   it('should handle round-trip conversion without conflicts', () => {

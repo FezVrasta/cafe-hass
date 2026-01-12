@@ -1,7 +1,4 @@
-// import type { Node, Edge } from '@xyflow/react';
-// import type { FlowNodeData } from '@/store/flow-store';
-
-import type { AutomationConfig, CafeMetadata } from './ha-api';
+import type { CafeMetadata } from '../parser/ha-zod-schemas';
 
 // Define automation action types
 export interface BaseAction {
@@ -14,6 +11,25 @@ export interface ChooseAction extends BaseAction {
 }
 
 export type AutomationAction = BaseAction | ChooseAction;
+
+export interface AutomationConfig {
+  id?: string;
+  alias?: string;
+  description?: string;
+  triggers?: Record<string, unknown>[];
+  trigger?: Record<string, unknown>[];
+  conditions?: Record<string, unknown>[];
+  condition?: Record<string, unknown>[];
+  actions?: Record<string, unknown>[];
+  action?: Record<string, unknown>[];
+  mode?: string;
+  max?: number;
+  variables?: {
+    _cafe_metadata?: CafeMetadata;
+    cafe_metadata?: CafeMetadata;
+    [key: string]: unknown;
+  };
+}
 
 /**
  * Represents an action with branch tracking information
@@ -56,7 +72,7 @@ export function processActions(
         action: {
           type: 'condition',
           condition: action.if,
-          alias: action.alias || 'If condition',
+          ...(typeof action.alias === 'string' ? { alias: action.alias } : {}),
           _conditionId: conditionId,
         },
         branch,
@@ -92,7 +108,7 @@ export function processActions(
                 action: {
                   type: 'condition',
                   condition: choiceObj.conditions,
-                  alias: action.alias || 'Choose condition',
+                  ...(typeof action.alias === 'string' ? { alias: action.alias } : {}),
                   _conditionId: conditionId,
                 },
                 branch,
@@ -240,25 +256,29 @@ export function convertNativeAutomationConfigToNodes(config: AutomationConfig): 
         console.log(`C.A.F.E.: Generated new trigger ID: ${nodeId}`);
       }
       const defaultPosition = { x: xOffset, y: baseYOffset + index * 120 };
-      const cleanedTrigger = { ...trigger };
-      delete cleanedTrigger.trigger;
+      const triggerData = { ...trigger };
+      // Only delete 'trigger' if it's a string (legacy field), not if it's an object with config
+      if (typeof triggerData.trigger === 'string') {
+        delete triggerData.trigger;
+      }
+      // Always preserve all fields, including KNX/device-specific ones
       nodesToCreate.push({
         id: nodeId,
         type: 'trigger',
         position: getNodePosition(nodeId, defaultPosition.x, defaultPosition.y),
         data: {
-          ...cleanedTrigger,
-          alias: typeof trigger.alias === 'string' ? trigger.alias : `Trigger ${index + 1}`,
+          ...triggerData,
+          ...(typeof trigger.alias === 'string' ? { alias: trigger.alias } : {}),
+          // Only set platform if not present, otherwise preserve original
           platform:
-            typeof trigger.device_id === 'string'
-              ? 'device'
-              : (typeof trigger.platform === 'string' && trigger.platform) ||
-                (typeof trigger.trigger === 'string' && trigger.trigger) ||
-                (typeof trigger.domain === 'string' && trigger.domain) ||
-                'state',
+            typeof triggerData.platform === 'string'
+              ? triggerData.platform
+              : (typeof triggerData.device_id === 'string' ? 'device' :
+                (typeof triggerData.trigger === 'string' && triggerData.trigger) ||
+                (typeof triggerData.domain === 'string' && triggerData.domain) ||
+                'state'),
         },
       });
-
       triggerNodes.push(nodeId);
     }
   }
@@ -282,7 +302,7 @@ export function convertNativeAutomationConfigToNodes(config: AutomationConfig): 
         type: 'condition',
         position: getNodePosition(nodeId, xOffset, baseYOffset),
         data: {
-          alias: typeof cond.alias === 'string' ? cond.alias : `Condition ${index + 1}`,
+          ...(typeof cond.alias === 'string' ? { alias: cond.alias } : {}),
           condition_type:
             (typeof cond.condition === 'string' && cond.condition) ||
             (typeof cond.platform === 'string' && cond.platform) ||
@@ -423,7 +443,7 @@ export function convertNativeAutomationConfigToNodes(config: AutomationConfig): 
           type: 'condition',
           position: getNodePosition(nodeId, xOffset, yPosition),
           data: {
-            alias: typeof action.alias === 'string' ? action.alias : `Condition ${index + 1}`,
+            ...(typeof action.alias === 'string' ? { alias: action.alias } : {}),
             condition_type: conditionType,
             ...conditionProps,
             ...action,
@@ -450,7 +470,7 @@ export function convertNativeAutomationConfigToNodes(config: AutomationConfig): 
           type: nodeType,
           position: getNodePosition(nodeId, xOffset, yPosition),
           data: {
-            alias: typeof action.alias === 'string' ? action.alias : `Action ${index + 1}`,
+            ...(typeof action.alias === 'string' ? { alias: action.alias } : {}),
             service: service,
             entity_id:
               action.target &&
@@ -923,7 +943,7 @@ function convertStateMachineFromYaml(
       position: getNodePosition(nodeId, xOffset, baseYOffset),
       data: {
         ...cleanedTrigger,
-        alias: trigger.alias || `Trigger ${index + 1}`,
+        ...(trigger.alias ? { alias: trigger.alias } : {}),
         platform: trigger.device_id
           ? 'device'
           : trigger.platform || trigger.trigger || trigger.domain || 'state',

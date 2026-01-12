@@ -1,0 +1,36 @@
+alias: >-
+  Reset timer Maya se armadio chiuso → porta aperta → porta riaperta → armadio
+  riaperto
+triggers:
+  - trigger: state
+    entity_id: binary_sensor.armadio_cappotti_soggiorno
+    to: "off"
+conditions:
+  - condition: state
+    entity_id: input_boolean.periodo_giorno
+    state: "on"
+actions:
+  - wait_for_trigger:
+      - trigger: state
+        entity_id: binary_sensor.porta_blindata
+        from: "on"
+        to: "off"
+    timeout: "00:00:30"
+    continue_on_timeout: false
+  - wait_for_trigger:
+      - trigger: state
+        entity_id: binary_sensor.porta_blindata
+        from: "off"
+        to: "on"
+    timeout: "00:15:00"
+    continue_on_timeout: false
+  - wait_for_trigger:
+      - trigger: state
+        entity_id: binary_sensor.armadio_cappotti_soggiorno
+        to: "on"
+    timeout: "00:00:30"
+    continue_on_timeout: false
+  - action: timer.start
+    target:
+      entity_id: timer.uscita_maya
+mode: restart

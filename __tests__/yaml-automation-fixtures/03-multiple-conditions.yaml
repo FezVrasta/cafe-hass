@@ -1,0 +1,33 @@
+alias: Movie Mode Automation
+description: Close covers when movie starts with proper conditions
+trigger:
+  - platform: state
+    entity_id: media_player.tv
+    to: playing
+    for: "00:00:05"
+condition:
+  - condition: numeric_state
+    entity_id: sensor.brightness_sensor
+    above: 120
+  - condition: template
+    value_template: "{% set app = (state_attr('media_player.tv', 'app_name') or '') | string %} {% set ok_apps = ['TV','Apple TV','Prime Video','Netflix'] %} {{ app in ok_apps }}"
+  - condition: template
+    value_template: "{{ (state_attr('media_player.tv','media_content_type') or '') | lower == 'movie' }}"
+action:
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ states('cover.velux_blind') != 'closed' }}"
+        sequence:
+          - service: cover.close_cover
+            target:
+              entity_id: cover.velux_blind
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ states('cover.main_blind') != 'closed' }}"
+        sequence:
+          - service: cover.close_cover
+            target:
+              entity_id: cover.main_blind
+mode: single

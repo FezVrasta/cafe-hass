@@ -1,3 +1,5 @@
+import type { AutomationConfig } from '@cafe/transpiler';
+
 // Type guard for Home Assistant objects that support callWS
 interface HassWithCallWS {
   callWS: (msg: Record<string, unknown>) => Promise<unknown>;
@@ -11,6 +13,7 @@ function hasCallWS(hass: unknown): hass is HassWithCallWS {
     typeof (hass as { callWS?: unknown }).callWS === 'function'
   );
 }
+
 import type { Connection } from 'home-assistant-js-websocket';
 
 export interface HassEntity {
@@ -59,25 +62,6 @@ export interface CafeMetadata {
   nodes: Record<string, unknown>;
   graph_id: string;
   graph_version: number;
-}
-
-export interface AutomationConfig {
-  id?: string;
-  alias?: string;
-  description?: string;
-  triggers?: Record<string, unknown>[];
-  trigger?: Record<string, unknown>[];
-  conditions?: Record<string, unknown>[];
-  condition?: Record<string, unknown>[];
-  actions?: Record<string, unknown>[];
-  action?: Record<string, unknown>[];
-  mode?: string;
-  max?: number;
-  variables?: {
-    _cafe_metadata?: CafeMetadata;
-    cafe_metadata?: CafeMetadata;
-    [key: string]: unknown;
-  };
 }
 
 export interface TraceStep {

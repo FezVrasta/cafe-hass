@@ -4,8 +4,9 @@
  *
  * @vitest-environment node
  */
+
+import { convertAutomationConfigToNodes, processActions } from '@cafe/transpiler';
 import { describe, expect, it } from 'vitest';
-import { convertAutomationConfigToNodes, processActions } from '@/lib/automation-converter';
 
 describe('automation-converter', () => {
   // Type guard helper for tests

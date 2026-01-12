@@ -221,10 +221,8 @@ export class StateMachineStrategy extends BaseStrategy {
     const nextNodeId = edges[0]?.target ?? 'END';
     const nextNode = nextNodeId === 'END' ? 'END' : nextNodeId;
     const currentNodeId = node.id;
-    const alias = this.generateAlias(node);
 
     const actionCall: Record<string, unknown> = {
-      alias,
       service: node.data.service,
     };
 
@@ -282,7 +280,6 @@ export class StateMachineStrategy extends BaseStrategy {
 
     // Generate Jinja2 template for condition evaluation
     const conditionTemplate = this.buildConditionTemplate(node);
-    const alias = this.generateAlias(node);
 
     return {
       conditions: [
@@ -293,7 +290,6 @@ export class StateMachineStrategy extends BaseStrategy {
       ],
       sequence: [
         {
-          alias,
           variables: {
             current_node: `{% if ${conditionTemplate} %}"${trueTarget}"{% else %}"${falseTarget}"{% endif %}`,
           },
@@ -309,7 +305,6 @@ export class StateMachineStrategy extends BaseStrategy {
     const nextNodeId = edges[0]?.target ?? 'END';
     const nextNode = nextNodeId === 'END' ? 'END' : nextNodeId;
     const currentNodeId = node.id;
-    const alias = this.generateAlias(node);
 
     return {
       conditions: [
@@ -320,7 +315,6 @@ export class StateMachineStrategy extends BaseStrategy {
       ],
       sequence: [
         {
-          alias,
           delay: node.data.delay,
         },
         {
@@ -339,11 +333,8 @@ export class StateMachineStrategy extends BaseStrategy {
     const nextNodeId = edges[0]?.target ?? 'END';
     const nextNode = nextNodeId === 'END' ? 'END' : nextNodeId;
     const currentNodeId = node.id;
-    const alias = this.generateAlias(node);
 
-    const waitAction: Record<string, unknown> = {
-      alias,
-    };
+    const waitAction: Record<string, unknown> = {};
 
     if (node.data.wait_template) {
       waitAction.wait_template = node.data.wait_template;

@@ -1,5 +1,5 @@
+import { convertAutomationConfigToNodes } from '@cafe/transpiler';
 import { describe, expect, it } from 'vitest';
-import { convertAutomationConfigToNodes } from '../automation-converter';
 
 describe('Position Restoration', () => {
   it('should restore node positions from transpiler metadata', () => {

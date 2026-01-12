@@ -1,3 +1,4 @@
+import { convertAutomationConfigToNodes } from '@cafe/transpiler';
 import { Clock, DiamondPlus, Download, Search, ToggleLeft } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
@@ -12,7 +13,6 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { type HassEntity, useHass } from '@/hooks/useHass';
-import { convertAutomationConfigToNodes } from '@/lib/automation-converter';
 import { getHomeAssistantAPI } from '@/lib/ha-api';
 import { useFlowStore } from '@/store/flow-store';
 

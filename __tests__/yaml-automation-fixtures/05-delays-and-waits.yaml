@@ -1,0 +1,25 @@
+alias: Security Light Sequence
+description: Automated security light sequence with delays
+trigger:
+  - platform: state
+    entity_id: binary_sensor.motion_detector
+    to: "on"
+action:
+  - service: light.turn_on
+    target:
+      entity_id: light.security_light
+    data:
+      brightness: 255
+  - delay: "00:00:05"
+  - service: light.turn_on
+    target:
+      entity_id: light.security_light
+    data:
+      brightness: 128
+  - wait_template: "{{ is_state('binary_sensor.motion_detector', 'off') }}"
+    timeout: "00:10:00"
+  - delay: "00:01:00"
+  - service: light.turn_off
+    target:
+      entity_id: light.security_light
+mode: restart

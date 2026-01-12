@@ -86,30 +86,4 @@ export abstract class BaseStrategy implements TranspilerStrategy {
     return flow.nodes.find((n) => n.id === nodeId);
   }
 
-  /**
-   * Generate a readable alias for a node
-   */
-  protected generateAlias(node: {
-    type: string;
-    data: { alias?: string; service?: string; platform?: string; condition_type?: string };
-  }): string {
-    if (node.data.alias) {
-      return node.data.alias;
-    }
-
-    switch (node.type) {
-      case 'trigger':
-        return `Trigger: ${node.data.platform || 'unknown'}`;
-      case 'condition':
-        return `Check: ${node.data.condition_type || 'unknown'}`;
-      case 'action':
-        return `Action: ${node.data.service || 'unknown'}`;
-      case 'delay':
-        return 'Delay';
-      case 'wait':
-        return 'Wait';
-      default:
-        return `Node: ${node.type}`;
-    }
-  }
 }

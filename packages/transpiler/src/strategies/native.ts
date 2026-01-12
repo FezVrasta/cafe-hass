@@ -208,7 +208,6 @@ export class NativeStrategy extends BaseStrategy {
     const condition = this.buildCondition(node);
 
     return {
-      alias: this.generateAlias(node),
       if: [condition],
       then: [], // Will be filled by the caller
       else: [], // Will be filled by the caller
@@ -243,7 +242,6 @@ export class NativeStrategy extends BaseStrategy {
    */
   private buildActionCall(node: ActionNode): Record<string, unknown> {
     const action: Record<string, unknown> = {
-      alias: this.generateAlias(node),
       service: node.data.service,
     };
 
@@ -279,7 +277,6 @@ export class NativeStrategy extends BaseStrategy {
    */
   private buildDelay(node: DelayNode): Record<string, unknown> {
     return {
-      alias: this.generateAlias(node),
       delay: node.data.delay,
     };
   }
@@ -288,9 +285,7 @@ export class NativeStrategy extends BaseStrategy {
    * Build wait action
    */
   private buildWait(node: WaitNode): Record<string, unknown> {
-    const wait: Record<string, unknown> = {
-      alias: this.generateAlias(node),
-    };
+    const wait: Record<string, unknown> = {};
 
     if (node.data.wait_template) {
       wait.wait_template = node.data.wait_template;

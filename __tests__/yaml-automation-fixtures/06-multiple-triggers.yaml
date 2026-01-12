@@ -1,0 +1,25 @@
+alias: Multi-trigger Door Bell
+description: Ring doorbell from multiple input sources
+trigger:
+  - platform: state
+    entity_id: binary_sensor.door_button
+    to: "on"
+  - platform: mqtt
+    topic: doorbell/ring
+  - platform: webhook
+    webhook_id: doorbell_webhook
+  - platform: time
+    at: "12:00:00"
+action:
+  - service: media_player.play_media
+    target:
+      entity_id: media_player.speakers
+    data:
+      media_content_id: /local/sounds/doorbell.mp3
+      media_content_type: music
+  - service: notify.mobile_app
+    data:
+      message: "Doorbell activated"
+      title: "Home Security"
+mode: queued
+max: 3
