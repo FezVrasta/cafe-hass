@@ -226,6 +226,9 @@ export class NativeStrategy extends BaseStrategy {
         condition: condition_type,
         ...rest,
       };
+      if (alias) {
+        out.alias = alias;
+      }
       // Recursively map nested group conditions
       if (Array.isArray(conditions) && conditions.length > 0) {
         out.conditions = conditions
@@ -293,7 +296,7 @@ export class NativeStrategy extends BaseStrategy {
       wait.wait_for_trigger = node.data.wait_for_trigger.map((triggerData) => {
         const trigger = { ...triggerData };
         // Don't include alias in the trigger definition itself
-        delete trigger.alias;
+        // delete trigger.alias;
         return Object.fromEntries(
           Object.entries(trigger).filter(([, v]) => v !== undefined && v !== '' && v !== null)
         );
