@@ -141,12 +141,7 @@
     }
   ],
   "files": {
-    "includes": [
-      "packages/**/*.ts",
-      "packages/**/*.tsx",
-      "packages/**/*.js",
-      "packages/**/*.jsx"
-    ],
+    "includes": ["packages/**/*.ts", "packages/**/*.tsx", "packages/**/*.js", "packages/**/*.jsx"],
     "ignoreUnknown": true
   },
   "vcs": {
