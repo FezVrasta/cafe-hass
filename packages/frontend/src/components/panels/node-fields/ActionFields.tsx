@@ -1,7 +1,7 @@
 import type { FlowNode } from '@cafe/shared';
 import { FormField } from '@/components/forms/FormField';
 import { Combobox } from '@/components/ui/Combobox';
-import { EntitySelector } from '@/components/ui/EntitySelector';
+import { MultiEntitySelector } from '@/components/ui/MultiEntitySelector';
 import type { HassEntity } from '@/hooks/useHass';
 import { useHass } from '@/hooks/useHass';
 import { getNodeDataObject, getNodeDataString } from '@/utils/nodeData';
@@ -31,7 +31,7 @@ export function ActionFields({ node, onChange, entities }: ActionFieldsProps) {
     onChange('data', undefined);
   };
 
-  const handleTargetChange = (value: string) => {
+  const handleTargetChange = (value: string[]) => {
     const currentTarget = getNodeDataObject(node, 'target', {});
     onChange('target', { ...currentTarget, entity_id: value });
   };
@@ -45,8 +45,14 @@ export function ActionFields({ node, onChange, entities }: ActionFieldsProps) {
     onChange('data', Object.keys(cleanedData).length > 0 ? cleanedData : undefined);
   };
 
-  const targetEntityId =
-    (getNodeDataObject(node, 'target', {}) as { entity_id?: string })?.entity_id || '';
+  const targetEntityIds =
+    (getNodeDataObject(node, 'target', {}) as { entity_id?: string | string[] })?.entity_id || [];
+  // Normalize to array
+  const targetEntityIdArray = Array.isArray(targetEntityIds)
+    ? targetEntityIds
+    : targetEntityIds
+    ? [targetEntityIds]
+    : [];
 
   return (
     <>
@@ -62,14 +68,14 @@ export function ActionFields({ node, onChange, entities }: ActionFieldsProps) {
         />
       </FormField>
 
-      {/* Target Entity */}
+      {/* Target Entities */}
       {serviceDefinition?.target && (
-        <FormField label="Target Entity">
-          <EntitySelector
-            value={targetEntityId}
+        <FormField label="Target Entities">
+          <MultiEntitySelector
+            value={targetEntityIdArray}
             onChange={handleTargetChange}
             entities={entities}
-            placeholder="Select target entity..."
+            placeholder="Select target entities..."
           />
         </FormField>
       )}

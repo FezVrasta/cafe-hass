@@ -46,7 +46,8 @@
         "useForOf": "warn",
         "useFragmentSyntax": "warn",
         "useShorthandFunctionType": "warn",
-        "noCommonJs": "error"
+        "noCommonJs": "error",
+        "noNonNullAssertion": "off"
       },
       "suspicious": {
         "noArrayIndexKey": "warn",
@@ -140,7 +141,12 @@
     }
   ],
   "files": {
-    "includes": ["packages/**/*.ts", "packages/**/*.tsx", "packages/**/*.js", "packages/**/*.jsx"],
+    "includes": [
+      "packages/**/*.ts",
+      "packages/**/*.tsx",
+      "packages/**/*.js",
+      "packages/**/*.jsx"
+    ],
     "ignoreUnknown": true
   },
   "vcs": {
