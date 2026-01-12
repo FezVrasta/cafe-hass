@@ -93,6 +93,22 @@ The user should have full control over when changes are committed and released.
 
 The codebase should compile with zero TypeScript errors and maintain type safety throughout.
 
+# Best Practices
+
+## Code Reusability (DRY)
+
+**REQUIRED PRACTICES**:
+
+- **Helper Functions/Utilities**: Extract common logic into reusable helper functions or utility modules.
+- **Generic Components**: Design React components to be as generic and reusable as possible, accepting props to customize behavior and appearance.
+- **Shared Types/Schemas**: Leverage `@cafe/shared` for all common types, interfaces, and Zod schemas to ensure consistency and avoid duplication across `frontend` and `transpiler`.
+- **Custom Hooks**: For shared stateful logic in React, create custom hooks.
+
+**FORBIDDEN PRACTICES**:
+
+- **Copy-pasting code**: Avoid duplicating blocks of code. If you find yourself copying and pasting, it's a sign that a reusable function or component is needed.
+- **Redundant Type Definitions**: Do not redefine types or interfaces that already exist in `@cafe/shared` or can be derived from existing schemas.
+
 # Cutting a New Release
 
 To cut a new release, follow these steps:
