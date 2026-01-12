@@ -22,6 +22,10 @@ describe('YAML round-trip (fixtures)', () => {
       const inputYaml = loadYamlFixture(fixture);
       // Parse YAML to FlowGraph
       const parseResult = parser.parse(inputYaml);
+      if (!parseResult.success) {
+        console.error('Parse errors:', parseResult.errors, 'Warnings:', parseResult.warnings);
+      }
+
       expect(parseResult.success).toBe(true);
       expect(parseResult.graph).toBeDefined();
       // Convert FlowGraph back to YAML
