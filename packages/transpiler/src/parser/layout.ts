@@ -29,7 +29,7 @@ export async function applyHeuristicLayout(
       id: 'root',
       layoutOptions: {
         'elk.algorithm': 'layered',
-        'elk.direction': 'DOWN',
+        'elk.direction': 'RIGHT',
         'elk.spacing.nodeNode': '80',
         'elk.layered.spacing.nodeNodeBetweenLayers': '100',
         'elk.spacing.edgeNode': '40',

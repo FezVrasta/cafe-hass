@@ -1,4 +1,5 @@
-import { z } from 'zod';
+import { z } from "zod";
+import { applyHeuristicLayout } from "./layout";
 
 // Zod schema for Home Assistant condition objects
 export const HAConditionSchema = z
@@ -25,10 +26,10 @@ export const HAConditionSchema = z
   .transform((input) => {
     // Normalize condition_type and template fields
     const condition_type = VALID_CONDITION_TYPES.includes(
-      (input.condition as ValidConditionType) ?? 'state'
+      (input.condition as ValidConditionType) ?? "state"
     )
       ? (input.condition as ValidConditionType)
-      : 'template';
+      : "template";
     return {
       alias: input.alias,
       condition_type,
@@ -53,18 +54,18 @@ export const HAConditionSchema = z
   });
 
 const HAPlatformEnum = z.enum([
-  'event',
-  'template',
-  'zone',
-  'state',
-  'time',
-  'time_pattern',
-  'mqtt',
-  'webhook',
-  'sun',
-  'numeric_state',
-  'homeassistant',
-  'device',
+  "event",
+  "template",
+  "zone",
+  "state",
+  "time",
+  "time_pattern",
+  "mqtt",
+  "webhook",
+  "sun",
+  "numeric_state",
+  "homeassistant",
+  "device",
 ]);
 
 /**
@@ -104,7 +105,7 @@ export const HATriggerSchema = z
   .passthrough() // Allow unknown keys to pass through
   .transform((input) => {
     // Always output a defined platform property
-    const platform = input.platform ?? input.trigger ?? 'state';
+    const platform = input.platform ?? input.trigger ?? "state";
     return {
       ...input,
       platform: platform,
@@ -115,9 +116,9 @@ export const HATriggerSchema = z
  * Zod schema for FlowGraph metadata block (not C.A.F.E. metadata)
  */
 export const FlowGraphMetadataSchema = z.object({
-  mode: z.enum(['single', 'restart', 'queued', 'parallel']).default('single'),
+  mode: z.enum(["single", "restart", "queued", "parallel"]).default("single"),
   max: z.number().optional(),
-  max_exceeded: z.enum(['silent', 'warning', 'critical']).optional(),
+  max_exceeded: z.enum(["silent", "warning", "critical"]).optional(),
   initial_state: z.boolean().default(false),
   hide_entity: z.boolean().optional(),
   trace: z.object({ stored_traces: z.number().optional() }).optional(),
@@ -127,12 +128,12 @@ export const FlowGraphMetadataSchema = z.object({
 /** Returns true if the action is a delay node */
 function isDelayAction(action: unknown): action is Record<string, unknown> {
   return (
-    typeof action === 'object' &&
+    typeof action === "object" &&
     action !== null &&
-    'delay' in action &&
-    (typeof (action as Record<string, unknown>).delay === 'string' ||
-      typeof (action as Record<string, unknown>).delay === 'number' ||
-      (typeof (action as Record<string, unknown>).delay === 'object' &&
+    "delay" in action &&
+    (typeof (action as Record<string, unknown>).delay === "string" ||
+      typeof (action as Record<string, unknown>).delay === "number" ||
+      (typeof (action as Record<string, unknown>).delay === "object" &&
         (action as Record<string, unknown>).delay !== null))
   );
 }
@@ -140,25 +141,25 @@ function isDelayAction(action: unknown): action is Record<string, unknown> {
 /** Returns true if the action is a wait node */
 function isWaitAction(action: unknown): action is Record<string, unknown> {
   return (
-    typeof action === 'object' &&
+    typeof action === "object" &&
     action !== null &&
-    ('wait_template' in action || 'wait_for_trigger' in action)
+    ("wait_template" in action || "wait_for_trigger" in action)
   );
 }
 
 /** Returns true if the action is a choose block */
 function isChooseAction(action: unknown): action is Record<string, unknown> {
-  return typeof action === 'object' && action !== null && 'choose' in action;
+  return typeof action === "object" && action !== null && "choose" in action;
 }
 
 /** Returns true if the action is an if/then/else block */
 function isIfThenAction(action: unknown): action is Record<string, unknown> {
   return (
-    typeof action === 'object' &&
+    typeof action === "object" &&
     action !== null &&
-    'if' in action &&
+    "if" in action &&
     Array.isArray((action as Record<string, unknown>).if) &&
-    'then' in action &&
+    "then" in action &&
     Array.isArray((action as Record<string, unknown>).then)
   );
 }
@@ -166,10 +167,10 @@ function isIfThenAction(action: unknown): action is Record<string, unknown> {
 /** Returns true if the action is a service or action call */
 function isServiceAction(action: unknown): action is Record<string, unknown> {
   return (
-    typeof action === 'object' &&
+    typeof action === "object" &&
     action !== null &&
-    (typeof (action as Record<string, unknown>).service === 'string' ||
-      typeof (action as Record<string, unknown>).action === 'string')
+    (typeof (action as Record<string, unknown>).service === "string" ||
+      typeof (action as Record<string, unknown>).action === "string")
   );
 }
 
@@ -179,9 +180,9 @@ function isServiceAction(action: unknown): action is Record<string, unknown> {
  */
 function isHATrigger(obj: unknown): obj is HATrigger {
   return (
-    typeof obj === 'object' &&
+    typeof obj === "object" &&
     obj !== null &&
-    ('platform' in obj || 'trigger' in obj || 'entity_id' in obj)
+    ("platform" in obj || "trigger" in obj || "entity_id" in obj)
   );
 }
 
@@ -191,9 +192,9 @@ function isHATrigger(obj: unknown): obj is HATrigger {
  */
 function isHACondition(obj: unknown): obj is HACondition {
   return (
-    typeof obj === 'object' &&
+    typeof obj === "object" &&
     obj !== null &&
-    ('condition' in obj || 'entity_id' in obj || 'state' in obj)
+    ("condition" in obj || "entity_id" in obj || "state" in obj)
   );
 }
 
@@ -202,7 +203,15 @@ function isHACondition(obj: unknown): obj is HACondition {
  * List of valid Home Assistant weekday strings.
  * Used for time-based conditions and triggers.
  */
-const VALID_WEEKDAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
+const VALID_WEEKDAYS = [
+  "sun",
+  "mon",
+  "tue",
+  "wed",
+  "thu",
+  "fri",
+  "sat",
+] as const;
 
 /**
  * Type representing a valid Home Assistant weekday.
@@ -216,7 +225,8 @@ type Weekday = (typeof VALID_WEEKDAYS)[number];
 function toWeekdayArray(arr: unknown): Weekday[] | undefined {
   if (!Array.isArray(arr)) return undefined;
   return arr.filter(
-    (d): d is Weekday => typeof d === 'string' && VALID_WEEKDAYS.includes(d as Weekday)
+    (d): d is Weekday =>
+      typeof d === "string" && VALID_WEEKDAYS.includes(d as Weekday)
   );
 }
 /**
@@ -291,7 +301,10 @@ export interface HACondition {
  */
 export interface HAAction {
   alias?: string;
-  delay?: string | number | { hours?: number; minutes?: number; seconds?: number };
+  delay?:
+    | string
+    | number
+    | { hours?: number; minutes?: number; seconds?: number };
   wait_template?: string;
   timeout?: string | number;
   continue_on_timeout?: boolean;
@@ -321,11 +334,11 @@ import type {
   FlowNode,
   TriggerNode,
   WaitNode,
-} from '@cafe/shared';
-import { FlowGraphSchema, validateGraphStructure } from '@cafe/shared';
-import { load as yamlLoad } from 'js-yaml';
-import { v4 as uuidv4 } from 'uuid';
-import { type CafeMetadata, CafeMetadataSchema } from './ha-zod-schemas';
+} from "@cafe/shared";
+import { FlowGraphSchema, validateGraphStructure } from "@cafe/shared";
+import { load as yamlLoad } from "js-yaml";
+import { v4 as uuidv4 } from "uuid";
+import { type CafeMetadata, CafeMetadataSchema } from "./ha-zod-schemas";
 
 /**
  * Result of parsing YAML
@@ -342,17 +355,17 @@ export interface ParseResult {
  * Valid condition types for Home Assistant
  */
 const VALID_CONDITION_TYPES = [
-  'state',
-  'numeric_state',
-  'template',
-  'time',
-  'sun',
-  'zone',
-  'and',
-  'or',
-  'not',
-  'device',
-  'trigger',
+  "state",
+  "numeric_state",
+  "template",
+  "time",
+  "sun",
+  "zone",
+  "and",
+  "or",
+  "not",
+  "device",
+  "trigger",
 ] as const;
 
 type ValidConditionType = (typeof VALID_CONDITION_TYPES)[number];
@@ -360,30 +373,38 @@ type ValidConditionType = (typeof VALID_CONDITION_TYPES)[number];
 /**
  * Nested condition type (limited to one level per schema)
  */
-type NestedCondition = NonNullable<ConditionNode['data']['conditions']>[number];
+type NestedCondition = NonNullable<ConditionNode["data"]["conditions"]>[number];
 
 /**
  * Transform Home Assistant condition format to internal nested condition format
  * HA uses 'condition' field, internal schema uses 'condition_type'
  * Note: Nested conditions are limited to one level per the schema
  */
-function transformToNestedCondition(condition: Record<string, unknown>): NestedCondition {
-  const conditionType = (condition.condition as string) || 'template';
-  const validatedType = VALID_CONDITION_TYPES.includes(conditionType as ValidConditionType)
+function transformToNestedCondition(
+  condition: Record<string, unknown>
+): NestedCondition {
+  const conditionType = (condition.condition as string) || "template";
+  const validatedType = VALID_CONDITION_TYPES.includes(
+    conditionType as ValidConditionType
+  )
     ? (conditionType as ValidConditionType)
-    : 'template';
+    : "template";
 
   return {
     condition_type: validatedType,
     entity_id:
-      typeof condition.entity_id === 'string' || Array.isArray(condition.entity_id)
+      typeof condition.entity_id === "string" ||
+      Array.isArray(condition.entity_id)
         ? condition.entity_id
         : undefined,
     state: condition.state as string | string[] | undefined,
     above: condition.above as number | string | undefined,
     below: condition.below as number | string | undefined,
     attribute: condition.attribute as string | undefined,
-    template: (condition.template as string) || (condition.value_template as string) || undefined,
+    template:
+      (condition.template as string) ||
+      (condition.value_template as string) ||
+      undefined,
     value_template: condition.value_template as string | undefined,
     zone: condition.zone as string | undefined,
     after: condition.after as string | undefined,
@@ -397,7 +418,9 @@ function transformToNestedCondition(condition: Record<string, unknown>): NestedC
  * Transform an array of Home Assistant conditions to internal format
  */
 function transformConditions(conditions: unknown[]): NestedCondition[] {
-  return conditions.map((c) => transformToNestedCondition(c as Record<string, unknown>));
+  return conditions.map((c) =>
+    transformToNestedCondition(c as Record<string, unknown>)
+  );
 }
 
 /**
@@ -407,17 +430,17 @@ export class YamlParser {
   /**
    * Parse Home Assistant YAML string into FlowGraph
    */
-  parse(yamlString: string): ParseResult {
+  async parse(yamlString: string): Promise<ParseResult> {
     const warnings: string[] = [];
 
     try {
       // Step 1: Parse YAML string
       const parsed = yamlLoad(yamlString) as Record<string, unknown>;
 
-      if (!parsed || typeof parsed !== 'object') {
+      if (!parsed || typeof parsed !== "object") {
         return {
           success: false,
-          errors: ['Invalid YAML structure'],
+          errors: ["Invalid YAML structure"],
           warnings,
           hadMetadata: false,
         };
@@ -430,10 +453,10 @@ export class YamlParser {
       // Step 3: Only support automation format (no script import)
       const content = parsed;
       // Defensive: ensure content is Record<string, unknown>
-      if (typeof content !== 'object' || content === null) {
+      if (typeof content !== "object" || content === null) {
         return {
           success: false,
-          errors: ['Invalid YAML content structure'],
+          errors: ["Invalid YAML content structure"],
           warnings,
           hadMetadata,
         };
@@ -444,7 +467,8 @@ export class YamlParser {
 
       // Step 5: Check if this is a state-machine format automation
       const isStateMachine =
-        metadata?.strategy === 'state-machine' || this.detectStateMachineFormat(content);
+        metadata?.strategy === "state-machine" ||
+        this.detectStateMachineFormat(content);
 
       // Step 6: Parse nodes and edges from YAML structure
       const { nodes, edges } = isStateMachine
@@ -456,8 +480,8 @@ export class YamlParser {
       if (hadMetadata && metadata) {
         nodesWithPositions = this.applyMetadataPositions(nodes, metadata);
       } else {
-        // Use synchronous fallback layout
-        nodesWithPositions = this.applyFallbackLayout(nodes);
+        // Use async heuristic layout if metadata is missing
+        nodesWithPositions = await applyHeuristicLayout(nodes, edges);
       }
 
       // Step 8: Build FlowGraph object
@@ -477,8 +501,12 @@ export class YamlParser {
 
       const graph: FlowGraph = {
         id: metadata?.graph_id || uuidv4(),
-        name: typeof content.alias === 'string' ? content.alias : 'Imported Automation',
-        description: typeof content.description === 'string' ? content.description : '',
+        name:
+          typeof content.alias === "string"
+            ? content.alias
+            : "Imported Automation",
+        description:
+          typeof content.description === "string" ? content.description : "",
         nodes: nodesWithPositions,
         edges,
         metadata: metadataBlock,
@@ -492,19 +520,23 @@ export class YamlParser {
         // Enhanced error logging: show node data and schema path
         // Zod v4 uses 'issues' instead of 'errors'
         const errorDetails = validation.error.issues.map((e) => {
-          let nodeInfo = '';
+          let nodeInfo = "";
           if (e.path && e.path.length > 0) {
             // Try to extract node id/type if error is in nodes array
-            if (e.path[0] === 'nodes' && typeof e.path[1] === 'number') {
+            if (e.path[0] === "nodes" && typeof e.path[1] === "number") {
               const idx = e.path[1];
               const node = graph.nodes[idx];
-              nodeInfo = `Node index ${idx} (id: ${node?.id}, type: ${node?.type})\nData: ${JSON.stringify(node?.data, null, 2)}`;
+              nodeInfo = `Node index ${idx} (id: ${node?.id}, type: ${
+                node?.type
+              })\nData: ${JSON.stringify(node?.data, null, 2)}`;
             }
           }
-          return `Schema path: ${e.path.join('.')}\nMessage: ${e.message}${nodeInfo ? `\n${nodeInfo}` : ''}`;
+          return `Schema path: ${e.path.join(".")}\nMessage: ${e.message}${
+            nodeInfo ? `\n${nodeInfo}` : ""
+          }`;
         });
         // Also log to console for debugging
-        console.error('Zod validation error details:', errorDetails);
+        console.error("Zod validation error details:", errorDetails);
         return {
           success: false,
           errors: errorDetails,
@@ -533,11 +565,13 @@ export class YamlParser {
       };
     } catch (error) {
       // Enhanced catch block: log YAML and error
-      console.error('YAML parsing error:', error);
-      console.error('YAML string:', yamlString);
+      console.error("YAML parsing error:", error);
+      console.error("YAML string:", yamlString);
       return {
         success: false,
-        errors: [error instanceof Error ? error.message : 'Unknown parsing error'],
+        errors: [
+          error instanceof Error ? error.message : "Unknown parsing error",
+        ],
         warnings,
         hadMetadata: false,
       };
@@ -551,17 +585,20 @@ export class YamlParser {
    * Extract and validate C.A.F.E. metadata from variables section using Zod schema.
    * Returns CafeMetadata if valid, otherwise null.
    */
-  private extractMetadata(parsed: Record<string, unknown>): CafeMetadata | null {
+  private extractMetadata(
+    parsed: Record<string, unknown>
+  ): CafeMetadata | null {
     try {
       let variables: unknown;
-      if (typeof parsed.variables === 'object' && parsed.variables !== null) {
+      if (typeof parsed.variables === "object" && parsed.variables !== null) {
         variables = parsed.variables;
       }
       if (
         variables &&
-        typeof variables === 'object' &&
-        '_cafe_metadata' in variables &&
-        typeof (variables as Record<string, unknown>)._cafe_metadata === 'object' &&
+        typeof variables === "object" &&
+        "_cafe_metadata" in variables &&
+        typeof (variables as Record<string, unknown>)._cafe_metadata ===
+          "object" &&
         (variables as Record<string, unknown>)._cafe_metadata !== null
       ) {
         const metadata = (variables as Record<string, unknown>)._cafe_metadata;
@@ -595,7 +632,7 @@ export class YamlParser {
       // Check for variables with current_node
       if (actionObj.variables) {
         const vars = actionObj.variables as Record<string, unknown>;
-        if ('current_node' in vars && 'flow_context' in vars) {
+        if ("current_node" in vars && "flow_context" in vars) {
           hasCurrentNodeVar = true;
         }
       }
@@ -649,7 +686,7 @@ export class YamlParser {
     // Parse triggers
     const triggerData = content.triggers || content.trigger;
     if (!triggerData) {
-      warnings.push('No triggers found in automation');
+      warnings.push("No triggers found in automation");
       return { nodes, edges };
     }
     const triggers = Array.isArray(triggerData) ? triggerData : [triggerData];
@@ -663,7 +700,7 @@ export class YamlParser {
     // Find the entry node and parse the state machine
     const actions = (content.actions || content.action) as unknown[];
     if (!Array.isArray(actions)) {
-      warnings.push('No actions found in automation');
+      warnings.push("No actions found in automation");
       return { nodes, edges };
     }
 
@@ -672,7 +709,7 @@ export class YamlParser {
       string,
       {
         nodeId: string;
-        nodeType: 'action' | 'condition' | 'delay' | 'wait';
+        nodeType: "action" | "condition" | "delay" | "wait";
         data: Record<string, unknown>;
         trueTarget: string | null;
         falseTarget: string | null;
@@ -685,7 +722,10 @@ export class YamlParser {
       // Find entry node from initial variables
       if (actionObj.variables) {
         const vars = actionObj.variables as Record<string, unknown>;
-        if (typeof vars.current_node === 'string' && vars.current_node !== 'END') {
+        if (
+          typeof vars.current_node === "string" &&
+          vars.current_node !== "END"
+        ) {
           entryNodeId = vars.current_node;
         }
       }
@@ -719,36 +759,36 @@ export class YamlParser {
       const nodeType = info.nodeType;
 
       switch (nodeType) {
-        case 'condition':
+        case "condition":
           nodes.push({
             id: nodeId,
-            type: 'condition',
+            type: "condition",
             position: { x: 0, y: 0 },
-            data: info.data as ConditionNode['data'],
+            data: info.data as ConditionNode["data"],
           });
           break;
-        case 'action':
+        case "action":
           nodes.push({
             id: nodeId,
-            type: 'action',
+            type: "action",
             position: { x: 0, y: 0 },
-            data: info.data as ActionNode['data'],
+            data: info.data as ActionNode["data"],
           });
           break;
-        case 'delay':
+        case "delay":
           nodes.push({
             id: nodeId,
-            type: 'delay',
+            type: "delay",
             position: { x: 0, y: 0 },
-            data: info.data as DelayNode['data'],
+            data: info.data as DelayNode["data"],
           });
           break;
-        case 'wait':
+        case "wait":
           nodes.push({
             id: nodeId,
-            type: 'wait',
+            type: "wait",
             position: { x: 0, y: 0 },
-            data: info.data as WaitNode['data'],
+            data: info.data as WaitNode["data"],
           });
           break;
       }
@@ -764,20 +804,20 @@ export class YamlParser {
 
     // Create edges between nodes based on transitions
     for (const [nodeId, info] of nodeInfoMap) {
-      if (info.trueTarget && info.trueTarget !== 'END') {
+      if (info.trueTarget && info.trueTarget !== "END") {
         edges.push({
           id: `edge-${nodeId}-${info.trueTarget}`,
           source: nodeId,
           target: info.trueTarget,
-          sourceHandle: info.falseTarget ? 'true' : undefined,
+          sourceHandle: info.falseTarget ? "true" : undefined,
         });
       }
-      if (info.falseTarget && info.falseTarget !== 'END') {
+      if (info.falseTarget && info.falseTarget !== "END") {
         edges.push({
           id: `edge-${nodeId}-${info.falseTarget}`,
           source: nodeId,
           target: info.falseTarget,
-          sourceHandle: 'false',
+          sourceHandle: "false",
         });
       }
     }
@@ -790,7 +830,7 @@ export class YamlParser {
    */
   private parseStateMachineChooseBlock(chooseBlock: Record<string, unknown>): {
     nodeId: string;
-    nodeType: 'action' | 'condition' | 'delay' | 'wait';
+    nodeType: "action" | "condition" | "delay" | "wait";
     data: Record<string, unknown>;
     trueTarget: string | null;
     falseTarget: string | null;
@@ -815,7 +855,7 @@ export class YamlParser {
     }
 
     // Parse sequence to determine node type and data
-    let nodeType: 'action' | 'condition' | 'delay' | 'wait' = 'action';
+    let nodeType: "action" | "condition" | "delay" | "wait" = "action";
     const data: Record<string, unknown> = {};
     let trueTarget: string | null = null;
     let falseTarget: string | null = null;
@@ -828,39 +868,47 @@ export class YamlParser {
         const vars = seqItem.variables as Record<string, unknown>;
         const currentNodeValue = vars.current_node;
 
-        if (typeof currentNodeValue === 'string') {
+        if (typeof currentNodeValue === "string") {
           // Check if it's a Jinja conditional (condition node)
-          if (currentNodeValue.includes('{%') && currentNodeValue.includes('%}')) {
-            nodeType = 'condition';
+          if (
+            currentNodeValue.includes("{%") &&
+            currentNodeValue.includes("%}")
+          ) {
+            nodeType = "condition";
 
             // Extract true and false targets
-            const trueMatch = currentNodeValue.match(/{%\s*if[^%]*%}\s*["']([^"']+)["']/);
-            const falseMatch = currentNodeValue.match(/{%\s*else\s*%}\s*["']([^"']+)["']/);
+            const trueMatch = currentNodeValue.match(
+              /{%\s*if[^%]*%}\s*["']([^"']+)["']/
+            );
+            const falseMatch = currentNodeValue.match(
+              /{%\s*else\s*%}\s*["']([^"']+)["']/
+            );
 
             trueTarget = trueMatch ? trueMatch[1] : null;
             falseTarget = falseMatch ? falseMatch[1] : null;
 
             // Extract condition expression from Jinja template
-            const conditionMatch = currentNodeValue.match(/{%\s*if\s+(.+?)\s*%}/);
+            const conditionMatch =
+              currentNodeValue.match(/{%\s*if\s+(.+?)\s*%}/);
             if (conditionMatch) {
               const conditionExpr = conditionMatch[1];
               Object.assign(data, this.parseJinjaCondition(conditionExpr));
             }
           } else {
             // Simple transition
-            trueTarget = currentNodeValue === 'END' ? null : currentNodeValue;
+            trueTarget = currentNodeValue === "END" ? null : currentNodeValue;
           }
         }
       }
       // Check for delay action
       else if (seqItem.delay !== undefined) {
-        nodeType = 'delay';
+        nodeType = "delay";
         data.delay = seqItem.delay;
         if (seqItem.alias) data.alias = seqItem.alias;
       }
       // Check for wait action
       else if (seqItem.wait_template !== undefined) {
-        nodeType = 'wait';
+        nodeType = "wait";
         data.wait_template = seqItem.wait_template;
         if (seqItem.timeout) data.timeout = seqItem.timeout;
         if (seqItem.continue_on_timeout !== undefined) {
@@ -870,7 +918,7 @@ export class YamlParser {
       }
       // Check for service call action
       else if (seqItem.service || seqItem.action) {
-        nodeType = 'action';
+        nodeType = "action";
         data.service = seqItem.service || seqItem.action;
         if (seqItem.target) data.target = seqItem.target;
         if (seqItem.data) data.data = seqItem.data;
@@ -886,21 +934,23 @@ export class YamlParser {
    */
   private parseJinjaCondition(expr: string): Record<string, unknown> {
     // is_state('entity', 'state')
-    const isStateMatch = expr.match(/is_state\s*\(\s*['"]([^'"]+)['"]\s*,\s*['"]([^'"]+)['"]\s*\)/);
+    const isStateMatch = expr.match(
+      /is_state\s*\(\s*['"]([^'"]+)['"]\s*,\s*['"]([^'"]+)['"]\s*\)/
+    );
     if (isStateMatch) {
       const entityId = isStateMatch[1];
       const state = isStateMatch[2];
 
       // Check for sun entity
-      if (entityId === 'sun.sun') {
-        if (state === 'above_horizon') {
-          return { condition_type: 'sun', after: 'sunrise', before: 'sunset' };
-        } else if (state === 'below_horizon') {
-          return { condition_type: 'sun', after: 'sunset', before: 'sunrise' };
+      if (entityId === "sun.sun") {
+        if (state === "above_horizon") {
+          return { condition_type: "sun", after: "sunrise", before: "sunset" };
+        } else if (state === "below_horizon") {
+          return { condition_type: "sun", after: "sunset", before: "sunrise" };
         }
       }
 
-      return { condition_type: 'state', entity_id: entityId, state };
+      return { condition_type: "state", entity_id: entityId, state };
     }
 
     // states('entity') | float > number
@@ -913,16 +963,16 @@ export class YamlParser {
       const value = parseFloat(numericMatch[3]);
 
       const result: Record<string, unknown> = {
-        condition_type: 'numeric_state',
+        condition_type: "numeric_state",
         entity_id: entityId,
       };
-      if (operator.includes('>')) result.above = value;
-      if (operator.includes('<')) result.below = value;
+      if (operator.includes(">")) result.above = value;
+      if (operator.includes("<")) result.below = value;
       return result;
     }
 
     // Fallback to template condition
-    return { condition_type: 'template', value_template: `{{ ${expr} }}` };
+    return { condition_type: "template", value_template: `{{ ${expr} }}` };
   }
 
   /**
@@ -949,7 +999,7 @@ export class YamlParser {
     // Parse triggers (support both 'trigger' and 'triggers')
     const triggerData = content.triggers || content.trigger;
     if (!triggerData) {
-      warnings.push('No triggers found in automation');
+      warnings.push("No triggers found in automation");
       return { nodes, edges };
     }
     const triggers = Array.isArray(triggerData) ? triggerData : [triggerData];
@@ -961,8 +1011,14 @@ export class YamlParser {
     const conditionData = content.conditions || content.condition;
 
     if (conditionData) {
-      const conditions = Array.isArray(conditionData) ? conditionData : [conditionData];
-      const conditionResults = this.parseConditions(conditions, warnings, getNextNodeId);
+      const conditions = Array.isArray(conditionData)
+        ? conditionData
+        : [conditionData];
+      const conditionResults = this.parseConditions(
+        conditions,
+        warnings,
+        getNextNodeId
+      );
       nodes.push(...conditionResults.nodes);
       edges.push(...conditionResults.edges);
 
@@ -986,7 +1042,7 @@ export class YamlParser {
     // Parse actions (support both 'action' and 'actions')
     const actionData = content.actions || content.action;
     if (!actionData) {
-      warnings.push('No actions found in automation');
+      warnings.push("No actions found in automation");
       return { nodes, edges };
     }
     const actions = Array.isArray(actionData) ? actionData : [actionData];
@@ -1012,20 +1068,22 @@ export class YamlParser {
     getNextNodeId: (type: string) => string
   ): FlowNode[] {
     return triggers.filter(isHATrigger).map((trigger, index) => {
-      const nodeId = getNextNodeId('trigger');
+      const nodeId = getNextNodeId("trigger");
       try {
         // Validate and parse trigger using HATriggerSchema
         const result = HATriggerSchema.safeParse(trigger);
         if (!result.success) {
           warnings.push(
-            `Trigger ${index} failed schema validation: ${JSON.stringify(result.error.issues)}`
+            `Trigger ${index} failed schema validation: ${JSON.stringify(
+              result.error.issues
+            )}`
           );
           return this.createUnknownNode(nodeId, trigger);
         }
         // Use platform directly from validated schema
         const node: TriggerNode = {
           id: nodeId,
-          type: 'trigger',
+          type: "trigger",
           position: { x: 0, y: 0 },
           data: result.data,
         };
@@ -1050,20 +1108,22 @@ export class YamlParser {
     const outputNodeIds: string[] = [];
 
     conditions.filter(isHACondition).forEach((condition, index) => {
-      const nodeId = getNextNodeId('condition');
+      const nodeId = getNextNodeId("condition");
       try {
         const result = HAConditionSchema.safeParse(condition);
         if (!result.success) {
           warnings.push(
-            `Condition ${index} failed schema validation: ${JSON.stringify(result.error.issues)}`
+            `Condition ${index} failed schema validation: ${JSON.stringify(
+              result.error.issues
+            )}`
           );
           nodes.push({
             id: nodeId,
-            type: 'condition',
+            type: "condition",
             position: { x: 0, y: 0 },
             data: {
-              condition_type: 'template',
-              alias: 'Unknown Condition',
+              condition_type: "template",
+              alias: "Unknown Condition",
               value_template: JSON.stringify(condition),
             },
           });
@@ -1071,7 +1131,7 @@ export class YamlParser {
         }
         const node: ConditionNode = {
           id: nodeId,
-          type: 'condition',
+          type: "condition",
           position: { x: 0, y: 0 },
           data: result.data,
         };
@@ -1082,11 +1142,11 @@ export class YamlParser {
         // Create a minimal valid unknown condition node
         nodes.push({
           id: nodeId,
-          type: 'condition',
+          type: "condition",
           position: { x: 0, y: 0 },
           data: {
-            condition_type: 'template',
-            alias: 'Unknown Condition',
+            condition_type: "template",
+            alias: "Unknown Condition",
             value_template: JSON.stringify(condition),
           },
         });
@@ -1110,22 +1170,24 @@ export class YamlParser {
     let currentNodeIds = previousNodeIds;
 
     actions.forEach((action, index) => {
-      if (!action || typeof action !== 'object') {
+      if (!action || typeof action !== "object") {
         // Unknown action type - create unknown node
         warnings.push(`Unknown action type at index ${index}`);
-        const nodeId = getNextNodeId('unknown');
+        const nodeId = getNextNodeId("unknown");
         nodes.push({
           id: nodeId,
-          type: 'action',
+          type: "action",
           position: { x: 0, y: 0 },
           data: {
-            alias: 'Unknown Node',
-            service: 'unknown.unknown',
+            alias: "Unknown Node",
+            service: "unknown.unknown",
             data: action as Record<string, unknown>,
           },
         });
         for (const prevId of currentNodeIds) {
-          const sourceHandle = conditionNodeIds.has(prevId) ? 'true' : undefined;
+          const sourceHandle = conditionNodeIds.has(prevId)
+            ? "true"
+            : undefined;
           edges.push(this.createEdge(prevId, nodeId, sourceHandle));
         }
         currentNodeIds = [nodeId];
@@ -1133,50 +1195,54 @@ export class YamlParser {
       }
       // Handle different action types
       if (isDelayAction(action)) {
-        const nodeId = getNextNodeId('delay');
+        const nodeId = getNextNodeId("delay");
         const act = action as Record<string, unknown>;
         const delayValue = act.delay;
         const delayNode: DelayNode = {
           id: nodeId,
-          type: 'delay',
+          type: "delay",
           position: { x: 0, y: 0 },
           data: {
-            alias: typeof act.alias === 'string' ? act.alias : undefined,
+            alias: typeof act.alias === "string" ? act.alias : undefined,
             delay:
-              typeof delayValue === 'string'
+              typeof delayValue === "string"
                 ? delayValue
-                : typeof delayValue === 'object' && delayValue !== null
-                  ? (delayValue as {
-                      hours?: number;
-                      minutes?: number;
-                      seconds?: number;
-                      milliseconds?: number;
-                    })
-                  : '',
+                : typeof delayValue === "object" && delayValue !== null
+                ? (delayValue as {
+                    hours?: number;
+                    minutes?: number;
+                    seconds?: number;
+                    milliseconds?: number;
+                  })
+                : "",
           },
         };
         nodes.push(delayNode);
         for (const prevId of currentNodeIds) {
-          const sourceHandle = conditionNodeIds.has(prevId) ? 'true' : undefined;
+          const sourceHandle = conditionNodeIds.has(prevId)
+            ? "true"
+            : undefined;
           edges.push(this.createEdge(prevId, nodeId, sourceHandle));
         }
         currentNodeIds = [nodeId];
       } else if (isWaitAction(action)) {
-        const nodeId = getNextNodeId('wait');
+        const nodeId = getNextNodeId("wait");
         const act = action as Record<string, unknown>;
         const waitTemplate = act.wait_template;
         const waitForTrigger = act.wait_for_trigger;
         const timeoutValue = act.timeout;
         const continueOnTimeoutValue = act.continue_on_timeout;
 
-        const waitData: WaitNode['data'] = {
-          alias: typeof act.alias === 'string' ? act.alias : undefined,
-          timeout: typeof timeoutValue === 'string' ? timeoutValue : undefined,
+        const waitData: WaitNode["data"] = {
+          alias: typeof act.alias === "string" ? act.alias : undefined,
+          timeout: typeof timeoutValue === "string" ? timeoutValue : undefined,
           continue_on_timeout:
-            typeof continueOnTimeoutValue === 'boolean' ? continueOnTimeoutValue : undefined,
+            typeof continueOnTimeoutValue === "boolean"
+              ? continueOnTimeoutValue
+              : undefined,
         };
 
-        if (typeof waitTemplate === 'string') {
+        if (typeof waitTemplate === "string") {
           waitData.wait_template = waitTemplate;
         } else if (Array.isArray(waitForTrigger)) {
           const parsedTriggers = [];
@@ -1195,14 +1261,16 @@ export class YamlParser {
 
         const waitNode: WaitNode = {
           id: nodeId,
-          type: 'wait',
+          type: "wait",
           position: { x: 0, y: 0 },
           data: waitData,
         };
 
         nodes.push(waitNode);
         for (const prevId of currentNodeIds) {
-          const sourceHandle = conditionNodeIds.has(prevId) ? 'true' : undefined;
+          const sourceHandle = conditionNodeIds.has(prevId)
+            ? "true"
+            : undefined;
           edges.push(this.createEdge(prevId, nodeId, sourceHandle));
         }
         currentNodeIds = [nodeId];
@@ -1228,7 +1296,7 @@ export class YamlParser {
           if: ifArr,
           then: thenArr,
           else: elseArr,
-          alias: typeof act.alias === 'string' ? act.alias : undefined,
+          alias: typeof act.alias === "string" ? act.alias : undefined,
         };
         const ifResult = this.parseIfBlock(
           ifAction,
@@ -1242,23 +1310,23 @@ export class YamlParser {
         currentNodeIds = ifResult.outputNodeIds;
       } else if (isServiceAction(action)) {
         // Regular service call action (support both 'service' and 'action' fields)
-        const nodeId = getNextNodeId('action');
+        const nodeId = getNextNodeId("action");
         try {
           const act = action as Record<string, unknown>;
           const actionNode: ActionNode = {
             id: nodeId,
-            type: 'action',
+            type: "action",
             position: { x: 0, y: 0 },
             data: {
-              alias: typeof act.alias === 'string' ? act.alias : undefined,
+              alias: typeof act.alias === "string" ? act.alias : undefined,
               service:
-                typeof act.service === 'string'
+                typeof act.service === "string"
                   ? act.service
-                  : typeof act.action === 'string'
-                    ? act.action
-                    : undefined,
+                  : typeof act.action === "string"
+                  ? act.action
+                  : undefined,
               target:
-                typeof act.target === 'object' && act.target !== null
+                typeof act.target === "object" && act.target !== null
                   ? (act.target as {
                       entity_id?: string | string[];
                       area_id?: string | string[];
@@ -1266,23 +1334,31 @@ export class YamlParser {
                     })
                   : undefined,
               data:
-                typeof act.data === 'object' && act.data !== null
+                typeof act.data === "object" && act.data !== null
                   ? (act.data as Record<string, unknown>)
                   : undefined,
               data_template:
-                typeof act.data_template === 'object' && act.data_template !== null
+                typeof act.data_template === "object" &&
+                act.data_template !== null
                   ? (act.data_template as Record<string, string>)
                   : undefined,
               response_variable:
-                typeof act.response_variable === 'string' ? act.response_variable : undefined,
+                typeof act.response_variable === "string"
+                  ? act.response_variable
+                  : undefined,
               continue_on_error:
-                typeof act.continue_on_error === 'boolean' ? act.continue_on_error : undefined,
-              enabled: typeof act.enabled === 'boolean' ? act.enabled : undefined,
+                typeof act.continue_on_error === "boolean"
+                  ? act.continue_on_error
+                  : undefined,
+              enabled:
+                typeof act.enabled === "boolean" ? act.enabled : undefined,
             },
           };
           nodes.push(actionNode);
           for (const prevId of currentNodeIds) {
-            const sourceHandle = conditionNodeIds.has(prevId) ? 'true' : undefined;
+            const sourceHandle = conditionNodeIds.has(prevId)
+              ? "true"
+              : undefined;
             edges.push(this.createEdge(prevId, nodeId, sourceHandle));
           }
           currentNodeIds = [nodeId];
@@ -1293,19 +1369,21 @@ export class YamlParser {
       } else {
         // Unknown action type - create unknown node
         warnings.push(`Unknown action type at index ${index}`);
-        const nodeId = getNextNodeId('unknown');
+        const nodeId = getNextNodeId("unknown");
         nodes.push({
           id: nodeId,
-          type: 'action',
+          type: "action",
           position: { x: 0, y: 0 },
           data: {
-            alias: 'Unknown Node',
-            service: 'unknown.unknown',
+            alias: "Unknown Node",
+            service: "unknown.unknown",
             data: action as Record<string, unknown>,
           },
         });
         for (const prevId of currentNodeIds) {
-          const sourceHandle = conditionNodeIds.has(prevId) ? 'true' : undefined;
+          const sourceHandle = conditionNodeIds.has(prevId)
+            ? "true"
+            : undefined;
           edges.push(this.createEdge(prevId, nodeId, sourceHandle));
         }
         currentNodeIds = [nodeId];
@@ -1335,9 +1413,9 @@ export class YamlParser {
       : [chooseAction.choose];
 
     choices.forEach((choice) => {
-      if (typeof choice !== 'object' || choice === null) return;
+      if (typeof choice !== "object" || choice === null) return;
       if (choice.conditions) {
-        const conditionId = getNextNodeId('condition');
+        const conditionId = getNextNodeId("condition");
         // choice.conditions can be an array of conditions or a single condition object
         const conditionsArray = Array.isArray(choice.conditions)
           ? choice.conditions
@@ -1346,11 +1424,11 @@ export class YamlParser {
         const firstCondition = conditionsArray[0] || {};
         const conditionNode: ConditionNode = {
           id: conditionId,
-          type: 'condition',
+          type: "condition",
           position: { x: 0, y: 0 },
           data: {
             alias: choice.alias,
-            condition_type: firstCondition.condition || 'template',
+            condition_type: firstCondition.condition || "template",
             entity_id: firstCondition.entity_id,
             state: firstCondition.state,
             // Support both 'template' and 'value_template' (Home Assistant uses value_template)
@@ -1365,8 +1443,8 @@ export class YamlParser {
               conditionsArray.length > 1
                 ? transformConditions(conditionsArray)
                 : Array.isArray(firstCondition.conditions)
-                  ? transformConditions(firstCondition.conditions)
-                  : undefined,
+                ? transformConditions(firstCondition.conditions)
+                : undefined,
           },
         };
 
@@ -1375,13 +1453,17 @@ export class YamlParser {
 
         // Connect from previous nodes
         for (const prevId of previousNodeIds) {
-          const sourceHandle = conditionNodeIds.has(prevId) ? 'true' : undefined;
+          const sourceHandle = conditionNodeIds.has(prevId)
+            ? "true"
+            : undefined;
           edges.push(this.createEdge(prevId, conditionId, sourceHandle));
         }
 
         // Parse sequence for this choice
         if (choice.sequence) {
-          const sequence = Array.isArray(choice.sequence) ? choice.sequence : [choice.sequence];
+          const sequence = Array.isArray(choice.sequence)
+            ? choice.sequence
+            : [choice.sequence];
           const sequenceResult = this.parseActions(
             sequence,
             warnings,
@@ -1399,7 +1481,7 @@ export class YamlParser {
               (e) => e.source === conditionId && e.target === firstActionId
             );
             if (trueEdge) {
-              trueEdge.sourceHandle = 'true';
+              trueEdge.sourceHandle = "true";
             }
           }
         }
@@ -1431,7 +1513,12 @@ export class YamlParser {
    * Parse if/then/else block
    */
   private parseIfBlock(
-    ifAction: { if: unknown[]; then: unknown[]; else?: unknown[]; alias?: string },
+    ifAction: {
+      if: unknown[];
+      then: unknown[];
+      else?: unknown[];
+      alias?: string;
+    },
     warnings: string[],
     previousNodeIds: string[],
     getNextNodeId: (type: string) => string,
@@ -1443,16 +1530,23 @@ export class YamlParser {
     const localConditionIds = new Set(conditionNodeIds);
 
     // Create condition node from the 'if' conditions
-    const conditionId = getNextNodeId('condition');
-    const ifConditions = Array.isArray(ifAction.if) ? ifAction.if : [ifAction.if];
+    const conditionId = getNextNodeId("condition");
+    const ifConditions = Array.isArray(ifAction.if)
+      ? ifAction.if
+      : [ifAction.if];
 
     // Use the first condition's type or default to 'template'
-    const firstCondition = ifConditions[0] as Record<string, unknown> | undefined;
-    const rawConditionType = (firstCondition?.condition as string) || 'numeric_state';
+    const firstCondition = ifConditions[0] as
+      | Record<string, unknown>
+      | undefined;
+    const rawConditionType =
+      (firstCondition?.condition as string) || "numeric_state";
     // Validate condition type against known types
-    const conditionType = VALID_CONDITION_TYPES.includes(rawConditionType as ValidConditionType)
+    const conditionType = VALID_CONDITION_TYPES.includes(
+      rawConditionType as ValidConditionType
+    )
       ? (rawConditionType as ValidConditionType)
-      : 'template';
+      : "template";
 
     // Extract template value (Home Assistant uses value_template)
     const templateValue =
@@ -1461,13 +1555,14 @@ export class YamlParser {
 
     const conditionNode: ConditionNode = {
       id: conditionId,
-      type: 'condition',
+      type: "condition",
       position: { x: 0, y: 0 },
       data: {
         alias: ifAction.alias,
         condition_type: conditionType,
         entity_id:
-          typeof firstCondition?.entity_id === 'string' || Array.isArray(firstCondition?.entity_id)
+          typeof firstCondition?.entity_id === "string" ||
+          Array.isArray(firstCondition?.entity_id)
             ? firstCondition?.entity_id
             : undefined,
         state: firstCondition?.state as string | string[] | undefined,
@@ -1481,8 +1576,8 @@ export class YamlParser {
         conditions: Array.isArray(firstCondition?.conditions)
           ? transformConditions(firstCondition.conditions)
           : ifConditions.length > 1
-            ? transformConditions(ifConditions)
-            : undefined,
+          ? transformConditions(ifConditions)
+          : undefined,
       },
     };
 
@@ -1491,16 +1586,19 @@ export class YamlParser {
 
     // Connect from previous nodes
     for (const prevId of previousNodeIds) {
-      const sourceHandle = conditionNodeIds.has(prevId) ? 'true' : undefined;
+      const sourceHandle = conditionNodeIds.has(prevId) ? "true" : undefined;
       edges.push(this.createEdge(prevId, conditionId, sourceHandle));
     }
 
     // Parse 'then' sequence (true branch)
     if (ifAction.then) {
-      const thenSequence = Array.isArray(ifAction.then) ? ifAction.then : [ifAction.then];
+      const thenSequence = Array.isArray(ifAction.then)
+        ? ifAction.then
+        : [ifAction.then];
       const thenResult = this.parseActions(
         thenSequence.filter(
-          (a): a is Record<string, unknown> => typeof a === 'object' && a !== null
+          (a): a is Record<string, unknown> =>
+            typeof a === "object" && a !== null
         ),
         warnings,
         [conditionId],
@@ -1513,9 +1611,11 @@ export class YamlParser {
       // The edges from condition to first action should use 'true' handle
       if (thenResult.nodes.length > 0) {
         const firstActionId = thenResult.nodes[0].id;
-        const trueEdge = edges.find((e) => e.source === conditionId && e.target === firstActionId);
+        const trueEdge = edges.find(
+          (e) => e.source === conditionId && e.target === firstActionId
+        );
         if (trueEdge) {
-          trueEdge.sourceHandle = 'true';
+          trueEdge.sourceHandle = "true";
         }
       }
 
@@ -1527,11 +1627,14 @@ export class YamlParser {
 
     // Parse 'else' sequence (false branch)
     if (ifAction.else) {
-      const elseSequence = Array.isArray(ifAction.else) ? ifAction.else : [ifAction.else];
+      const elseSequence = Array.isArray(ifAction.else)
+        ? ifAction.else
+        : [ifAction.else];
       // For else branch, we need to connect from condition with 'false' handle
       const elseResult = this.parseActions(
         elseSequence.filter(
-          (a): a is Record<string, unknown> => typeof a === 'object' && a !== null
+          (a): a is Record<string, unknown> =>
+            typeof a === "object" && a !== null
         ),
         warnings,
         [conditionId],
@@ -1551,7 +1654,7 @@ export class YamlParser {
           elseResult.edges.splice(existingEdgeIndex, 1);
         }
         // Add edge with 'false' handle
-        edges.push(this.createEdge(conditionId, firstElseNodeId, 'false'));
+        edges.push(this.createEdge(conditionId, firstElseNodeId, "false"));
       }
 
       // Add remaining edges from else result
@@ -1578,11 +1681,11 @@ export class YamlParser {
     const data = originalData as Record<string, unknown> | null | undefined;
     return {
       id: nodeId,
-      type: 'action',
+      type: "action",
       position: { x: 0, y: 0 },
       data: {
-        alias: `Unknown: ${data?.service || data?.platform || 'Node'}`,
-        service: (data?.service as string) || 'unknown.unknown',
+        alias: `Unknown: ${data?.service || data?.platform || "Node"}`,
+        service: (data?.service as string) || "unknown.unknown",
         data: data as Record<string, unknown> | undefined,
       },
     };
@@ -1591,7 +1694,10 @@ export class YamlParser {
   /**
    * Apply positions from metadata
    */
-  private applyMetadataPositions(nodes: FlowNode[], metadata: CafeMetadata): FlowNode[] {
+  private applyMetadataPositions(
+    nodes: FlowNode[],
+    metadata: CafeMetadata
+  ): FlowNode[] {
     return nodes.map((node) => ({
       ...node,
       position: metadata.nodes[node.id] || node.position,
@@ -1601,32 +1707,17 @@ export class YamlParser {
   /**
    * Create an edge between two nodes
    */
-  private createEdge(source: string, target: string, sourceHandle?: string): FlowEdge {
+  private createEdge(
+    source: string,
+    target: string,
+    sourceHandle?: string
+  ): FlowEdge {
     return {
       id: `e-${source}-${target}-${Date.now()}`,
       source,
       target,
       sourceHandle: sourceHandle || undefined,
     };
-  }
-
-  /**
-   * Simple fallback layout when metadata is not available
-   */
-  private applyFallbackLayout(nodes: FlowNode[]): FlowNode[] {
-    const startX = 100;
-    const startY = 150;
-    const horizontalSpacing = 250;
-
-    return nodes.map((node, index) => {
-      return {
-        ...node,
-        position: {
-          x: startX + index * horizontalSpacing,
-          y: startY,
-        },
-      };
-    });
   }
 }
 

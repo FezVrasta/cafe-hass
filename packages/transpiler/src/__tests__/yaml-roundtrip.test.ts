@@ -12,7 +12,7 @@ function loadYamlFixture(name: string): string {
   return readFileSync(join(FIXTURES_DIR, name), 'utf8');
 }
 
-describe('YAML round-trip (fixtures)', () => {
+describe('YAML round-trip (fixtures)', async () => {
   const fixtures = glob.sync('*.yaml', { cwd: FIXTURES_DIR });
   const parser = new YamlParser();
   const transpiler = new FlowTranspiler();
@@ -20,7 +20,7 @@ describe('YAML round-trip (fixtures)', () => {
   for (const fixture of fixtures) {
     const inputYaml = loadYamlFixture(fixture);
     // Parse YAML to FlowGraph
-    const parseResult = parser.parse(inputYaml);
+    const parseResult = await parser.parse(inputYaml);
 
     if (!parseResult.success) {
       console.error('Parse errors:', parseResult.errors, 'Warnings:', parseResult.warnings);

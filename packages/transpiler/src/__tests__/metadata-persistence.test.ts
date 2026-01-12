@@ -6,7 +6,7 @@ import { FlowTranspiler } from '../FlowTranspiler';
 import { YamlParser } from '../parser/YamlParser';
 
 describe('Metadata Persistence', () => {
-  it('should support entity_id as array in trigger and condition nodes', () => {
+  it('should support entity_id as array in trigger and condition nodes', async () => {
     const flow: FlowGraph = {
       id: uuidv4(),
       name: 'Array EntityId',
@@ -50,7 +50,7 @@ describe('Metadata Persistence', () => {
     const transpiler = new FlowTranspiler();
     const parser = new YamlParser();
     const yaml = transpiler.transpile(flow).yaml!;
-    const parsed = parser.parse(yaml);
+    const parsed = await parser.parse(yaml);
     console.log(yaml, parsed.errors);
     expect(parsed.success).toBe(true);
     const trigger = parsed.graph?.nodes.find(
@@ -70,7 +70,7 @@ describe('Metadata Persistence', () => {
   const parser = new YamlParser();
 
   describe('Native Strategy - Round Trip', () => {
-    it('should preserve node positions when exporting and re-importing simple flow', () => {
+    it('should preserve node positions when exporting and re-importing simple flow', async () => {
       // Arrange: Create a simple flow with specific positions
       const originalFlow: FlowGraph = {
         id: uuidv4(),
@@ -120,7 +120,7 @@ describe('Metadata Persistence', () => {
       expect(result.yaml).toContain('action-1');
 
       // Act: Parse back to flow
-      const parseResult = parser.parse(result.yaml!);
+      const parseResult = await parser.parse(result.yaml!);
 
       // Assert: Parsing succeeds
       expect(parseResult.success).toBe(true);
@@ -131,14 +131,18 @@ describe('Metadata Persistence', () => {
       const reimportedFlow = parseResult.graph!;
       expect(reimportedFlow.nodes).toHaveLength(2);
 
-      const trigger = reimportedFlow.nodes.find((n) => n.id === 'trigger-1');
-      const action = reimportedFlow.nodes.find((n) => n.id === 'action-1');
+      const trigger = reimportedFlow.nodes.find(
+        (n: (typeof reimportedFlow.nodes)[number]) => n.id === 'trigger-1'
+      );
+      const action = reimportedFlow.nodes.find(
+        (n: (typeof reimportedFlow.nodes)[number]) => n.id === 'action-1'
+      );
 
       expect(trigger?.position).toEqual({ x: 100, y: 50 });
       expect(action?.position).toEqual({ x: 200, y: 150 });
     });
 
-    it('should preserve node IDs across round trip', () => {
+    it('should preserve node IDs across round trip', async () => {
       const flow: FlowGraph = {
         id: uuidv4(),
         name: 'ID Test',
@@ -163,14 +167,14 @@ describe('Metadata Persistence', () => {
       };
 
       const yaml = transpiler.toYaml(flow);
-      const parsed = parser.parse(yaml);
+      const parsed = await parser.parse(yaml);
 
       expect(parsed.success).toBe(true);
       expect(parsed.graph?.nodes[0].id).toBe('custom-trigger-id');
       expect(parsed.graph?.nodes[1].id).toBe('custom-action-id');
     });
 
-    it('should preserve graph metadata (ID and version)', () => {
+    it('should preserve graph metadata (ID and version)', async () => {
       const originalGraphId = uuidv4();
       const flow: FlowGraph = {
         id: originalGraphId,
@@ -190,7 +194,7 @@ describe('Metadata Persistence', () => {
       };
 
       const yaml = transpiler.toYaml(flow);
-      const parsed = parser.parse(yaml);
+      const parsed = await parser.parse(yaml);
 
       expect(parsed.graph?.id).toBe(originalGraphId);
       expect(parsed.graph?.version).toBe(1);
@@ -198,7 +202,7 @@ describe('Metadata Persistence', () => {
       expect(parsed.graph?.metadata?.max).toBe(5);
     });
 
-    it('should preserve node IDs when using native strategy', () => {
+    it('should preserve node IDs when using native strategy', async () => {
       // This test reproduces the issue where native strategy YAML
       // doesn't preserve node IDs during round-trip
       const flow: FlowGraph = {
@@ -242,14 +246,18 @@ describe('Metadata Persistence', () => {
       const yaml = transpiler.toYaml(flow);
 
       // Parse it back
-      const parsed = parser.parse(yaml);
+      const parsed = await parser.parse(yaml);
 
       expect(parsed.success).toBe(true);
       expect(parsed.hadMetadata).toBe(true);
 
       // Node IDs should be preserved
-      const trigger = parsed.graph?.nodes.find((n) => n.id === 'trigger_1767870543439');
-      const action = parsed.graph?.nodes.find((n) => n.id === 'action_1767870548496');
+      const trigger = parsed.graph?.nodes.find(
+        (n: (typeof flow.nodes)[number]) => n.id === 'trigger_1767870543439'
+      );
+      const action = parsed.graph?.nodes.find(
+        (n: (typeof flow.nodes)[number]) => n.id === 'action_1767870548496'
+      );
 
       expect(trigger).toBeDefined();
       expect(action).toBeDefined();
@@ -306,7 +314,7 @@ describe('Metadata Persistence', () => {
       expect(result.yaml).toContain('action-2');
     });
 
-    it('should preserve positions when re-importing state machine YAML', () => {
+    it('should preserve positions when re-importing state machine YAML', async () => {
       const flow: FlowGraph = {
         id: uuidv4(),
         name: 'Position Test',
@@ -341,7 +349,7 @@ describe('Metadata Persistence', () => {
       };
 
       const yaml = transpiler.toYaml(flow, { forceStrategy: 'state-machine' });
-      const parsed = parser.parse(yaml);
+      const parsed = await parser.parse(yaml);
 
       expect(parsed.success).toBe(true);
       expect(parsed.hadMetadata).toBe(true);
@@ -358,7 +366,7 @@ describe('Metadata Persistence', () => {
   });
 
   describe('YAML without metadata', () => {
-    it('should use heuristic layout for manually written YAML', () => {
+    it('should use heuristic layout for manually written YAML', async () => {
       const manualYaml = `
 alias: Manual Automation
 description: Written by hand
@@ -373,7 +381,7 @@ action:
 mode: single
       `;
 
-      const parsed = parser.parse(manualYaml);
+      const parsed = await parser.parse(manualYaml);
 
       expect(parsed.success).toBe(true);
       expect(parsed.hadMetadata).toBe(false);
@@ -389,7 +397,7 @@ mode: single
       expect(nodes?.[1].position.y).toBeGreaterThanOrEqual(0);
     });
 
-    it('should handle Home Assistant 2024+ format (triggers/actions)', () => {
+    it('should handle Home Assistant 2024+ format (triggers/actions)', async () => {
       const modernYaml = `
 alias: Modern Format
 triggers:
@@ -409,7 +417,7 @@ actions:
 mode: single
       `;
 
-      const parsed = parser.parse(modernYaml);
+      const parsed = await parser.parse(modernYaml);
 
       expect(parsed.success).toBe(true);
       expect(parsed.graph?.nodes).toHaveLength(3); // trigger + condition + action
@@ -417,7 +425,7 @@ mode: single
   });
 
   describe('Complex flows with conditions', () => {
-    it('should preserve positions for flows with condition nodes', () => {
+    it('should preserve positions for flows with condition nodes', async () => {
       const flow: FlowGraph = {
         id: uuidv4(),
         name: 'Condition Flow',
@@ -433,7 +441,11 @@ mode: single
             id: 'condition-1',
             type: 'condition',
             position: { x: 200, y: 200 },
-            data: { condition_type: 'state', entity_id: 'sun.sun', state: 'below_horizon' },
+            data: {
+              condition_type: 'state',
+              entity_id: 'sun.sun',
+              state: 'below_horizon',
+            },
           },
           {
             id: 'action-1',
@@ -444,14 +456,19 @@ mode: single
         ],
         edges: [
           { id: 'e1', source: 'trigger-1', target: 'condition-1' },
-          { id: 'e2', source: 'condition-1', target: 'action-1', sourceHandle: 'true' },
+          {
+            id: 'e2',
+            source: 'condition-1',
+            target: 'action-1',
+            sourceHandle: 'true',
+          },
         ],
         metadata: { mode: 'single', initial_state: true },
         version: 1,
       };
 
       const yaml = transpiler.toYaml(flow);
-      const parsed = parser.parse(yaml);
+      const parsed = await parser.parse(yaml);
 
       expect(parsed.success).toBe(true);
 
@@ -461,7 +478,7 @@ mode: single
   });
 
   describe('Edge cases', () => {
-    it('should handle flows with delay and wait nodes', () => {
+    it('should handle flows with delay and wait nodes', async () => {
       const flow: FlowGraph = {
         id: uuidv4(),
         name: 'Delay Test',
@@ -495,7 +512,7 @@ mode: single
       };
 
       const yaml = transpiler.toYaml(flow);
-      const parsed = parser.parse(yaml);
+      const parsed = await parser.parse(yaml);
 
       expect(parsed.success).toBe(true);
       expect(parsed.graph?.nodes).toHaveLength(3);
@@ -504,7 +521,7 @@ mode: single
       expect(delay?.position).toEqual({ x: 100, y: 100 });
     });
 
-    it('should handle empty positions gracefully', () => {
+    it('should handle empty positions gracefully', async () => {
       const flow: FlowGraph = {
         id: uuidv4(),
         name: 'Zero Test',
@@ -523,13 +540,13 @@ mode: single
       };
 
       const yaml = transpiler.toYaml(flow);
-      const parsed = parser.parse(yaml);
+      const parsed = await parser.parse(yaml);
 
       expect(parsed.success).toBe(true);
       expect(parsed.graph?.nodes[0].position).toEqual({ x: 0, y: 0 });
     });
 
-    it('should handle very large position values', () => {
+    it('should handle very large position values', async () => {
       const flow: FlowGraph = {
         id: uuidv4(),
         name: 'Large Positions',
@@ -548,13 +565,13 @@ mode: single
       };
 
       const yaml = transpiler.toYaml(flow);
-      const parsed = parser.parse(yaml);
+      const parsed = await parser.parse(yaml);
 
       expect(parsed.success).toBe(true);
       expect(parsed.graph?.nodes[0].position).toEqual({ x: 9999, y: 8888 });
     });
 
-    it('should handle special characters in node IDs', () => {
+    it('should handle special characters in node IDs', async () => {
       const flow: FlowGraph = {
         id: uuidv4(),
         name: 'Special Chars',
@@ -574,14 +591,18 @@ mode: single
           },
         ],
         edges: [
-          { id: 'e1', source: 'trigger_with_underscores_123', target: 'action-with-dashes-456' },
+          {
+            id: 'e1',
+            source: 'trigger_with_underscores_123',
+            target: 'action-with-dashes-456',
+          },
         ],
         metadata: { mode: 'single', initial_state: true },
         version: 1,
       };
 
       const yaml = transpiler.toYaml(flow);
-      const parsed = parser.parse(yaml);
+      const parsed = await parser.parse(yaml);
 
       expect(parsed.success).toBe(true);
       expect(parsed.graph?.nodes[0].id).toBe('trigger_with_underscores_123');
@@ -590,20 +611,20 @@ mode: single
   });
 
   describe('Validation and error handling', () => {
-    it('should reject invalid YAML', () => {
+    it('should reject invalid YAML', async () => {
       const invalidYaml = `
 this is not
   valid: yaml: structure:
       `;
 
-      const parsed = parser.parse(invalidYaml);
+      const parsed = await parser.parse(invalidYaml);
 
       expect(parsed.success).toBe(false);
       expect(parsed.errors).toBeDefined();
       expect(parsed.errors?.length).toBeGreaterThan(0);
     });
 
-    it('should reject YAML without triggers', () => {
+    it('should reject YAML without triggers', async () => {
       const noTriggerYaml = `
 alias: No Trigger
 action:
@@ -611,13 +632,13 @@ action:
 mode: single
       `;
 
-      const parsed = parser.parse(noTriggerYaml);
+      const parsed = await parser.parse(noTriggerYaml);
 
       expect(parsed.success).toBe(false);
       expect(parsed.warnings).toContain('No triggers found in automation');
     });
 
-    it('should handle corrupted metadata gracefully', () => {
+    it('should handle corrupted metadata gracefully', async () => {
       const corruptedMetadataYaml = `
 alias: Corrupted Metadata
 trigger:
@@ -630,7 +651,7 @@ variables:
 mode: single
       `;
 
-      const parsed = parser.parse(corruptedMetadataYaml);
+      const parsed = await parser.parse(corruptedMetadataYaml);
 
       // Should still parse, just without metadata
       expect(parsed.success).toBe(true);
@@ -701,7 +722,7 @@ mode: single
       expect(yaml).toContain('strategy: state-machine');
     });
 
-    it('should use node IDs in state machine conditions for proper round-trip', () => {
+    it('should use node IDs in state machine conditions for proper round-trip', async () => {
       // This test reproduces the issue from the user's example
       const flow: FlowGraph = {
         id: '013a49d4-4469-4087-84ff-17874278935e',
@@ -747,7 +768,7 @@ mode: single
       expect(yaml).toContain('action_1767870548496');
 
       // Try to parse it back
-      const parsed = parser.parse(yaml);
+      const parsed = await parser.parse(yaml);
 
       expect(parsed.success).toBe(true);
       expect(parsed.hadMetadata).toBe(true);

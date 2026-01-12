@@ -5,7 +5,7 @@ import type { ConditionNode } from '@cafe/shared';
 import { yamlParser } from '../parser/YamlParser';
 
 describe('YamlParser', () => {
-  it('parses trigger and condition with entity_id as array', () => {
+  it('parses trigger and condition with entity_id as array', async () => {
     const yaml = `
   alias: Array Entity Test
   triggers:
@@ -26,7 +26,7 @@ describe('YamlParser', () => {
           - light.a
           - light.b
   `;
-    const result = yamlParser.parse(yaml);
+    const result = await yamlParser.parse(yaml);
     expect(result.success).toBe(true);
     expect(result.graph).toBeDefined();
 
@@ -40,13 +40,13 @@ describe('YamlParser', () => {
     expect(Array.isArray(conditionNodes?.[0].data.entity_id)).toBe(true);
     expect(conditionNodes?.[0].data.entity_id).toEqual(['binary_sensor.a', 'binary_sensor.b']);
   });
-  it('parses 09-templates.yaml correctly', () => {
+  it('parses 09-templates.yaml correctly', async () => {
     const yamlPath = path.resolve(
       __dirname,
       '../../../frontend/src/lib/__tests__/fixtures/09-templates.yaml'
     );
     const yamlString = readFileSync(yamlPath, 'utf8');
-    const result = yamlParser.parse(yamlString);
+    const result = await yamlParser.parse(yamlString);
     if (!result.success) {
       // eslint-disable-next-line no-console
       console.error('YAML parser errors:', result.errors);
@@ -77,7 +77,7 @@ describe('YamlParser', () => {
     expect(nodes.length).toBe(10);
   });
 
-  it('parses template condition with value_template field', () => {
+  it('parses template condition with value_template field', async () => {
     const yaml = `
 alias: Template Test
 triggers:
@@ -93,7 +93,7 @@ actions:
             target:
               entity_id: light.test
 `;
-    const result = yamlParser.parse(yaml);
+    const result = await yamlParser.parse(yaml);
     expect(result.success).toBe(true);
     expect(result.graph).toBeDefined();
 
@@ -108,7 +108,7 @@ actions:
     expect(templateCondition?.data.value_template).toBe("{{ states('sensor.test') == 'on' }}");
   });
 
-  it('parses nested conditions with value_template in choose block', () => {
+  it('parses nested conditions with value_template in choose block', async () => {
     const yaml = `
 alias: Nested Template Test
 triggers:
@@ -129,7 +129,7 @@ actions:
             target:
               entity_id: light.living_room
 `;
-    const result = yamlParser.parse(yaml);
+    const result = await yamlParser.parse(yaml);
     expect(result.success).toBe(true);
     expect(result.graph).toBeDefined();
 
@@ -151,7 +151,7 @@ actions:
     expect(nestedTemplateCondition?.template).toBe("{{ is_state('binary_sensor.motion', 'on') }}");
   });
 
-  it('parses if/then/else with template condition', () => {
+  it('parses if/then/else with template condition', async () => {
     const yaml = `
 alias: If Template Test
 triggers:
@@ -170,7 +170,7 @@ actions:
         target:
           entity_id: light.test
 `;
-    const result = yamlParser.parse(yaml);
+    const result = await yamlParser.parse(yaml);
     expect(result.success).toBe(true);
     expect(result.graph).toBeDefined();
 
@@ -185,7 +185,7 @@ actions:
     expect(ifCondition?.data.value_template).toBe('{{ now().hour >= 18 }}');
   });
 
-  it('parses top-level template condition', () => {
+  it('parses top-level template condition', async () => {
     const yaml = `
 alias: Top Level Template Test
 triggers:
@@ -199,7 +199,7 @@ actions:
     target:
       entity_id: light.test
 `;
-    const result = yamlParser.parse(yaml);
+    const result = await yamlParser.parse(yaml);
     expect(result.success).toBe(true);
     expect(result.graph).toBeDefined();
 
@@ -216,7 +216,7 @@ actions:
     );
   });
 
-  it('parses wait_for_trigger action', () => {
+  it('parses wait_for_trigger action', async () => {
     const yaml = `
 alias: Wait for Trigger Test
 trigger:
@@ -238,7 +238,7 @@ action:
     target:
       entity_id: light.test_light
 `;
-    const result = yamlParser.parse(yaml);
+    const result = await yamlParser.parse(yaml);
     expect(result.success).toBe(true);
     expect(result.graph).toBeDefined();
 

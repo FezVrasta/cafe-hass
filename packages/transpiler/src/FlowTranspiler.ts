@@ -1,11 +1,11 @@
-import type { FlowGraph } from '@cafe/shared';
-import { dump as yamlDump } from 'js-yaml';
-import { analyzeTopology, type TopologyAnalysis } from './analyzer/topology';
-import { type ValidationResult, validateFlowGraph } from './analyzer/validator';
-import { type ParseResult, YamlParser } from './parser/YamlParser';
-import type { HAYamlOutput, TranspilerStrategy } from './strategies/base';
-import { NativeStrategy } from './strategies/native';
-import { StateMachineStrategy } from './strategies/state-machine';
+import type { FlowGraph } from "@cafe/shared";
+import { dump as yamlDump } from "js-yaml";
+import { analyzeTopology, type TopologyAnalysis } from "./analyzer/topology";
+import { type ValidationResult, validateFlowGraph } from "./analyzer/validator";
+import { type ParseResult, YamlParser } from "./parser/YamlParser";
+import type { HAYamlOutput, TranspilerStrategy } from "./strategies/base";
+import { NativeStrategy } from "./strategies/native";
+import { StateMachineStrategy } from "./strategies/state-machine";
 
 /**
  * Options for YAML generation
@@ -22,7 +22,7 @@ export interface YamlOptions {
   /**
    * Force a specific strategy instead of auto-selecting
    */
-  forceStrategy?: 'native' | 'state-machine';
+  forceStrategy?: "native" | "state-machine";
 }
 
 /**
@@ -59,7 +59,10 @@ export interface TranspileResult {
  * Main transpiler class for converting React Flow graphs to Home Assistant YAML
  */
 export class FlowTranspiler {
-  private strategies: TranspilerStrategy[] = [new NativeStrategy(), new StateMachineStrategy()];
+  private strategies: TranspilerStrategy[] = [
+    new NativeStrategy(),
+    new StateMachineStrategy(),
+  ];
 
   /**
    * Validate a flow graph input
@@ -100,7 +103,9 @@ export class FlowTranspiler {
     let strategy: TranspilerStrategy;
 
     if (options.forceStrategy) {
-      const forced = this.strategies.find((s) => s.name === options.forceStrategy);
+      const forced = this.strategies.find(
+        (s) => s.name === options.forceStrategy
+      );
       if (!forced) {
         return {
           success: false,
@@ -135,7 +140,7 @@ export class FlowTranspiler {
     const yamlContent = output.automation ?? output.script;
     let yaml: string;
 
-    if (yamlContent && typeof yamlContent === 'object') {
+    if (yamlContent && typeof yamlContent === "object") {
       const metadata = this.generateCafeMetadata(flow, strategy);
       const contentWithMetadata = {
         ...yamlContent,
@@ -178,7 +183,7 @@ export class FlowTranspiler {
     const result = this.transpile(input, options);
 
     if (!result.success) {
-      throw new Error(`Transpilation failed: ${result.errors?.join(', ')}`);
+      throw new Error(`Transpilation failed: ${result.errors?.join(", ")}`);
     }
 
     return result.yaml!;
@@ -188,20 +193,20 @@ export class FlowTranspiler {
    * Force native strategy (for tree-shaped flows)
    */
   toNativeYaml(input: unknown, options: YamlOptions = {}): string {
-    return this.toYaml(input, { ...options, forceStrategy: 'native' });
+    return this.toYaml(input, { ...options, forceStrategy: "native" });
   }
 
   /**
    * Force state machine strategy (for complex flows)
    */
   toStateMachineYaml(input: unknown, options: YamlOptions = {}): string {
-    return this.toYaml(input, { ...options, forceStrategy: 'state-machine' });
+    return this.toYaml(input, { ...options, forceStrategy: "state-machine" });
   }
 
   /**
    * Parse Home Assistant YAML back into FlowGraph
    */
-  fromYaml(yamlString: string): ParseResult {
+  fromYaml(yamlString: string): Promise<ParseResult> {
     const parser = new YamlParser();
     return parser.parse(yamlString);
   }

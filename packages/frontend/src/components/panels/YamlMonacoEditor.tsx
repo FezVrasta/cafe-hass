@@ -23,12 +23,12 @@ export function YamlMonacoEditor({ yaml, errors, onYamlChange }: YamlMonacoEdito
   }, [yaml]);
 
   // Handle YAML changes (YAML → canvas)
-  const handleChange = (value?: string) => {
+  const handleChange = async (value?: string) => {
     if (typeof value !== 'string') return;
     if (onYamlChange) onYamlChange(value);
     try {
       const transpiler = new FlowTranspiler();
-      const importResult = transpiler.fromYaml(value);
+      const importResult = await transpiler.fromYaml(value);
       if (!importResult.success || !importResult.graph) {
         // No direct error display here; let parent handle errors
         return;

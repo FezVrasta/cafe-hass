@@ -13,7 +13,7 @@ describe('YamlParser Strategy Selection', () => {
     const yamlString = await fs.readFile(yamlPath, 'utf-8');
 
     const parser = new YamlParser();
-    const parseResult = parser.parse(yamlString);
+    const parseResult = await parser.parse(yamlString);
 
     expect(parseResult.success).toBe(true);
     expect(parseResult.graph).toBeDefined();

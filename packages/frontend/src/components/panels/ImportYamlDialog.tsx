@@ -38,7 +38,7 @@ export function ImportYamlDialog({ isOpen, onClose, onImportSuccess }: ImportYam
 
     try {
       // Parse YAML using the transpiler
-      const result = transpiler.fromYaml(yamlText);
+      const result = await transpiler.fromYaml(yamlText);
 
       if (!result.success) {
         setError(result.errors?.join('\n') || 'Failed to parse YAML. Please check the format.');
