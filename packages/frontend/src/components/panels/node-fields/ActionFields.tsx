@@ -51,8 +51,8 @@ export function ActionFields({ node, onChange, entities }: ActionFieldsProps) {
   const targetEntityIdArray = Array.isArray(targetEntityIds)
     ? targetEntityIds
     : targetEntityIds
-    ? [targetEntityIds]
-    : [];
+      ? [targetEntityIds]
+      : [];
 
   return (
     <>

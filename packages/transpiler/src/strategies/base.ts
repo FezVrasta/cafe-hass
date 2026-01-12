@@ -85,5 +85,4 @@ export abstract class BaseStrategy implements TranspilerStrategy {
   protected getNode(flow: FlowGraph, nodeId: string) {
     return flow.nodes.find((n) => n.id === nodeId);
   }
-
 }

@@ -1,9 +1,8 @@
 // @vitest-environment node
 import type { FlowGraph } from '@cafe/shared';
-import { FlowTranspiler } from '../FlowTranspiler';
 import { load as yamlLoad } from 'js-yaml';
-
 import { v4 as uuidv4 } from 'uuid';
+import { FlowTranspiler } from '../FlowTranspiler';
 
 describe('FlowTranspiler', () => {
   it('transpiles a wait_for_trigger node correctly', () => {
