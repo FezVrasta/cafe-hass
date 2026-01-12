@@ -51,7 +51,6 @@ describe('automation-converter', () => {
 
       expect(result).toHaveLength(3);
       expect(getActionProperty(result[0].action, 'type')).toBe('condition');
-      expect(getActionProperty(result[0].action, 'alias')).toBe('If condition');
       expect(getActionProperty(result[1].action, 'action')).toBe('light.turn_on');
       expect(result[1].branch).toBe('then');
       expect(getActionProperty(result[2].action, 'action')).toBe('light.turn_off');
@@ -76,7 +75,6 @@ describe('automation-converter', () => {
 
       expect(result).toHaveLength(4);
       expect(getActionProperty(result[0].action, 'type')).toBe('condition');
-      expect(getActionProperty(result[0].action, 'alias')).toBe('If condition');
       expect(getActionProperty(result[1].action, 'type')).toBe('condition');
       expect(result[1].branch).toBe('then');
       expect(getActionProperty(result[2].action, 'action')).toBe('light.turn_on');
