@@ -2372,6 +2372,7 @@ __metadata:
   resolution: "cafe@workspace:."
   dependencies:
     "@biomejs/biome": "npm:^2.3.11"
+    glob: "npm:^13.0.0"
     tsx: "npm:^4.19.0"
     turbo: "npm:^2.3.0"
     typescript: "npm:^5.7.0"
