@@ -100,6 +100,7 @@ export const HATriggerSchema = z
     topic: z.string().optional(),
     payload: z.string().optional(),
   })
+  .passthrough() // Allow unknown keys to pass through
   .transform((input) => {
     // Always output a defined platform property
     const platform = input.platform ?? input.trigger ?? 'state';
