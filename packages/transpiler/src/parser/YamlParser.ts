@@ -21,6 +21,7 @@ export const HAConditionSchema = z
     attribute: z.string().optional(),
     id: z.string().optional(),
   })
+  .passthrough() // Allow unknown keys to pass through
   .transform((input) => {
     // Normalize condition_type and template fields
     const condition_type = VALID_CONDITION_TYPES.includes(
