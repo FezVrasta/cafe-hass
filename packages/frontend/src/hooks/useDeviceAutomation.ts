@@ -69,11 +69,12 @@ export function useDeviceAutomation() {
   const getDeviceTriggers = useCallback(
     async (deviceId: string): Promise<DeviceTrigger[]> => {
       try {
-        const response = await sendMessage<DeviceTrigger[]>({
+        const response = await sendMessage<{ resources: DeviceTrigger[] }>({
           type: 'device_automation/trigger/list',
           device_id: deviceId,
         });
-        return response || [];
+        console.log('response', response);
+        return response.resources || [];
       } catch (error) {
         console.error('Failed to fetch device triggers:', error);
         throw error;
