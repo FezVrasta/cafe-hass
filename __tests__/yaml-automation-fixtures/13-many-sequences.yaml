@@ -1,0 +1,125 @@
+alias: ensuite fan dupe
+description: ""
+triggers:
+  - trigger: time
+    at: "21:00:00"
+    id: NightOff
+  - trigger: state
+    entity_id:
+      - light.ensuite
+    id: light-toggled-on
+    to:
+      - "on"
+  - trigger: state
+    entity_id:
+      - light.ensuite
+    id: light-toggled-off
+    to:
+      - "off"
+  - trigger: state
+    entity_id:
+      - switch.ensuite_fan_boost
+    id: fan-switch-toggled-off
+    to:
+      - "off"
+conditions: []
+actions:
+  - choose:
+      - conditions:
+          - condition: trigger
+            id:
+              - NightOff
+        sequence:
+          - if:
+              - condition: state
+                entity_id: switch.ensuite
+                state:
+                  - "on"
+            then:
+              - wait_for_trigger:
+                  - trigger: state
+                    entity_id:
+                      - switch.ensuite
+                    to:
+                      - "off"
+                timeout:
+                  hours: 0
+                  minutes: 20
+                  seconds: 0
+                  milliseconds: 0
+              - action: switch.turn_off
+                metadata: {}
+                data: {}
+                target:
+                  entity_id:
+                    - switch.ensuite_fan
+                    - switch.ensuite_fan_boost
+            else:
+              - action: switch.turn_off
+                metadata: {}
+                data: {}
+                target:
+                  entity_id:
+                    - switch.ensuite_fan
+                    - switch.ensuite_fan_boost
+        alias: Off at night
+      - conditions:
+          - condition: trigger
+            id:
+              - light-toggled-on
+              - fan-switch-toggled-on
+        sequence:
+          - if:
+              - condition: time
+                after: "05:45:00"
+                before: "21:00:00"
+              - condition: state
+                entity_id: light.ensuite
+                state:
+                  - "on"
+              - condition: state
+                entity_id: switch.ensuite_fan
+                state:
+                  - "off"
+            then:
+              - action: switch.turn_on
+                metadata: {}
+                data: {}
+                target:
+                  entity_id: switch.ensuite_fan
+      - conditions:
+          - condition: trigger
+            id:
+              - light-toggled-off
+              - fan-switch-toggled-off
+          - condition: time
+            after: "05:45:00"
+            before: "21:00:00"
+        sequence:
+          - if:
+              - condition: trigger
+                id:
+                  - light-toggled-off
+            then:
+              - delay:
+                  hours: 0
+                  minutes: 30
+                  seconds: 0
+                  milliseconds: 0
+              - action: switch.turn_off
+                metadata: {}
+                data: {}
+                target:
+                  entity_id: switch.ensuite_fan
+            else:
+              - delay:
+                  hours: 1
+                  minutes: 0
+                  seconds: 0
+                  milliseconds: 0
+              - action: switch.turn_off
+                metadata: {}
+                data: {}
+                target:
+                  entity_id: switch.ensuite_fan
+mode: restart

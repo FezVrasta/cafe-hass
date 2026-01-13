@@ -1117,7 +1117,7 @@ export class YamlParser {
     actions.forEach((action, index) => {
       if (!action || typeof action !== 'object') {
         // Unknown action type - create unknown node
-        warnings.push(`Unknown action type at index ${index}`);
+        warnings.push(`Unknown action type (${JSON.stringify(action)}) at index ${index}`);
         const nodeId = getNextNodeId('unknown');
         nodes.push({
           id: nodeId,
@@ -1297,7 +1297,7 @@ export class YamlParser {
         }
       } else {
         // Unknown action type - create unknown node
-        warnings.push(`Unknown action type at index ${index}`);
+        warnings.push(`Unknown action type (${JSON.stringify(action)}) at index ${index}`);
         const nodeId = getNextNodeId('unknown');
         nodes.push({
           id: nodeId,

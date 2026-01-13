@@ -43,7 +43,7 @@ describe('YamlParser', () => {
   it('parses 09-templates.yaml correctly', async () => {
     const yamlPath = path.resolve(
       __dirname,
-      '../../../frontend/src/lib/__tests__/fixtures/09-templates.yaml'
+      '../../../../__tests__/yaml-automation-fixtures/09-templates.yaml'
     );
     const yamlString = readFileSync(yamlPath, 'utf8');
     const result = await yamlParser.parse(yamlString);

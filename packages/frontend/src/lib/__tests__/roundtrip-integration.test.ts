@@ -8,7 +8,7 @@ import { useFlowStore } from '@/store/flow-store';
 import { generateUUID } from '../utils';
 
 describe('Roundtrip Import/Export Tests', () => {
-  const fixturesDir = join(__dirname, 'fixtures');
+  const fixturesDir = join(__dirname, '../../../../../__tests__/yaml-automation-fixtures');
 
   // Get all YAML files from fixtures directory
   const yamlFiles = readdirSync(fixturesDir)
