@@ -37,13 +37,13 @@ export function ServiceDataFields({
   }
 
   return (
-    <div className="mt-3 border-t pt-3">
+    <div className="mt-3 flex flex-col gap-3 border-t pt-3">
       <h4 className="mb-3 font-semibold text-muted-foreground text-xs">Service Data</h4>
       {Object.entries(serviceFields).map(([fieldName, field]) => {
         const selector = field.selector || {};
         const selectorType = Object.keys(selector)[0];
         const selectorConfig = selector[selectorType] || {};
-        const currentValue = currentData[fieldName];
+        const currentValue = currentData[fieldName] as string | number | boolean | undefined;
 
         // Use field.name if available, otherwise format fieldName as label
         const fieldLabel =
@@ -87,14 +87,14 @@ export function ServiceDataFields({
               description={field.description}
             >
               <Select
-                value={(currentValue as string) ?? ''}
-                onValueChange={(value) => onChange(fieldName, value)}
+                value={String(currentValue === '' ? '__NONE__' : (currentValue ?? '__NONE__'))}
+                onValueChange={(value) => onChange(fieldName, value === '__NONE__' ? '' : value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="None" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None</SelectItem>
+                  <SelectItem value="__NONE__">None</SelectItem>
                   {config.options?.map((opt) => (
                     <SelectItem key={opt} value={opt}>
                       {opt}
