@@ -18,6 +18,7 @@ import { ActionNode, ConditionNode, DelayNode, TriggerNode, WaitNode } from '@/c
 import { useCopyPaste } from '@/hooks/useCopyPaste';
 import { useDarkMode } from '@/hooks/useDarkMode';
 import { useFlowStore } from '@/store/flow-store';
+import { isMacOS } from '@/utils/useAgentPlatform';
 
 const nodeTypes: NodeTypes = {
   trigger: TriggerNode,
@@ -193,6 +194,7 @@ export function FlowCanvas() {
         onSelectionChange={onSelectionChange}
         onDragOver={onDragOver}
         onDrop={onDrop}
+        panOnScroll={isMacOS()}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         defaultEdgeOptions={{
