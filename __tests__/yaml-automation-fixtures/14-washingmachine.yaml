@@ -1,0 +1,70 @@
+alias: Verzend bericht indien wasmachine gereed
+description: Stuur melding zodra wasmachine gereed is
+triggers:
+  - entity_id:
+      - sensor.noord_wasplaats_vermogen_wasmachine
+    above: 10
+    for:
+      hours: 0
+      minutes: 2
+      seconds: 0
+    id: machine_on
+    trigger: numeric_state
+  - entity_id:
+      - sensor.noord_wasplaats_vermogen_wasmachine
+    below: 2
+    for:
+      hours: 0
+      minutes: 5
+      seconds: 0
+    id: machine_off
+    trigger: numeric_state
+conditions: []
+actions:
+  - choose:
+      - conditions:
+          - condition: trigger
+            id: machine_on
+          - condition: state
+            entity_id: input_boolean.wasmachine_status
+            state: "off"
+        sequence:
+          - target:
+              entity_id: input_boolean.wasmachine_status
+            action: input_boolean.turn_on
+            data: {}
+          - action: input_number.set_value
+            data:
+              value: "{{ states('sensor.noord_wasplaats_energie_wasmachine') }}"
+            target:
+              entity_id: input_number.wasmachine_energie_start_cyclus
+      - conditions:
+          - condition: trigger
+            id: machine_off
+          - condition: state
+            entity_id: input_boolean.wasmachine_status
+            state: "on"
+        sequence:
+          - target:
+              entity_id: input_boolean.wasmachine_status
+            action: input_boolean.turn_off
+            data: {}
+          - variables:
+              verbruik_cyclus: >-
+                {{ (((states('sensor.noord_wasplaats_energie_wasmachine') |
+                float) - (states('input_number.wasmachine_energie_start_cyclus')
+                | float)) * 1000) | int }}
+          - action: script.notify_by_label
+            data:
+              labels:
+                - gsm_bart
+                - gsm_cindy
+              title: Wasmachine gereed
+              message: Cyclus heeft ({{ verbruik_cyclus | int }} Wh verbruikt
+          - action: tts.cloud_say
+            data:
+              entity_id:
+                - media_player.kitchen_speaker
+                - media_player.zithoek_speaker
+              message: Het wasmachine is gereed en moet leeg gemaakt worden
+mode: single

@@ -8,7 +8,7 @@ describe('YamlParser Strategy Selection', () => {
   it('should recommend "native" strategy for automations with multiple triggers pointing to the same condition', async () => {
     const yamlPath = path.resolve(
       __dirname,
-      '../../../frontend/src/lib/__tests__/fixtures/10-multiple-entity-ids.yaml'
+      '../../../../__tests__/yaml-automation-fixtures/10-multiple-entity-ids.yaml'
     );
     const yamlString = await fs.readFile(yamlPath, 'utf-8');
 
