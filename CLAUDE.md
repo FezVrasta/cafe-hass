@@ -131,13 +131,23 @@ To cut a new release, follow these steps:
    - Example:
      ```bash
      git tag v0.1.9
-     git push origin v0.1.9
      ```
 
-3. **Create a GitHub release**
+3. **Push changes to remote**
+   - Push your commits and tags to the remote repository.
+   - Example:
+     ```bash
+     git push origin main
+     git push origin --tags
+     ```
+
+4. **Create a GitHub release**
    - Use the GitHub CLI (`gh`) to create a release.
    - **Include the changelog in the GitHub release notes. Do NOT create a literal CHANGELOG.md file.**
-   - Read the git commit history since the last release to compile the changelog. Focus on user-facing changes.
+   - Read the git commit history since the last release to compile the changelog. Focus on user-facing changes. Make sure to include:
+     - New features
+     - Bug fixes
+     - Breaking changes
    - Example:
      ```bash
      gh release create v0.1.9 --title "C.A.F.E. v0.1.9" --notes "<release notes>"
