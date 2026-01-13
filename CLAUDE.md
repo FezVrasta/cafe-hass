@@ -109,6 +109,7 @@ The codebase should compile with zero TypeScript errors and maintain type safety
 - **Copy-pasting code**: Avoid duplicating blocks of code. If you find yourself copying and pasting, it's a sign that a reusable function or component is needed.
 - **Redundant Type Definitions**: Do not redefine types or interfaces that already exist in `@cafe/shared` or can be derived from existing schemas.
 
+
 # Cutting a New Release
 
 To cut a new release, follow these steps:
@@ -135,6 +136,7 @@ To cut a new release, follow these steps:
 
 3. **Create a GitHub release**
    - Use the GitHub CLI (`gh`) to create a release.
+   - **Include the changelog in the GitHub release notes. Do NOT create a literal CHANGELOG.md file.**
    - Example:
      ```bash
      gh release create v0.1.9 --title "C.A.F.E. v0.1.9" --notes "<release notes>"
