@@ -137,12 +137,13 @@ To cut a new release, follow these steps:
 3. **Create a GitHub release**
    - Use the GitHub CLI (`gh`) to create a release.
    - **Include the changelog in the GitHub release notes. Do NOT create a literal CHANGELOG.md file.**
+   - Read the git commit history since the last release to compile the changelog. Focus on user-facing changes.
    - Example:
      ```bash
      gh release create v0.1.9 --title "C.A.F.E. v0.1.9" --notes "<release notes>"
      ```
 
 4. **Verify release on GitHub**
-   - Check the Releases page to confirm the new release is published and marked as pre-release.
+   - Check the Releases page to confirm the new release is published.
 
 **Note:** Do not cut a release without explicit user approval. Always confirm before pushing tags or creating releases.
