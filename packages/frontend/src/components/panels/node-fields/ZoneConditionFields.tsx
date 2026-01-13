@@ -2,7 +2,7 @@ import type { FlowNode } from '@cafe/shared';
 import { FormField } from '@/components/forms/FormField';
 import { EntitySelector } from '@/components/ui/EntitySelector';
 import { Input } from '@/components/ui/input';
-import type { HassEntity } from '@/hooks/useHass';
+import type { HassEntity } from '@/types/hass';
 import { getNodeDataString } from '@/utils/nodeData';
 
 interface ZoneConditionFieldsProps {

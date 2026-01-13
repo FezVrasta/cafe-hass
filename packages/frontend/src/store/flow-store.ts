@@ -1,4 +1,5 @@
 import type { FlowEdge, FlowGraph, FlowNode } from '@cafe/shared';
+import { FlowTranspiler } from '@cafe/transpiler';
 import {
   addEdge,
   applyEdgeChanges,
@@ -11,7 +12,9 @@ import {
 } from '@xyflow/react';
 import { create } from 'zustand';
 import type { AutomationTrace } from '@/lib/ha-api';
+import { getHomeAssistantAPI } from '@/lib/ha-api';
 import { generateUUID } from '@/lib/utils';
+import type { HomeAssistant } from '@/types/hass';
 
 /**
  * Node data types for React Flow
@@ -155,8 +158,8 @@ interface FlowState {
   setSaving: (saving: boolean) => void;
   setSaved: () => void;
   setUnsavedChanges: (hasChanges: boolean) => void;
-  saveAutomation: () => Promise<string>;
-  updateAutomation: () => Promise<void>;
+  saveAutomation: (hassApi: HomeAssistant) => Promise<string>;
+  updateAutomation: (hassApi: HomeAssistant) => Promise<void>;
 
   // Simulation
   startSimulation: () => void;
@@ -266,19 +269,9 @@ export const useFlowStore = create<FlowState>((set, get) => ({
   setSaved: () => set({ lastSaved: new Date(), hasUnsavedChanges: false }),
   setUnsavedChanges: (hasChanges) => set({ hasUnsavedChanges: hasChanges }),
 
-  saveAutomation: async () => {
+  saveAutomation: async (hassApi: HomeAssistant) => {
     const state = get();
-
-    // Get the current hass instance using the global accessor
-    const { getGlobalHass } = await import('@/hooks/useHass');
-    const { getHomeAssistantAPI } = await import('@/lib/ha-api');
-    const hass = getGlobalHass();
-
-    if (!hass) {
-      throw new Error('No Home Assistant connection available');
-    }
-
-    const api = getHomeAssistantAPI(hass);
+    const api = getHomeAssistantAPI(hassApi);
 
     set({ isSaving: true });
 
@@ -309,8 +302,6 @@ export const useFlowStore = create<FlowState>((set, get) => ({
         );
       }
 
-      // Import transpiler and convert to automation config
-      const { FlowTranspiler } = await import('@cafe/transpiler');
       const transpiler = new FlowTranspiler();
 
       // Validate first
@@ -369,10 +360,9 @@ export const useFlowStore = create<FlowState>((set, get) => ({
     }
   },
 
-  updateAutomation: async () => {
+  updateAutomation: async (hassApi: HomeAssistant) => {
     const state = get();
-    const { getHomeAssistantAPI } = await import('@/lib/ha-api');
-    const api = getHomeAssistantAPI();
+    const api = getHomeAssistantAPI(hassApi);
 
     if (!state.automationId) {
       throw new Error('No automation ID set. Use saveAutomation() for new automations.');
@@ -409,8 +399,6 @@ export const useFlowStore = create<FlowState>((set, get) => ({
         );
       }
 
-      // Import transpiler and convert to automation config
-      const { FlowTranspiler } = await import('@cafe/transpiler');
       const transpiler = new FlowTranspiler();
 
       // Validate first

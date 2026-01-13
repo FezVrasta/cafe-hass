@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useHass } from '@/hooks/useHass';
+import { useHass } from '@/contexts/HassContext';
 
 interface Device {
   id: string;

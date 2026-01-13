@@ -1,5 +1,5 @@
 import type { FlowNode } from '@cafe/shared';
-import type { HassEntity } from '@/hooks/useHass';
+import type { HassEntity } from '@/types/hass';
 import { ActionFields } from './node-fields/ActionFields';
 import { ConditionFields } from './node-fields/ConditionFields';
 import { DelayFields } from './node-fields/DelayFields';

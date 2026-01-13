@@ -4,7 +4,9 @@ import './index.css';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import { HassProvider } from './contexts/HassContext';
 import { logger } from './lib/logger';
+import type { HomeAssistant } from './types/hass';
 
 // Define proper types for Home Assistant panel integration
 interface HassRoute {
@@ -22,22 +24,10 @@ interface HassPanel {
   [key: string]: unknown;
 }
 
-// Import HassInstance type from our API module
-type HassInstance = {
-  states: Record<string, { entity_id: string; state: string; attributes: Record<string, unknown> }>;
-  services: Record<string, Record<string, unknown>>;
-  callService?: (domain: string, service: string, data?: Record<string, unknown>) => Promise<void>;
-  connection?: unknown;
-  callApi?: (method: string, path: string, data?: Record<string, unknown>) => Promise<unknown>;
-  auth?: unknown;
-  user?: unknown;
-  [key: string]: unknown;
-};
-
 // Create a web component for Home Assistant panel integration
 class CafePanel extends HTMLElement {
   private root: ReactDOM.Root | null = null;
-  private _hass: HassInstance | null = null;
+  private _hass: HomeAssistant | null = null;
   private _narrow: boolean = false;
   private _route: HassRoute | null = null;
   private _panel: HassPanel | null = null;
@@ -56,7 +46,7 @@ class CafePanel extends HTMLElement {
     if (value === null || value === undefined) {
       this._hass = null;
     } else if (typeof value === 'object' && value !== null && 'states' in value) {
-      this._hass = value as HassInstance;
+      this._hass = value as HomeAssistant;
     } else {
       logger.warn('Invalid hass object provided, ignoring');
       return;
@@ -67,7 +57,6 @@ class CafePanel extends HTMLElement {
       statesCount: this._hass?.states ? Object.keys(this._hass.states).length : 0,
       servicesCount: this._hass?.services ? Object.keys(this._hass.services).length : 0,
       hasConnection: !!this._hass?.connection,
-      hasAuth: !!this._hass?.auth,
     });
 
     if (this.root) this.render();
@@ -164,7 +153,9 @@ class CafePanel extends HTMLElement {
 
       this.root.render(
         <React.StrictMode>
-          <App hass={this._hass} narrow={this._narrow} route={this._route} panel={this._panel} />
+          <HassProvider externalHass={this._hass ?? undefined}>
+            <App />
+          </HassProvider>
         </React.StrictMode>
       );
     }
@@ -188,7 +179,9 @@ if (typeof document !== 'undefined') {
     try {
       ReactDOM.createRoot(rootElement).render(
         <React.StrictMode>
-          <App />
+          <HassProvider forceMode="remote">
+            <App />
+          </HassProvider>
         </React.StrictMode>
       );
     } catch (error) {

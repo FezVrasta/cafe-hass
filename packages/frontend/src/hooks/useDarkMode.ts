@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { logger } from '@/lib/logger';
-import { useHass } from './useHass';
+import { useHass } from '../contexts/HassContext';
 
 /**
  * Hook to detect and sync with Home Assistant's dark mode

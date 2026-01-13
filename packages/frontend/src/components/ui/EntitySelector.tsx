@@ -11,8 +11,8 @@ import {
 } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { usePortalContainer } from '@/contexts/PortalContainer';
-import type { HassEntity } from '@/hooks/useHass';
 import { cn } from '@/lib/utils';
+import type { HassEntity } from '@/types/hass';
 
 interface EntitySelectorProps {
   value: string;

@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { useHass } from './useHass';
+import { useHass } from '../contexts/HassContext';
 
 /**
  * Device trigger definition from HA API

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { z } from 'zod';
-import { useHass } from '@/hooks/useHass';
+import { useHass } from '@/contexts/HassContext';
 
 // Zod schema for translation API response
 const TranslationResponseSchema = z.object({

@@ -10,7 +10,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { getTriggerFields } from '@/config/triggerFields';
-import type { HassEntity } from '@/hooks/useHass';
+import type { HassEntity } from '@/types/hass';
 import { getNodeDataString } from '@/utils/nodeData';
 import { DeviceTriggerFields } from './DeviceTriggerFields';
 

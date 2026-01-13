@@ -2,8 +2,8 @@ import type { FlowNode } from '@cafe/shared';
 import { FormField } from '@/components/forms/FormField';
 import { Combobox } from '@/components/ui/Combobox';
 import { MultiEntitySelector } from '@/components/ui/MultiEntitySelector';
-import type { HassEntity } from '@/hooks/useHass';
-import { useHass } from '@/hooks/useHass';
+import { useHass } from '@/contexts/HassContext';
+import type { HassEntity } from '@/types/hass';
 import { getNodeDataObject, getNodeDataString } from '@/utils/nodeData';
 import { ServiceDataFields } from './ServiceDataFields';
 

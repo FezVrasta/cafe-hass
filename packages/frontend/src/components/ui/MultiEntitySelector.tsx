@@ -1,6 +1,6 @@
 import { XIcon } from 'lucide-react';
-import type { HassEntity } from '@/hooks/useHass';
 import { cn } from '@/lib/utils';
+import type { HassEntity } from '@/types/hass';
 import { EntitySelector } from './EntitySelector';
 
 interface MultiEntitySelectorProps {
