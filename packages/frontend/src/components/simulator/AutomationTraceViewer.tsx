@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useHass } from '@/hooks/useHass';
+import { useHass } from '@/contexts/HassContext';
 import { getHomeAssistantAPI, type TraceListItem } from '@/lib/ha-api';
 import { logger } from '@/lib/logger';
 import { cn } from '@/lib/utils';

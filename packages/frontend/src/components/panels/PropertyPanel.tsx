@@ -5,9 +5,9 @@ import { FormField } from '@/components/forms/FormField';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { getHandledProperties } from '@/config/handledProperties';
-import type { HassEntity } from '@/hooks/useHass';
-import { useHass } from '@/hooks/useHass';
+import { useHass } from '@/contexts/HassContext';
 import { useFlowStore } from '@/store/flow-store';
+import type { HassEntity } from '@/types/hass';
 import { NodeFields } from './NodeFields';
 import { PropertyEditor } from './PropertyEditor';
 
@@ -31,6 +31,7 @@ export function PropertyPanel() {
         attributes: state.attributes || {},
         last_changed: state.last_changed || '',
         last_updated: state.last_updated || '',
+        context: state.context,
       }));
     }
     return entities;

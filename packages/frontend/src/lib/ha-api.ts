@@ -1,60 +1,5 @@
 import type { AutomationConfig } from '@cafe/transpiler';
-
-// Type guard for Home Assistant objects that support callWS
-interface HassWithCallWS {
-  callWS: (msg: Record<string, unknown>) => Promise<unknown>;
-}
-
-function hasCallWS(hass: unknown): hass is HassWithCallWS {
-  return (
-    typeof hass === 'object' &&
-    hass !== null &&
-    'callWS' in hass &&
-    typeof (hass as { callWS?: unknown }).callWS === 'function'
-  );
-}
-
-import type { Connection } from 'home-assistant-js-websocket';
-
-export interface HassEntity {
-  entity_id: string;
-  state: string;
-  attributes: Record<string, unknown>;
-  last_changed?: string;
-  last_updated?: string;
-}
-
-export interface HassConnection {
-  sendMessagePromise: (message: Record<string, unknown>) => Promise<unknown>;
-}
-
-// Type union to handle both HA API types
-type HassInstance =
-  | HassConfig
-  | {
-      states: Record<string, HassEntity>;
-      services: Record<string, Record<string, unknown>>;
-      callService: (
-        domain: string,
-        service: string,
-        data?: Record<string, unknown>
-      ) => Promise<void>;
-      connection?: Connection | null;
-      callApi?: (method: string, path: string, data?: Record<string, unknown>) => Promise<unknown>;
-    };
-
-export interface HassConfig {
-  entities?: Record<string, HassEntity>;
-  states?: Record<string, HassEntity>;
-  callApi?: (method: string, path: string, parameters?: Record<string, unknown>) => Promise<void>;
-  callService?: (
-    domain: string,
-    service: string,
-    serviceData?: Record<string, unknown>,
-    target?: Record<string, unknown>
-  ) => Promise<void>;
-  connection?: HassConnection;
-}
+import type { Connection, HassEntity, HomeAssistant } from '@/types/hass';
 
 export interface CafeMetadata {
   version: number;
@@ -117,14 +62,13 @@ export interface TraceListItem {
  * Works in both custom panel mode (with hass object) and standalone mode
  */
 export class HomeAssistantAPI {
-  public hass: HassInstance | null = null;
-  private connection: HassConnection | Connection | null = null;
+  public hass: HomeAssistant | null = null;
+  private connection: Connection | null = null;
   private baseUrl?: string;
   private token?: string;
 
-  constructor(hass?: HassInstance, config?: { url?: string; token?: string }) {
+  constructor(hass?: HomeAssistant, config?: { url?: string; token?: string }) {
     this.hass = hass || null;
-    this.connection = hass?.connection || null;
 
     // Store base URL and token for REST API calls
     if (config?.url && config?.token) {
@@ -139,9 +83,8 @@ export class HomeAssistantAPI {
   /**
    * Update the hass reference (for when it changes)
    */
-  updateHass(hass: HassInstance | null, config?: { url?: string; token?: string }) {
+  updateHass(hass: HomeAssistant | null, config?: { url?: string; token?: string }) {
     this.hass = hass;
-    this.connection = hass?.connection || null;
 
     // Update base URL and token if provided
     if (config?.url && config?.token) {
@@ -174,15 +117,7 @@ export class HomeAssistantAPI {
   getStates(): Record<string, HassEntity> | null {
     if (!this.hass) return null;
 
-    // Handle both HassConfig and HassAPI types
-    if ('states' in this.hass && this.hass.states) {
-      return this.hass.states;
-    }
-    if ('entities' in this.hass && this.hass.entities) {
-      return this.hass.entities;
-    }
-
-    return null;
+    return this.hass.states;
   }
 
   /**
@@ -245,7 +180,11 @@ export class HomeAssistantAPI {
   /**
    * Call Home Assistant REST API
    */
-  async callAPI(method: string, path: string, data?: Record<string, unknown>): Promise<unknown> {
+  async callAPI(
+    method: 'GET' | 'POST' | 'PUT' | 'DELETE',
+    path: string,
+    data?: Record<string, unknown>
+  ): Promise<unknown> {
     if (this.hass?.callApi) {
       // Use built-in API calling (custom panel mode)
       return await this.hass.callApi(method, path, data);
@@ -262,7 +201,7 @@ export class HomeAssistantAPI {
    */
   private async fetchRestAPI(
     path: string,
-    method = 'GET',
+    method: 'GET' | 'POST' | 'PUT' | 'DELETE' = 'GET',
     body?: Record<string, unknown>
   ): Promise<unknown> {
     if (this.hass?.callApi) {
@@ -306,9 +245,9 @@ export class HomeAssistantAPI {
   async getAutomationConfigs(): Promise<AutomationConfig[]> {
     try {
       // First try websocket approach
-      if (hasCallWS(this.hass)) {
+      if (this.connection) {
         try {
-          const result = await this.hass.callWS({
+          const result = await this.sendMessage({
             type: 'config/automation/list',
           });
           if (Array.isArray(result)) {
@@ -342,9 +281,9 @@ export class HomeAssistantAPI {
   async getAutomationConfig(automationId: string): Promise<AutomationConfig | null> {
     try {
       // Try websocket approach first
-      if (hasCallWS(this.hass)) {
+      if (this.connection) {
         try {
-          const config = await this.hass.callWS({
+          const config = await this.sendMessage({
             type: 'config/automation/get',
             automation_id: automationId,
           });
@@ -487,16 +426,16 @@ export class HomeAssistantAPI {
         }
       }
 
-      if (hasCallWS(this.hass)) {
+      if (this.connection) {
         try {
-          await this.hass.callWS({
+          await this.sendMessage({
             type: 'call_service',
             domain: 'automation',
             service: 'reload',
           });
           return automationId;
         } catch (wsError) {
-          console.error('C.A.F.E.: callWS failed:', wsError);
+          console.error('C.A.F.E.: sendMessage failed:', wsError);
         }
       }
 
@@ -738,7 +677,7 @@ let haAPI: HomeAssistantAPI | null = null;
  * Get the global Home Assistant API instance
  */
 export function getHomeAssistantAPI(
-  hass?: HassInstance,
+  hass?: HomeAssistant,
   config?: { url?: string; token?: string }
 ): HomeAssistantAPI {
   if (!haAPI) {

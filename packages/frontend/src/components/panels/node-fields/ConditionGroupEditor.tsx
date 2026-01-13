@@ -12,9 +12,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { type HassEntity, useHass } from '@/hooks/useHass';
+import { useHass } from '@/contexts/HassContext';
 import { cn } from '@/lib/utils';
 import type { ConditionNodeData } from '@/store/flow-store';
+import type { HassEntity } from '@/types/hass';
 import { Label } from '../../ui/label';
 
 interface ConditionGroupEditorProps {

@@ -12,6 +12,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { useHass } from '@/contexts/HassContext';
 import { getHomeAssistantAPI } from '@/lib/ha-api';
 import { useFlowStore } from '@/store/flow-store';
 
@@ -33,12 +34,13 @@ export function AutomationSaveDialog({ isOpen, onClose, onSaved }: AutomationSav
     updateAutomation,
   } = useFlowStore();
 
+  const { hass } = useHass();
+
   const [localDescription, setLocalDescription] = useState(flowDescription);
   const [error, setError] = useState<string | null>(null);
   const [suggestedName, setSuggestedName] = useState<string | null>(null);
 
   const isUpdate = !!automationId;
-  const api = getHomeAssistantAPI();
 
   // Sync local description with store when dialog opens
   useEffect(() => {
@@ -57,9 +59,9 @@ export function AutomationSaveDialog({ isOpen, onClose, onSaved }: AutomationSav
     }
 
     try {
-      const exists = await api.automationExistsByAlias(name);
+      const exists = await getHomeAssistantAPI(hass).automationExistsByAlias(name);
       if (exists && !isUpdate) {
-        const uniqueName = await api.getUniqueAutomationAlias(name);
+        const uniqueName = await getHomeAssistantAPI(hass).getUniqueAutomationAlias(name);
         setSuggestedName(uniqueName);
       } else {
         setSuggestedName(null);
@@ -71,6 +73,11 @@ export function AutomationSaveDialog({ isOpen, onClose, onSaved }: AutomationSav
   };
 
   const handleSave = async () => {
+    if (!hass) {
+      setError('Home Assistant is not connected');
+      return;
+    }
+
     if (!flowName.trim()) {
       setError('Automation name is required');
       return;
@@ -84,10 +91,10 @@ export function AutomationSaveDialog({ isOpen, onClose, onSaved }: AutomationSav
 
       let resultId: string;
       if (isUpdate) {
-        await updateAutomation();
+        await updateAutomation(hass);
         resultId = automationId || '';
       } else {
-        resultId = await saveAutomation();
+        resultId = await saveAutomation(hass);
       }
 
       onSaved?.(resultId);

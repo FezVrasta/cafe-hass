@@ -8,8 +8,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type { HassEntity } from '@/hooks/useHass';
 import type { ConditionNodeData } from '@/store/flow-store';
+import type { HassEntity } from '@/types/hass';
 import { getNodeDataString } from '@/utils/nodeData';
 import { DeviceConditionFields } from './DeviceConditionFields';
 import { NumericStateConditionFields } from './NumericStateConditionFields';

@@ -13,8 +13,8 @@ import {
 import type { DeviceTrigger, TriggerField } from '@/hooks/useDeviceAutomation';
 import { useDeviceAutomation } from '@/hooks/useDeviceAutomation';
 import { useDeviceRegistry } from '@/hooks/useDeviceRegistry';
-import type { HassEntity } from '@/hooks/useHass';
 import { useTranslations } from '@/hooks/useTranslations';
+import type { HassEntity } from '@/types/hass';
 import { getNodeDataString } from '@/utils/nodeData';
 
 interface DeviceTriggerFieldsProps {

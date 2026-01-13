@@ -13,7 +13,7 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import type { FieldConfig } from '@/config/triggerFields';
 import type { TriggerField } from '@/hooks/useDeviceAutomation';
-import type { HassEntity } from '@/hooks/useHass';
+import type { HassEntity } from '@/types/hass';
 
 interface DynamicFieldRendererProps {
   /**
