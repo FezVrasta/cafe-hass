@@ -221,7 +221,27 @@ export function FlowCanvas() {
           color={isDarkMode ? '#475569' : '#cbd5e1'}
         />
         <Controls />
-        <MiniMap nodeStrokeWidth={3} zoomable pannable />
+        <MiniMap
+          nodeStrokeWidth={3}
+          zoomable
+          pannable
+          nodeClassName={(node) => {
+            switch (node.type) {
+              case 'trigger':
+                return 'fill-amber-50 stroke-amber-400';
+              case 'condition':
+                return 'fill-blue-50 stroke-blue-400';
+              case 'action':
+                return 'fill-green-50 stroke-green-400';
+              case 'delay':
+                return 'fill-purple-50 stroke-purple-400';
+              case 'wait':
+                return 'fill-orange-50 stroke-orange-400';
+              default:
+                return 'fill-slate-100 stroke-slate-400';
+            }
+          }}
+        />
 
         {isSimulating && (
           <Panel

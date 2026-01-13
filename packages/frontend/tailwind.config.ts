@@ -39,19 +39,6 @@ const config: Config = {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
         },
-        // Node type colors
-        trigger: {
-          DEFAULT: 'hsl(var(--trigger))',
-          foreground: 'hsl(var(--trigger-foreground))',
-        },
-        condition: {
-          DEFAULT: 'hsl(var(--condition))',
-          foreground: 'hsl(var(--condition-foreground))',
-        },
-        action: {
-          DEFAULT: 'hsl(var(--action))',
-          foreground: 'hsl(var(--action-foreground))',
-        },
       },
       borderRadius: {
         lg: 'var(--radius)',
