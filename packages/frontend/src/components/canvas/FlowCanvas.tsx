@@ -51,8 +51,8 @@ export function FlowCanvas() {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const { screenToFlowPosition, setViewport } = useReactFlow();
   const [rfInstance, setRfInstance] = useState<ReactFlowInstance | null>(null);
-  // Enable copy/paste support
-  useCopyPaste(rfInstance);
+  // Enable copy/paste support only inside the canvas
+  useCopyPaste(rfInstance, reactFlowWrapper);
 
   // Set initial zoom level
   useEffect(() => {

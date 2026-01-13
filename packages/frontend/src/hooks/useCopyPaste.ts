@@ -1,4 +1,8 @@
-import type { Node, ReactFlowInstance } from '@xyflow/react';
+import type { Node as FlowNode, ReactFlowInstance } from '@xyflow/react';
+
+type DOMNode = globalThis.Node;
+
+import type { RefObject } from 'react';
 import { useCallback, useEffect } from 'react';
 
 function isEditableElement(el: Element | null): boolean {
@@ -9,21 +13,34 @@ function isEditableElement(el: Element | null): boolean {
   return false;
 }
 
+function isInsideCanvas(target: EventTarget | null, canvasRef: RefObject<HTMLElement>): boolean {
+  if (!target || !canvasRef.current) return false;
+  // Safely cast target to DOM Node if possible
+  const node: DOMNode | null = target instanceof Node ? target : null;
+  return node ? canvasRef.current.contains(node) : false;
+}
+
 /**
  * Hook to support copy and paste of nodes in a ReactFlow instance.
- * Adds event listeners for 'copy' and 'paste' on the window.
+ * Only captures events when the event target is inside the Flow Canvas element.
+ * @param rfInstance The ReactFlow instance
+ * @param canvasRef Ref to the Flow Canvas element
  */
-export function useCopyPaste(rfInstance: ReactFlowInstance | null) {
+export function useCopyPaste(
+  rfInstance: ReactFlowInstance | null,
+  canvasRef: RefObject<HTMLElement>
+) {
   const onCopyCapture = useCallback(
     (event: ClipboardEvent) => {
       if (!rfInstance) return;
       const active = document.activeElement;
       if (isEditableElement(active)) return; // allow normal copy in fields
+      if (!isInsideCanvas(event.target, canvasRef)) return;
       event.preventDefault();
       const nodes = JSON.stringify(rfInstance.getNodes().filter((n) => n.selected));
       event.clipboardData?.setData('flowchart:nodes', nodes);
     },
-    [rfInstance]
+    [rfInstance, canvasRef]
   );
 
   const onPasteCapture = useCallback(
@@ -31,9 +48,10 @@ export function useCopyPaste(rfInstance: ReactFlowInstance | null) {
       if (!rfInstance) return;
       const active = document.activeElement;
       if (isEditableElement(active)) return; // allow normal paste in fields
+      if (!isInsideCanvas(event.target, canvasRef)) return;
       event.preventDefault();
       const nodes = JSON.parse(event.clipboardData?.getData('flowchart:nodes') || '[]') as
-        | Node[]
+        | FlowNode[]
         | undefined;
       if (nodes && nodes.length > 0) {
         const randomId = () => Math.random().toString(16).slice(2);
@@ -48,7 +66,7 @@ export function useCopyPaste(rfInstance: ReactFlowInstance | null) {
         ]);
       }
     },
-    [rfInstance]
+    [rfInstance, canvasRef]
   );
 
   useEffect(() => {
