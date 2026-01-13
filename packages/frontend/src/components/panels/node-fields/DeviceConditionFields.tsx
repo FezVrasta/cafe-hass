@@ -1,5 +1,6 @@
 import type { FlowNode } from '@cafe/shared';
 import { FormField } from '@/components/forms/FormField';
+import { DeviceSelector } from '@/components/ui/DeviceSelector';
 import { Input } from '@/components/ui/input';
 import { getNodeDataString } from '@/utils/nodeData';
 
@@ -19,14 +20,13 @@ export function DeviceConditionFields({ node, onChange }: DeviceConditionFieldsP
 
   return (
     <>
-      <FormField label="Device ID" required>
-        <Input
-          type="text"
-          value={deviceId}
-          onChange={(e) => onChange('device_id', e.target.value)}
-          placeholder="Device ID"
-        />
-      </FormField>
+      <DeviceSelector
+        value={deviceId}
+        onChange={(val) => onChange('device_id', val)}
+        label="Device"
+        required
+        placeholder="Select device..."
+      />
 
       <FormField label="Domain" required description="Device integration domain">
         <Input

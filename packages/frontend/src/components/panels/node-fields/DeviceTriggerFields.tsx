@@ -1,8 +1,8 @@
 import type { FlowNode } from '@cafe/shared';
 import { useEffect, useState } from 'react';
 import { FormField } from '@/components/forms/FormField';
+import { DeviceSelector } from '@/components/ui/DeviceSelector';
 import { DynamicFieldRenderer } from '@/components/ui/DynamicFieldRenderer';
-import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -12,7 +12,6 @@ import {
 } from '@/components/ui/select';
 import type { DeviceTrigger, TriggerField } from '@/hooks/useDeviceAutomation';
 import { useDeviceAutomation } from '@/hooks/useDeviceAutomation';
-import { useDeviceRegistry } from '@/hooks/useDeviceRegistry';
 import { useTranslations } from '@/hooks/useTranslations';
 import type { HassEntity } from '@/types/hass';
 import { getNodeDataString } from '@/utils/nodeData';
@@ -29,7 +28,7 @@ interface DeviceTriggerFieldsProps {
  */
 export function DeviceTriggerFields({ node, onChange, entities }: DeviceTriggerFieldsProps) {
   const { getDeviceTriggers, getTriggerCapabilities } = useDeviceAutomation();
-  const { devices, isLoading: loadingDevices } = useDeviceRegistry();
+  // DeviceSelector handles device registry internally
   const { translations } = useTranslations();
 
   const [availableDeviceTriggers, setAvailableDeviceTriggers] = useState<DeviceTrigger[]>([]);
@@ -88,36 +87,13 @@ export function DeviceTriggerFields({ node, onChange, entities }: DeviceTriggerF
   return (
     <>
       {/* Device selector */}
-      <FormField label="Device" required>
-        {loadingDevices ? (
-          <div className="text-muted-foreground text-sm">Loading devices...</div>
-        ) : devices.length > 0 ? (
-          <Select value={deviceId} onValueChange={(value) => onChange('device_id', value)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select device..." />
-            </SelectTrigger>
-            <SelectContent>
-              {devices.map((device) => (
-                <SelectItem key={device.id} value={device.id}>
-                  {device.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        ) : (
-          <Input
-            type="text"
-            value={deviceId}
-            onChange={(e) => onChange('device_id', e.target.value)}
-            placeholder="Enter device ID manually"
-          />
-        )}
-        {!loadingDevices && devices.length === 0 && (
-          <p className="text-muted-foreground text-xs">
-            No devices found. Enter device ID manually or check your Home Assistant connection.
-          </p>
-        )}
-      </FormField>
+      <DeviceSelector
+        value={deviceId}
+        onChange={(val) => onChange('device_id', val)}
+        label="Device"
+        required
+        placeholder="Select device..."
+      />
 
       {/* Trigger type selector */}
       {deviceId && availableDeviceTriggers.length > 0 && (
