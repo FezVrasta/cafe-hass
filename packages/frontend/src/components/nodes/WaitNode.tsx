@@ -4,6 +4,7 @@ import { memo } from 'react';
 import { cn } from '@/lib/utils';
 import type { WaitNodeData } from '@/store/flow-store';
 import { useFlowStore } from '@/store/flow-store';
+import { formatDuration } from './formatDuration';
 
 interface WaitNodeProps extends NodeProps {
   data: WaitNodeData;
@@ -14,6 +15,9 @@ export const WaitNode = memo(function WaitNode({ id, data, selected }: WaitNodeP
   const getExecutionStepNumber = useFlowStore((s) => s.getExecutionStepNumber);
   const isActive = activeNodeId === id;
   const stepNumber = getExecutionStepNumber(id);
+
+  // Format timeout for display (reuse shared util)
+  const timeoutDisplay = formatDuration(data.timeout);
 
   return (
     <div
@@ -53,7 +57,7 @@ export const WaitNode = memo(function WaitNode({ id, data, selected }: WaitNodeP
             Waits for {data.wait_for_trigger.length} trigger(s)
           </div>
         )}
-        {data.timeout && <div className="opacity-75">Timeout: {data.timeout}</div>}
+        {timeoutDisplay && <div className="opacity-75">Timeout: {timeoutDisplay}</div>}
       </div>
 
       <Handle
