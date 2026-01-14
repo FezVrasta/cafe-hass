@@ -6,7 +6,8 @@ import { EntitySelector } from './EntitySelector';
 interface MultiEntitySelectorProps {
   value: string[];
   onChange: (value: string[]) => void;
-  entities: HassEntity[];
+  /** Optional entities list. If not provided, EntitySelector auto-fetches from useHass() */
+  entities?: HassEntity[];
   placeholder?: string;
   className?: string;
 }

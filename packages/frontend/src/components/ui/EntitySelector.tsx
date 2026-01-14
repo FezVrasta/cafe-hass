@@ -10,6 +10,7 @@ import {
   CommandList,
 } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { useHass } from '@/contexts/HassContext';
 import { usePortalContainer } from '@/contexts/PortalContainer';
 import { cn } from '@/lib/utils';
 import type { HassEntity } from '@/types/hass';
@@ -17,7 +18,8 @@ import type { HassEntity } from '@/types/hass';
 interface EntitySelectorProps {
   value: string;
   onChange: (value: string) => void;
-  entities: HassEntity[];
+  /** Optional entities list. If not provided, auto-fetches from useHass() */
+  entities?: HassEntity[];
   placeholder?: string;
   className?: string;
 }
@@ -175,7 +177,7 @@ function getEntityName(entity: HassEntity): string {
 export function EntitySelector({
   value,
   onChange,
-  entities,
+  entities: entitiesProp,
   placeholder = 'Select entity...',
   className,
 }: EntitySelectorProps) {
@@ -183,6 +185,10 @@ export function EntitySelector({
   const [search, setSearch] = useState('');
   const triggerRef = useRef<HTMLButtonElement>(null);
   const portalContainer = usePortalContainer();
+  const { entities: contextEntities } = useHass();
+
+  // Use provided entities or fall back to context entities
+  const entities = entitiesProp ?? contextEntities;
 
   // Filter and sort entities
   const filteredEntities = useMemo(() => {

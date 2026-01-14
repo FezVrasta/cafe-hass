@@ -32,7 +32,8 @@ interface DynamicFieldRendererProps {
   onChange: (value: unknown) => void;
 
   /**
-   * Available entities (for entity selector)
+   * Available entities (for entity selector).
+   * Optional - EntitySelector will auto-fetch from useHass() if not provided.
    */
   entities?: HassEntity[];
 
@@ -55,7 +56,7 @@ export function DynamicFieldRenderer({
   field,
   value,
   onChange,
-  entities = [],
+  entities,
   domain,
   translations = {},
 }: DynamicFieldRendererProps) {
