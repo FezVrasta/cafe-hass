@@ -473,8 +473,8 @@ export class StateMachineStrategy extends BaseStrategy {
         return this.buildNumericCondition(data);
 
       case 'template': {
-        // Strip outer {{ }} if present
-        let template = data.template || 'true';
+        // Strip outer {{ }} if present - check both template and value_template
+        let template = data.template || data.value_template || 'true';
         if (template.startsWith('{{') && template.endsWith('}}')) {
           template = template.slice(2, -2).trim();
         }
