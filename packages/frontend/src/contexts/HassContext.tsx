@@ -73,7 +73,9 @@ const HassContext = createContext<HassContextProps | undefined>(undefined);
 export const HassProvider: FC<
   PropsWithChildren<{ forceMode?: 'remote'; externalHass?: HomeAssistant }>
 > = ({ children, forceMode, externalHass }) => {
-  const [config, setConfigState] = useState<HassConfig>(loadConfig);
+  const [config, setConfigState] = useState<HassConfig>(
+    forceMode ? loadConfig() : { url: '', token: '' }
+  );
   const [remoteEntities, setRemoteEntities] = useState<HassEntity[]>([]);
   const [remoteServices, setRemoteServices] = useState<HassServices>({});
   const [isLoading, setIsLoading] = useState(false);
@@ -83,7 +85,7 @@ export const HassProvider: FC<
   // Mode detection - remote connection or defer to external hass
   const hasRemoteConfig = !!(config.url && config.token);
   // If externalHass is provided, we are in panel mode, so no remote connection
-  const shouldUseRemote = forceMode === 'remote' || (!externalHass && hasRemoteConfig);
+  const shouldUseRemote = forceMode === 'remote';
 
   // Save config handler
   const setConfig = useCallback((newConfig: HassConfig) => {
