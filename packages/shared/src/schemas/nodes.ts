@@ -22,8 +22,9 @@ export const TriggerDataSchema = z
     platform: TriggerPlatformSchema,
     // State trigger
     entity_id: z.union([z.string(), z.array(z.string())]).optional(),
-    from: z.string().optional(),
-    to: z.string().optional(),
+    // Home Assistant supports both string and array for from/to fields
+    from: z.union([z.string(), z.array(z.string())]).optional(),
+    to: z.union([z.string(), z.array(z.string())]).optional(),
     for: z
       .union([
         z.string(),
@@ -254,7 +255,18 @@ export const WaitDataSchema = z
     alias: z.string().optional(),
     wait_template: z.string().optional(),
     wait_for_trigger: z.array(TriggerDataSchema).optional(),
-    timeout: z.string().optional(),
+    // Home Assistant supports both string and object timeout formats
+    timeout: z
+      .union([
+        z.string(),
+        z.object({
+          hours: z.number().optional(),
+          minutes: z.number().optional(),
+          seconds: z.number().optional(),
+          milliseconds: z.number().optional(),
+        }),
+      ])
+      .optional(),
     continue_on_timeout: z.boolean().optional(),
   })
   .passthrough()
