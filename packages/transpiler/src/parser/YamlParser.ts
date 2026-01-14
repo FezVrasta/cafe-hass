@@ -78,8 +78,9 @@ export const HATriggerSchema = z
     platform: HAPlatformEnum.optional(),
     trigger: HAPlatformEnum.optional(),
     entity_id: z.union([z.string(), z.array(z.string())]).optional(),
-    from: z.string().optional(),
-    to: z.string().optional(),
+    // Home Assistant supports both string and array for from/to fields
+    from: z.union([z.string(), z.array(z.string())]).optional(),
+    to: z.union([z.string(), z.array(z.string())]).optional(),
     for: z
       .union([
         z.string(),
@@ -171,6 +172,33 @@ function isServiceAction(action: unknown): action is Record<string, unknown> {
     action !== null &&
     (typeof (action as Record<string, unknown>).service === 'string' ||
       typeof (action as Record<string, unknown>).action === 'string')
+  );
+}
+
+/** Returns true if the action is an inline condition (guard) in the action sequence */
+function isConditionAction(action: unknown): action is Record<string, unknown> {
+  return (
+    typeof action === 'object' &&
+    action !== null &&
+    'condition' in action &&
+    typeof (action as Record<string, unknown>).condition === 'string'
+  );
+}
+
+/** Returns true if the action is a variables block */
+function isVariablesAction(action: unknown): action is Record<string, unknown> {
+  return (
+    typeof action === 'object' &&
+    action !== null &&
+    'variables' in action &&
+    typeof (action as Record<string, unknown>).variables === 'object' &&
+    // Make sure it's not mistaken for other action types that might have variables
+    !('service' in action) &&
+    !('action' in action) &&
+    !('delay' in action) &&
+    !('wait_template' in action) &&
+    !('choose' in action) &&
+    !('if' in action)
   );
 }
 
@@ -964,9 +992,14 @@ export class YamlParser {
     // Parse conditions (if present at top level - support both 'condition' and 'conditions')
     let firstActionNodeIds: string[] = [];
     const conditionData = content.conditions || content.condition;
+    // Normalize to array and check if non-empty
+    const conditions = Array.isArray(conditionData)
+      ? conditionData
+      : conditionData
+        ? [conditionData]
+        : [];
 
-    if (conditionData) {
-      const conditions = Array.isArray(conditionData) ? conditionData : [conditionData];
+    if (conditions.length > 0) {
       const conditionResults = this.parseConditions(conditions, warnings, getNextNodeId);
       nodes.push(...conditionResults.nodes);
       edges.push(...conditionResults.edges);
@@ -1113,6 +1146,16 @@ export class YamlParser {
     const nodes: FlowNode[] = [];
     const edges: FlowEdge[] = [];
     let currentNodeIds = previousNodeIds;
+    // Create a mutable copy so we can track condition nodes created during parsing
+    const localConditionNodeIds = new Set(conditionNodeIds);
+
+    // Helper to create edges from current nodes to a target
+    const createEdgesFromCurrent = (targetId: string): void => {
+      for (const prevId of currentNodeIds) {
+        const sourceHandle = localConditionNodeIds.has(prevId) ? 'true' : undefined;
+        edges.push(this.createEdge(prevId, targetId, sourceHandle));
+      }
+    };
 
     actions.forEach((action, index) => {
       if (!action || typeof action !== 'object') {
@@ -1129,15 +1172,64 @@ export class YamlParser {
             data: action as Record<string, unknown>,
           },
         });
-        for (const prevId of currentNodeIds) {
-          const sourceHandle = conditionNodeIds.has(prevId) ? 'true' : undefined;
-          edges.push(this.createEdge(prevId, nodeId, sourceHandle));
-        }
+        createEdgesFromCurrent(nodeId);
         currentNodeIds = [nodeId];
         return;
       }
+
       // Handle different action types
-      if (isDelayAction(action)) {
+      if (isConditionAction(action)) {
+        // Inline condition guard in action sequence
+        const nodeId = getNextNodeId('condition');
+        const act = action as Record<string, unknown>;
+        const conditionType = (act.condition as string) || 'template';
+        const validatedType = VALID_CONDITION_TYPES.includes(conditionType as ValidConditionType)
+          ? (conditionType as ValidConditionType)
+          : 'template';
+
+          // Use Zod schema for parsing and type safety
+          let parsedData: ConditionNode['data'] | undefined;
+          try {
+            parsedData = HAConditionSchema.parse(act);
+          } catch (e) {
+            warnings.push(
+              `Inline condition at index ${index} failed schema validation: ${e instanceof Error ? e.message : JSON.stringify(e)}`
+            );
+            parsedData = {
+              condition_type: validatedType,
+              alias: typeof act.alias === 'string' ? act.alias : undefined,
+              value_template: JSON.stringify(act),
+            };
+          }
+          const conditionNode: ConditionNode = {
+            id: nodeId,
+            type: 'condition',
+            position: { x: 0, y: 0 },
+            data: parsedData,
+          };
+
+        nodes.push(conditionNode);
+        createEdgesFromCurrent(nodeId);
+        // Track this condition node so subsequent edges use 'true' handle
+        localConditionNodeIds.add(nodeId);
+        currentNodeIds = [nodeId];
+      } else if (isVariablesAction(action)) {
+        // Variables block - create action node with just variables
+        const nodeId = getNextNodeId('action');
+        const act = action as Record<string, unknown>;
+        const actionNode: ActionNode = {
+          id: nodeId,
+          type: 'action',
+          position: { x: 0, y: 0 },
+          data: {
+            alias: typeof act.alias === 'string' ? act.alias : 'Set Variables',
+            variables: act.variables as Record<string, unknown>,
+          },
+        };
+        nodes.push(actionNode);
+        createEdgesFromCurrent(nodeId);
+        currentNodeIds = [nodeId];
+      } else if (isDelayAction(action)) {
         const nodeId = getNextNodeId('delay');
         const act = action as Record<string, unknown>;
         const delayValue = act.delay;
@@ -1161,10 +1253,7 @@ export class YamlParser {
           },
         };
         nodes.push(delayNode);
-        for (const prevId of currentNodeIds) {
-          const sourceHandle = conditionNodeIds.has(prevId) ? 'true' : undefined;
-          edges.push(this.createEdge(prevId, nodeId, sourceHandle));
-        }
+        createEdgesFromCurrent(nodeId);
         currentNodeIds = [nodeId];
       } else if (isWaitAction(action)) {
         const nodeId = getNextNodeId('wait');
@@ -1174,9 +1263,22 @@ export class YamlParser {
         const timeoutValue = act.timeout;
         const continueOnTimeoutValue = act.continue_on_timeout;
 
+        // Handle timeout as either string or object format
+        let timeout: WaitNode['data']['timeout'];
+        if (typeof timeoutValue === 'string') {
+          timeout = timeoutValue;
+        } else if (typeof timeoutValue === 'object' && timeoutValue !== null) {
+          timeout = timeoutValue as {
+            hours?: number;
+            minutes?: number;
+            seconds?: number;
+            milliseconds?: number;
+          };
+        }
+
         const waitData: WaitNode['data'] = {
           alias: typeof act.alias === 'string' ? act.alias : undefined,
-          timeout: typeof timeoutValue === 'string' ? timeoutValue : undefined,
+          timeout,
           continue_on_timeout:
             typeof continueOnTimeoutValue === 'boolean' ? continueOnTimeoutValue : undefined,
         };
@@ -1206,10 +1308,7 @@ export class YamlParser {
         };
 
         nodes.push(waitNode);
-        for (const prevId of currentNodeIds) {
-          const sourceHandle = conditionNodeIds.has(prevId) ? 'true' : undefined;
-          edges.push(this.createEdge(prevId, nodeId, sourceHandle));
-        }
+        createEdgesFromCurrent(nodeId);
         currentNodeIds = [nodeId];
       } else if (isChooseAction(action)) {
         // Handle condition branching (choose blocks)
@@ -1218,10 +1317,17 @@ export class YamlParser {
           warnings,
           currentNodeIds,
           getNextNodeId,
-          conditionNodeIds
+          localConditionNodeIds
         );
         nodes.push(...chooseResult.nodes);
         edges.push(...chooseResult.edges);
+        // Add any new condition nodes to our tracking set
+        for (const outId of chooseResult.outputNodeIds) {
+          const outNode = chooseResult.nodes.find((n) => n.id === outId);
+          if (outNode?.type === 'condition') {
+            localConditionNodeIds.add(outId);
+          }
+        }
         currentNodeIds = chooseResult.outputNodeIds;
       } else if (isIfThenAction(action)) {
         // Handle if/then/else blocks
@@ -1240,10 +1346,17 @@ export class YamlParser {
           warnings,
           currentNodeIds,
           getNextNodeId,
-          conditionNodeIds
+          localConditionNodeIds
         );
         nodes.push(...ifResult.nodes);
         edges.push(...ifResult.edges);
+        // Add any new condition nodes to our tracking set
+        for (const outId of ifResult.outputNodeIds) {
+          const outNode = ifResult.nodes.find((n) => n.id === outId);
+          if (outNode?.type === 'condition') {
+            localConditionNodeIds.add(outId);
+          }
+        }
         currentNodeIds = ifResult.outputNodeIds;
       } else if (isServiceAction(action)) {
         // Regular service call action (support both 'service' and 'action' fields)
@@ -1286,10 +1399,7 @@ export class YamlParser {
             },
           };
           nodes.push(actionNode);
-          for (const prevId of currentNodeIds) {
-            const sourceHandle = conditionNodeIds.has(prevId) ? 'true' : undefined;
-            edges.push(this.createEdge(prevId, nodeId, sourceHandle));
-          }
+          createEdgesFromCurrent(nodeId);
           currentNodeIds = [nodeId];
         } catch (error) {
           warnings.push(`Failed to parse action ${index}: ${error}`);
@@ -1309,10 +1419,7 @@ export class YamlParser {
             data: action as Record<string, unknown>,
           },
         });
-        for (const prevId of currentNodeIds) {
-          const sourceHandle = conditionNodeIds.has(prevId) ? 'true' : undefined;
-          edges.push(this.createEdge(prevId, nodeId, sourceHandle));
-        }
+        createEdgesFromCurrent(nodeId);
         currentNodeIds = [nodeId];
       }
     });
@@ -1378,9 +1485,9 @@ export class YamlParser {
         nodes.push(conditionNode);
         localConditionIds.add(conditionId);
 
-        // Connect from previous nodes
+        // Connect from previous nodes (use localConditionIds which includes newly tracked conditions)
         for (const prevId of previousNodeIds) {
-          const sourceHandle = conditionNodeIds.has(prevId) ? 'true' : undefined;
+          const sourceHandle = localConditionIds.has(prevId) ? 'true' : undefined;
           edges.push(this.createEdge(prevId, conditionId, sourceHandle));
         }
 
@@ -1499,9 +1606,9 @@ export class YamlParser {
     nodes.push(conditionNode);
     localConditionIds.add(conditionId);
 
-    // Connect from previous nodes
+    // Connect from previous nodes (use localConditionIds which includes newly tracked conditions)
     for (const prevId of previousNodeIds) {
-      const sourceHandle = conditionNodeIds.has(prevId) ? 'true' : undefined;
+      const sourceHandle = localConditionIds.has(prevId) ? 'true' : undefined;
       edges.push(this.createEdge(prevId, conditionId, sourceHandle));
     }
 

@@ -142,13 +142,16 @@ describe('Roundtrip Import/Export Tests', () => {
       }
 
       // Step 6: Condition validation
-      if (originalConfig.condition || originalConfig.conditions) {
-        const originalConditions = Array.isArray(originalConfig.condition)
-          ? originalConfig.condition
-          : Array.isArray(originalConfig.conditions)
-            ? originalConfig.conditions
-            : [originalConfig.condition || originalConfig.conditions];
+      // Normalize conditions to an array, handling both empty arrays and non-existent conditions
+      const originalConditions = Array.isArray(originalConfig.condition)
+        ? originalConfig.condition
+        : Array.isArray(originalConfig.conditions)
+          ? originalConfig.conditions
+          : originalConfig.condition || originalConfig.conditions
+            ? [originalConfig.condition || originalConfig.conditions]
+            : [];
 
+      if (originalConditions.length > 0) {
         // Conditions should be preserved in some form (either as top-level or within actions)
         expect(originalConditions.length).toBeGreaterThan(0);
       }
