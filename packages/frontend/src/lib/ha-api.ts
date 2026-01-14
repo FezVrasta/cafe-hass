@@ -1,5 +1,4 @@
-import type { AutomationConfig } from '@cafe/transpiler';
-import type { Connection, HassEntity, HomeAssistant } from '@/types/hass';
+import type { AutomationConfig, Connection, HassEntity, HomeAssistant } from '@/types/hass';
 
 export interface CafeMetadata {
   version: number;
@@ -300,7 +299,7 @@ export class HomeAssistantAPI {
         try {
           const config = await this.fetchRestAPI(`config/automation/config/${automationId}`);
           if (config) {
-            return config;
+            return config as AutomationConfig;
           }
         } catch (directError) {
           console.warn(`REST API failed for automation ${automationId}:`, directError);
@@ -356,7 +355,7 @@ export class HomeAssistantAPI {
       if (this.connection) {
         const config = await this.getAutomationTrace(automationId);
         if (config) {
-          return config;
+          return config as AutomationConfig;
         }
       }
 

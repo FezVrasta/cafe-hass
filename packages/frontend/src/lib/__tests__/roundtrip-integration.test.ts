@@ -1,11 +1,10 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { FlowGraph } from '@cafe/shared';
-import { convertAutomationConfigToNodes, FlowTranspiler } from '@cafe/transpiler';
+import { FlowTranspiler, transpiler } from '@cafe/transpiler';
 import * as yaml from 'js-yaml';
 import { describe, expect, it } from 'vitest';
 import { useFlowStore } from '@/store/flow-store';
-import { generateUUID } from '../utils';
 
 describe('Roundtrip Import/Export Tests', () => {
   const fixturesDir = join(__dirname, '../../../../../__tests__/yaml-automation-fixtures');
@@ -28,8 +27,15 @@ describe('Roundtrip Import/Export Tests', () => {
       expect(originalConfig).toBeDefined();
       expect(originalConfig.alias).toBeDefined();
 
-      // Step 1: Convert YAML to visual nodes
-      const { nodes, edges } = convertAutomationConfigToNodes(originalConfig);
+      // Step 1: Use transpiler to parse YAML to flow graph
+      const parseResult = await transpiler.fromYaml(originalYamlContent);
+      expect(parseResult.success).toBe(true);
+      expect(parseResult.graph).toBeDefined();
+
+      const flowGraph = parseResult.graph!;
+      const nodes = flowGraph.nodes;
+      const edges = flowGraph.edges;
+
       expect(nodes.length).toBeGreaterThan(0);
 
       console.log(
@@ -50,37 +56,17 @@ describe('Roundtrip Import/Export Tests', () => {
       edges.forEach((edge) => {
         expect(edge.source).toBeDefined();
         expect(edge.target).toBeDefined();
-        // sourceHandle can be null, 'true', or 'false'
-        expect(['true', 'false', null]).toContain(edge.sourceHandle);
+        // sourceHandle can be undefined, 'true', or 'false'
+        expect([undefined, 'true', 'false']).toContain(edge.sourceHandle);
       });
 
-      // Step 2: Create a flow graph and set it in the store
-      const flowGraph = {
-        id: generateUUID(),
-        name: originalConfig.alias,
-        nodes,
-        edges: edges.map((e) => ({
-          id: `e-${e.source}-${e.target}-${Date.now()}`,
-          source: e.source,
-          target: e.target,
-          sourceHandle: e.sourceHandle,
-        })),
-        metadata: {
-          mode: originalConfig.mode || 'single',
-          initial_state: originalConfig.initial_state ?? true,
-          max: originalConfig.max,
-          max_exceeded: originalConfig.max_exceeded,
-        },
-        version: 1,
-      };
-
-      // Set the graph in the store
+      // Step 2: Set the graph in the store
       const store = useFlowStore.getState();
       store.fromFlowGraph(flowGraph as FlowGraph);
 
       // Step 3: Transpile back to YAML using FlowTranspiler
-      const transpiler = new FlowTranspiler();
-      const result = transpiler.transpile(flowGraph);
+      const flowTranspiler = new FlowTranspiler();
+      const result = flowTranspiler.transpile(flowGraph);
 
       if (!result.success) {
         console.error('Transpilation failed for', filename);
@@ -166,20 +152,26 @@ describe('Roundtrip Import/Export Tests', () => {
         if (Array.isArray(generatedConfig.action)) {
           generatedConfig.action.forEach((action: unknown, actionIndex: number) => {
             expect(action).toBeDefined();
-            // Action should have either service, choose, if, delay, wait, variables (for state machine), or repeat
+            // Action should have valid action/control flow properties
 
             // Type guard to check if action is a valid object
             if (typeof action === 'object' && action !== null) {
               const actionObj = action as Record<string, unknown>;
               const hasValidActionType =
                 actionObj.service ||
+                actionObj.action || // New HA format
                 actionObj.choose ||
                 actionObj.if ||
                 actionObj.delay ||
                 actionObj.wait_template ||
                 actionObj.wait_for_trigger ||
                 actionObj.variables ||
-                actionObj.repeat;
+                actionObj.repeat ||
+                actionObj.condition || // Inline condition guards
+                actionObj.parallel ||
+                actionObj.sequence ||
+                actionObj.stop ||
+                actionObj.event;
 
               if (!hasValidActionType) {
                 console.error(`Invalid action at index ${actionIndex}:`, action);
@@ -222,31 +214,36 @@ describe('Roundtrip Import/Export Tests', () => {
     expect(yamlFiles.length).toBeGreaterThan(0);
   });
 
-  it('should have consistent node positioning', () => {
+  it('should have consistent node positioning', async () => {
     // Test that all fixtures generate nodes with proper positioning
-    yamlFiles.forEach((filename) => {
+    for (const filename of yamlFiles) {
       const filePath = join(fixturesDir, filename);
       const originalYamlContent = readFileSync(filePath, 'utf8');
-      const originalConfig = yaml.load(originalYamlContent) as Record<string, unknown>;
 
-      const { nodes } = convertAutomationConfigToNodes(originalConfig);
+      const parseResult = await transpiler.fromYaml(originalYamlContent);
+      expect(parseResult.success).toBe(true);
+
+      const nodes = parseResult.graph!.nodes;
 
       nodes.forEach((node) => {
-        expect(node.position.x).toBeGreaterThanOrEqual(100);
-        expect(node.position.y).toBeGreaterThanOrEqual(-200); // Allow negative Y for branch offsets
+        expect(node.position.x).toBeGreaterThanOrEqual(0);
+        expect(node.position.y).toBeGreaterThanOrEqual(0);
         expect(typeof node.position.x).toBe('number');
         expect(typeof node.position.y).toBe('number');
       });
-    });
+    }
   });
 
-  it('should generate valid edge connections', () => {
-    yamlFiles.forEach((filename) => {
+  it('should generate valid edge connections', async () => {
+    for (const filename of yamlFiles) {
       const filePath = join(fixturesDir, filename);
       const originalYamlContent = readFileSync(filePath, 'utf8');
-      const originalConfig = yaml.load(originalYamlContent) as Record<string, unknown>;
 
-      const { nodes, edges } = convertAutomationConfigToNodes(originalConfig);
+      const parseResult = await transpiler.fromYaml(originalYamlContent);
+      expect(parseResult.success).toBe(true);
+
+      const nodes = parseResult.graph!.nodes;
+      const edges = parseResult.graph!.edges;
       const nodeIds = new Set(nodes.map((n) => n.id));
 
       edges.forEach((edge) => {
@@ -254,6 +251,6 @@ describe('Roundtrip Import/Export Tests', () => {
         expect(nodeIds.has(edge.target)).toBe(true);
         expect(edge.source).not.toBe(edge.target);
       });
-    });
+    }
   });
 });

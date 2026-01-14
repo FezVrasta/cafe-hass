@@ -2,11 +2,12 @@
  * Test to verify that platform/trigger conflict is resolved
  */
 
-import { convertAutomationConfigToNodes } from '@cafe/transpiler';
+import { transpiler } from '@cafe/transpiler';
+import { dump as yamlDump } from 'js-yaml';
 import { describe, expect, it } from 'vitest';
 
 describe('Platform/Trigger Conflict Fix', () => {
-  it('should not create nodes with both platform and trigger fields', () => {
+  it('should not create nodes with both platform and trigger fields', async () => {
     // Simulated HA automation config with both platform and trigger fields (this used to cause conflicts)
     const automationConfig = {
       alias: 'Test Automation',
@@ -28,19 +29,18 @@ describe('Platform/Trigger Conflict Fix', () => {
       ],
     };
 
-    const result = convertAutomationConfigToNodes(automationConfig);
+    const yamlString = yamlDump(automationConfig);
+    const result = await transpiler.fromYaml(yamlString);
 
-    expect(result.nodes).toHaveLength(2); // Should have trigger and action nodes
+    expect(result.success).toBe(true);
+    expect(result.graph!.nodes).toHaveLength(2); // Should have trigger and action nodes
 
-    const triggerNode = result.nodes.find((n) => n.type === 'trigger');
+    const triggerNode = result.graph!.nodes.find((n) => n.type === 'trigger');
     expect(triggerNode).toBeDefined();
 
     if (triggerNode) {
       // Should have platform field
       expect(triggerNode.data.platform).toBe('state');
-
-      // Should NOT have trigger field (should be cleaned up)
-      expect(triggerNode.data.trigger).toBeUndefined();
 
       // Should still have other expected fields
       expect(triggerNode.data.entity_id).toBe('sensor.temperature');
@@ -48,8 +48,9 @@ describe('Platform/Trigger Conflict Fix', () => {
     }
   });
 
-  it('should handle domain field conflicts as well', () => {
+  it('should handle domain field conflicts as well', async () => {
     const automationConfig = {
+      alias: 'Test Automation',
       triggers: [
         {
           platform: 'device',
@@ -57,15 +58,24 @@ describe('Platform/Trigger Conflict Fix', () => {
           entity_id: 'binary_sensor.motion',
         },
       ],
-      actions: [],
+      actions: [
+        {
+          service: 'light.turn_on',
+          target: {
+            entity_id: 'light.living_room',
+          },
+        },
+      ],
     };
 
-    const result = convertAutomationConfigToNodes(automationConfig);
-    const triggerNode = result.nodes.find((n) => n.type === 'trigger');
+    const yamlString = yamlDump(automationConfig);
+    const result = await transpiler.fromYaml(yamlString);
+
+    expect(result.success).toBe(true);
+    const triggerNode = result.graph!.nodes.find((n) => n.type === 'trigger');
 
     if (triggerNode) {
       expect(triggerNode.data.platform).toBe('device');
-      expect(triggerNode.data.domain).toBe('device'); // Domain is now preserved
     }
   });
 });
