@@ -1,10 +1,12 @@
 import type { FlowNode } from '@cafe/shared';
+import { useEffect, useState } from 'react';
 import { FormField } from '@/components/forms/FormField';
 import { Combobox } from '@/components/ui/Combobox';
 import { MultiEntitySelector } from '@/components/ui/MultiEntitySelector';
 import { useHass } from '@/contexts/HassContext';
 import type { HassEntity } from '@/types/hass';
 import { getNodeDataObject, getNodeDataString } from '@/utils/nodeData';
+import { ResponseVariableField } from './ResponseVariableField';
 import { ServiceDataFields } from './ServiceDataFields';
 
 interface ActionFieldsProps {
@@ -13,17 +15,19 @@ interface ActionFieldsProps {
   entities: HassEntity[];
 }
 
-/**
- * Action node field component.
- * Handles service selection and dynamic service data fields.
- * Replaces the 119-line inline action field rendering.
- */
 export function ActionFields({ node, onChange, entities }: ActionFieldsProps) {
   const { getAllServices, getServiceDefinition } = useHass();
   const serviceName = getNodeDataString(node, 'service');
   const serviceDefinition = getServiceDefinition(serviceName);
   const serviceFields = serviceDefinition?.fields || {};
   const currentData = getNodeDataObject(node, 'data', {});
+  const responseVariable = getNodeDataString(node, 'response_variable');
+  const [showResponseVariable, setShowResponseVariable] = useState(!!responseVariable);
+
+  // Keep toggle in sync if node changes externally
+  useEffect(() => {
+    setShowResponseVariable(!!responseVariable);
+  }, [responseVariable]);
 
   const handleServiceChange = (value: string) => {
     onChange('service', value);
@@ -43,6 +47,10 @@ export function ActionFields({ node, onChange, entities }: ActionFieldsProps) {
       Object.entries(newData).filter(([, v]) => v !== undefined && v !== '')
     );
     onChange('data', Object.keys(cleanedData).length > 0 ? cleanedData : undefined);
+  };
+
+  const handleResponseVariableChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    onChange('response_variable', e.target.value === '' ? undefined : e.target.value);
   };
 
   const targetEntityIds =
@@ -86,6 +94,18 @@ export function ActionFields({ node, onChange, entities }: ActionFieldsProps) {
         currentData={currentData}
         onChange={handleDataFieldChange}
       />
+
+      {/* Response Variable (show if response exists, toggle if optional, always input if not) */}
+      {serviceDefinition?.response && (
+        <ResponseVariableField
+          response={serviceDefinition.response}
+          responseVariable={responseVariable}
+          showResponseVariable={showResponseVariable}
+          setShowResponseVariable={setShowResponseVariable}
+          onChange={onChange}
+          handleResponseVariableChange={handleResponseVariableChange}
+        />
+      )}
     </>
   );
 }
