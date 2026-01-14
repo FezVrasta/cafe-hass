@@ -1,4 +1,6 @@
-import { convertAutomationConfigToNodes } from '@cafe/transpiler';
+import { transpiler } from '@cafe/transpiler';
+import { useReactFlow } from '@xyflow/react';
+import { dump as yamlDump } from 'js-yaml';
 import { Clock, DiamondPlus, Download, Search, ToggleLeft } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
@@ -39,7 +41,8 @@ interface HaAutomation {
 export function AutomationImportDialog({ isOpen, onClose }: AutomationImportDialogProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const { hass, config: hassConfig } = useHass();
-  const { setFlowName, setAutomationId, reset } = useFlowStore();
+  const { setFlowName, setAutomationId, reset, fromFlowGraph } = useFlowStore();
+  const { fitView } = useReactFlow();
 
   // Get all automations from HA
   const automations = useMemo(() => {
@@ -96,24 +99,31 @@ export function AutomationImportDialog({ isOpen, onClose }: AutomationImportDial
       setAutomationId(automationId); // Set the automation ID for future updates
 
       if (config) {
-        // Convert automation config to visual nodes
+        // Convert automation config to YAML and use the transpiler for parsing
+        // This handles both native and state-machine formats with ELK layout
+        const yamlString = yamlDump(config, {
+          indent: 2,
+          lineWidth: -1,
+          quotingType: '"',
+          forceQuotes: false,
+        });
 
-        const { nodes, edges } = convertAutomationConfigToNodes(config);
-        const { addNode, onConnect } = useFlowStore.getState();
+        const result = await transpiler.fromYaml(yamlString);
 
-        // Create all nodes
-        for (const node of nodes) {
-          addNode(node);
+        if (!result.success) {
+          throw new Error(result.errors?.join('\n') || 'Failed to parse automation configuration');
         }
 
-        // Create all edges
-        for (const edge of edges) {
-          onConnect({
-            source: edge.source,
-            target: edge.target,
-            sourceHandle: edge.sourceHandle,
-            targetHandle: null,
-          });
+        if (result.graph) {
+          fromFlowGraph(result.graph);
+
+          // Center the viewport on the imported nodes
+          setTimeout(() => {
+            fitView({
+              padding: 0.2,
+              duration: 300,
+            });
+          }, 50);
         }
 
         toast.success(

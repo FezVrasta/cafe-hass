@@ -1,8 +1,9 @@
-import { convertAutomationConfigToNodes } from '@cafe/transpiler';
+import { transpiler } from '@cafe/transpiler';
+import { dump as yamlDump } from 'js-yaml';
 import { describe, expect, it } from 'vitest';
 
 describe('Position Restoration', () => {
-  it('should restore node positions from transpiler metadata', () => {
+  it('should restore node positions from transpiler metadata', async () => {
     const automationConfig = {
       alias: 'CAFE',
       description: '',
@@ -11,7 +12,6 @@ describe('Position Restoration', () => {
           alias: 'Trigger 1',
           platform: 'state',
           entity_id: 'alarm_control_panel.allarme',
-          trigger: 'state',
         },
       ],
       action: [
@@ -40,45 +40,19 @@ describe('Position Restoration', () => {
           },
           graph_id: '4600fa94-4226-4a53-bab7-16c06799c614',
           graph_version: 1,
-          strategy: 'native' as const,
+          strategy: 'native',
         },
       },
     };
 
-    // Temporarily replace console.log to capture logs
-    const logs: unknown[][] = [];
-    const originalLog = console.log;
-    console.log = (...args) => {
-      if (args[0]?.includes?.('C.A.F.E.:')) {
-        logs.push(args);
-      }
-    };
+    const yamlString = yamlDump(automationConfig);
+    const result = await transpiler.fromYaml(yamlString);
 
-    const { nodes } = convertAutomationConfigToNodes(automationConfig);
-
-    // Restore console.log
-    console.log = originalLog;
+    expect(result.success).toBe(true);
+    const nodes = result.graph!.nodes;
 
     // Should have created 2 nodes
     expect(nodes).toHaveLength(2);
-
-    // Check that logs show metadata was detected
-    const metadataLog = logs.find(
-      (log) =>
-        Array.isArray(log) &&
-        log.length > 0 &&
-        typeof log[0] === 'string' &&
-        log[0].includes('Loading automation with metadata')
-    );
-    expect(metadataLog).toBeTruthy();
-    if (metadataLog && Array.isArray(metadataLog) && metadataLog.length > 1) {
-      const metadata = metadataLog[1] as {
-        hasTranspilerMetadata?: boolean;
-        savedPositionsCount?: number;
-      };
-      expect(metadata.hasTranspilerMetadata).toBe(true);
-      expect(metadata.savedPositionsCount).toBe(2);
-    }
 
     // Find trigger and action nodes
     const triggerNode = nodes.find((node) => node.type === 'trigger');
@@ -87,21 +61,17 @@ describe('Position Restoration', () => {
     expect(triggerNode).toBeTruthy();
     expect(actionNode).toBeTruthy();
 
-    // Check that positions were restored (should match or be close to saved positions)
-    console.log('Trigger position:', triggerNode?.position);
-    console.log('Action position:', actionNode?.position);
-    console.log('Expected trigger position: 150, 200');
-    console.log('Expected action position: 450, 250');
+    // When metadata is present, positions should be restored
+    expect(result.hadMetadata).toBe(true);
 
-    // The positions should be restored if the node IDs match
-    // If they don't match exactly, at least verify the nodes were created with valid positions
-    expect(triggerNode?.position.x).toBeGreaterThan(0);
-    expect(triggerNode?.position.y).toBeGreaterThan(0);
-    expect(actionNode?.position.x).toBeGreaterThan(0);
-    expect(actionNode?.position.y).toBeGreaterThan(0);
+    // Check that positions were restored (should match saved positions)
+    expect(triggerNode?.position.x).toBe(150);
+    expect(triggerNode?.position.y).toBe(200);
+    expect(actionNode?.position.x).toBe(450);
+    expect(actionNode?.position.y).toBe(250);
   });
 
-  it('should handle missing metadata gracefully', () => {
+  it('should handle missing metadata gracefully', async () => {
     const automationConfigWithoutMetadata = {
       alias: 'Simple Automation',
       trigger: [{ platform: 'state', entity_id: 'sensor.test' }],
@@ -109,15 +79,23 @@ describe('Position Restoration', () => {
       mode: 'single',
     };
 
-    const { nodes } = convertAutomationConfigToNodes(automationConfigWithoutMetadata);
+    const yamlString = yamlDump(automationConfigWithoutMetadata);
+    const result = await transpiler.fromYaml(yamlString);
+
+    expect(result.success).toBe(true);
+    const nodes = result.graph!.nodes;
 
     expect(nodes).toHaveLength(2);
+    expect(result.hadMetadata).toBe(false);
 
-    // Should use default positions when no metadata
+    // Should use ELK layout positions when no metadata
     const triggerNode = nodes.find((node) => node.type === 'trigger');
     const actionNode = nodes.find((node) => node.type === 'action');
 
-    expect(triggerNode?.position.x).toBe(100); // Default x position
-    expect(actionNode?.position.x).toBe(400); // Default x position + spacing
+    // ELK layout generates valid positions
+    expect(triggerNode?.position.x).toBeGreaterThanOrEqual(0);
+    expect(triggerNode?.position.y).toBeGreaterThanOrEqual(0);
+    expect(actionNode?.position.x).toBeGreaterThanOrEqual(0);
+    expect(actionNode?.position.y).toBeGreaterThanOrEqual(0);
   });
 });
