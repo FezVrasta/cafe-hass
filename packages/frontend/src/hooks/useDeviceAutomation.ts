@@ -61,7 +61,7 @@ export interface TriggerCapabilities {
  * Hook to interact with Home Assistant Device Automation API
  */
 export function useDeviceAutomation() {
-  const { sendMessage } = useHass();
+  const { hass } = useHass();
 
   /**
    * Fetch available triggers for a specific device
@@ -69,18 +69,18 @@ export function useDeviceAutomation() {
   const getDeviceTriggers = useCallback(
     async (deviceId: string): Promise<DeviceTrigger[]> => {
       try {
-        const response = await sendMessage<{ resources: DeviceTrigger[] }>({
+        const response = (await hass?.sendWS({
           type: 'device_automation/trigger/list',
           device_id: deviceId,
-        });
-        console.log('response', response);
-        return response.resources || [];
+        })) as { resources: DeviceTrigger[] } | undefined;
+
+        return response?.resources || [];
       } catch (error) {
         console.error('Failed to fetch device triggers:', error);
         throw error;
       }
     },
-    [sendMessage]
+    [hass]
   );
 
   /**
@@ -89,7 +89,7 @@ export function useDeviceAutomation() {
   const getTriggerCapabilities = useCallback(
     async (trigger: Partial<DeviceTrigger>): Promise<TriggerCapabilities> => {
       try {
-        const response = await sendMessage<TriggerCapabilities>({
+        const response = await hass?.sendWS({
           type: 'device_automation/trigger/capabilities',
           trigger,
         });
@@ -99,7 +99,7 @@ export function useDeviceAutomation() {
         throw error;
       }
     },
-    [sendMessage]
+    [hass]
   );
 
   return {

@@ -21,7 +21,7 @@ const TranslationResponseSchema = z.object({
  * Extracts the complex translation logic from PropertyPanel.
  */
 export function useTranslations() {
-  const { sendMessage } = useHass();
+  const { hass } = useHass();
   const [translations, setTranslations] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(true);
 
@@ -89,7 +89,7 @@ export function useTranslations() {
 
       // Always try to fetch translations via WebSocket as fallback or to get more complete data
       try {
-        const result = await sendMessage({
+        const result = await hass?.sendWS({
           type: 'frontend/get_translations',
           language: navigator.language.split('-')[0] || 'en',
           category: 'device_automation',
@@ -112,7 +112,7 @@ export function useTranslations() {
     };
 
     loadTranslations();
-  }, [sendMessage]);
+  }, [hass]);
 
   return { translations, isLoading };
 }

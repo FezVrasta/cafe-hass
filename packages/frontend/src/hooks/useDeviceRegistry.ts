@@ -11,7 +11,7 @@ interface Device {
  * Extracts device loading logic from DeviceTriggerFields.
  */
 export function useDeviceRegistry() {
-  const { sendMessage } = useHass();
+  const { hass } = useHass();
   const [devices, setDevices] = useState<Device[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -22,7 +22,7 @@ export function useDeviceRegistry() {
       setError(null);
 
       try {
-        const deviceList = await sendMessage({
+        const deviceList = await hass?.sendWS({
           type: 'config/device_registry/list',
         });
 
@@ -50,7 +50,7 @@ export function useDeviceRegistry() {
     };
 
     loadDevices();
-  }, [sendMessage]);
+  }, [hass]);
 
   return { devices, isLoading, error };
 }

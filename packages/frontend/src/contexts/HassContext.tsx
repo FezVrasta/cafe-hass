@@ -65,7 +65,6 @@ interface HassContextProps {
   getEntitiesByDomain: (domain: string) => HassEntity[];
   getAllServices: () => Array<{ domain: string; service: string; definition: HassService }>;
   getServiceDefinition: (fullServiceName: string) => HassService | null;
-  sendMessage: <T = unknown>(message: Record<string, unknown> & { type: string }) => Promise<T>;
 }
 
 const HassContext = createContext<HassContextProps | undefined>(undefined);
@@ -291,18 +290,6 @@ export const HassProvider: FC<
     [services]
   );
 
-  const sendMessage = useCallback(
-    async <T = unknown>(message: Record<string, unknown> & { type: string }): Promise<T> => {
-      // Try WebSocket connection first
-      if (wsConnection) {
-        return wsConnection.sendMessagePromise(message) as Promise<T>;
-      }
-
-      throw new Error('No WebSocket connection available');
-    },
-    [wsConnection]
-  );
-
   const value: HassContextProps = {
     hass,
     isRemote: shouldUseRemote,
@@ -315,7 +302,6 @@ export const HassProvider: FC<
     getEntitiesByDomain,
     getAllServices,
     getServiceDefinition,
-    sendMessage,
   };
 
   return <HassContext.Provider value={value}>{children}</HassContext.Provider>;
