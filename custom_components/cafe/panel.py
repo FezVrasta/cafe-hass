@@ -22,7 +22,7 @@ async def async_register_panel(hass: HomeAssistant) -> None:
     
     # Register static path for the frontend assets
     await hass.http.async_register_static_paths([
-        StaticPathConfig("/cafe_static", str(www_path), False)
+        StaticPathConfig("/cafe-hass", str(www_path), False)
     ])
 
     # Find the main JS file
@@ -36,7 +36,7 @@ async def async_register_panel(hass: HomeAssistant) -> None:
     # Add cache-busting parameter to force fresh load
     import time
     cache_bust = int(time.time())
-    module_url = f"/cafe_static/assets/{js_filename}?v={cache_bust}"
+    module_url = f"/cafe-hass/assets/{js_filename}?v={cache_bust}"
 
     # First try to unregister any existing panel
     try:

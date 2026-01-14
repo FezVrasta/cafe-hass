@@ -9,7 +9,7 @@ I've added comprehensive debugging to help identify the issue with your custom p
 Add `?debug=true` to the URL when accessing the panel:
 
 ```
-http://your-ha-instance:8123/cafe_static/#/cafe?debug=true
+http://your-ha-instance:8123/cafe-hass/#/cafe?debug=true
 ```
 
 ### Option 2: Browser Console

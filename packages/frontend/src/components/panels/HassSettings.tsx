@@ -106,25 +106,6 @@ export function HassSettings({ isOpen, onClose, config, onSave }: HassSettingsPr
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Auto-detection info */}
-          {window.location.pathname.includes('/cafe_static/') && (
-            <Alert>
-              <CheckCircle className="h-4 w-4" />
-              <AlertDescription>
-                <p className="mb-1 font-medium">Auto-detection enabled</p>
-                <p className="text-sm">
-                  C.A.F.E. detected it's running in Home Assistant and will try to auto-configure
-                  the connection.
-                  {config.url && !config.token && (
-                    <span className="mt-1 block">
-                      ⚠️ Please add your long-lived access token below to enable entity access.
-                    </span>
-                  )}
-                </p>
-              </AlertDescription>
-            </Alert>
-          )}
-
           <div className="space-y-2">
             <Label htmlFor="url">Home Assistant URL</Label>
             <Input
@@ -134,10 +115,7 @@ export function HassSettings({ isOpen, onClose, config, onSave }: HassSettingsPr
               onChange={(e) => setUrl(e.target.value)}
               placeholder="http://homeassistant.local:8123"
             />
-            <p className="text-muted-foreground text-xs">
-              The URL of your Home Assistant instance{' '}
-              {window.location.pathname.includes('/cafe_static/') ? '(auto-detected)' : ''}
-            </p>
+            <p className="text-muted-foreground text-xs">The URL of your Home Assistant instance</p>
           </div>
 
           <div className="space-y-2">
@@ -186,12 +164,14 @@ export function HassSettings({ isOpen, onClose, config, onSave }: HassSettingsPr
             <AlertDescription>
               <h4 className="mb-1 font-medium">CORS Note</h4>
               <p className="mb-2 text-xs">
-                To connect from a browser, you may need to add CORS headers to your HA config:
+                To connect from a browser, you may need to add CORS headers to your HA config. If
+                you are connecting from https://fezvrasta.github.io/hass-cafe, you need your HA
+                instance to be under HTTPS.
               </p>
               <pre className="overflow-x-auto rounded bg-muted p-2 font-mono text-xs">
                 {`http:
   cors_allowed_origins:
-    - http://localhost:5173`}
+    - https://my-home-assistant.example.com`}
               </pre>
             </AlertDescription>
           </Alert>
@@ -211,7 +191,7 @@ export function HassSettings({ isOpen, onClose, config, onSave }: HassSettingsPr
 
         <div className="flex items-center justify-between pt-4">
           <Button variant="destructive" onClick={handleClear} size="sm">
-            Clear & Use Mock Data
+            Disconnect
           </Button>
           <div className="flex items-center gap-2">
             <Button variant="outline" onClick={onClose} size="sm">

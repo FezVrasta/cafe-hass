@@ -82,6 +82,7 @@ function App() {
   const [automationImportOpen, setAutomationImportOpen] = useState(false);
   const [importDropdownOpen, setImportDropdownOpen] = useState(false);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const forceSettingsOpen = actualIsRemote && (config.url === '' || config.token === '');
 
   const handleImport = () => {
     const input = document.createElement('input');
@@ -146,7 +147,7 @@ function App() {
   const status = getConnectionStatus();
 
   return (
-    <CSSInjector>
+    <CSSInjector isPanelMode={!actualIsRemote}>
       <PortalContainer>
         <ErrorBoundary
           FallbackComponent={({ error, resetErrorBoundary }) => (
@@ -212,7 +213,7 @@ function App() {
                     </Badge>
                   )}
 
-                  {(!actualIsRemote || !hass?.connected) && (
+                  {actualIsRemote && (
                     <Button
                       onClick={() => setSettingsOpen(true)}
                       variant="ghost"
@@ -391,12 +392,14 @@ function App() {
             </div>
 
             {/* Settings modal - Only show when not in panel mode */}
-            <HassSettings
-              isOpen={settingsOpen}
-              onClose={() => setSettingsOpen(false)}
-              config={config}
-              onSave={setConfig}
-            />
+            {actualIsRemote && (
+              <HassSettings
+                isOpen={settingsOpen || forceSettingsOpen}
+                onClose={() => setSettingsOpen(false)}
+                config={config}
+                onSave={setConfig}
+              />
+            )}
 
             {/* Import YAML dialog */}
             <ImportYamlDialog isOpen={importYamlOpen} onClose={() => setImportYamlOpen(false)} />

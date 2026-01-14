@@ -22,7 +22,7 @@ export default defineConfig({
       },
     }),
   ],
-  base: '/cafe_static/',
+  base: '/cafe-hass/',
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
