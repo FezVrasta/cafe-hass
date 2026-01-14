@@ -226,11 +226,16 @@ export class NativeStrategy extends BaseStrategy {
     // Helper to recursively map condition_type to condition
     function mapCondition(data: Record<string, unknown>): Record<string, unknown> {
       if (!data || typeof data !== 'object') return data;
-      const { condition_type, conditions, alias, ...rest } = data;
+      // Destructure and exclude 'template' - HA uses 'value_template' for template conditions
+      const { condition_type, conditions, alias, template, ...rest } = data;
       const out: Record<string, unknown> = {
         condition: condition_type,
         ...rest,
       };
+      // For template conditions, ensure value_template is set from template if needed
+      if (condition_type === 'template' && !rest.value_template && template) {
+        out.value_template = template;
+      }
       // Recursively map nested group conditions
       if (Array.isArray(conditions) && conditions.length > 0) {
         out.conditions = conditions
