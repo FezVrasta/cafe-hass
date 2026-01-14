@@ -1,9 +1,8 @@
-import type { FlowNode, TriggerPlatform } from '@cafe/shared';
+import type { TriggerPlatform } from '@cafe/shared';
 import { Trash2Icon } from 'lucide-react';
 import { FormField } from '@/components/forms/FormField';
 import { Button } from '@/components/ui/button';
 import { DynamicFieldRenderer } from '@/components/ui/DynamicFieldRenderer';
-import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -15,16 +14,21 @@ import { Textarea } from '@/components/ui/textarea';
 import { getTriggerFields, TRIGGER_PLATFORM_FIELDS } from '@/config/triggerFields';
 import type { TriggerNodeData } from '@/store/flow-store';
 import { getNodeData, getNodeDataString } from '@/utils/nodeData';
+// Input import removed
+import { DurationField } from './DurationField';
+// Switch import removed
+// removed unused useState import
+
+import type { WaitNode } from '@cafe/shared';
 
 interface WaitFieldsProps {
-  node: FlowNode;
+  node: WaitNode;
   onChange: (key: string, value: unknown) => void;
 }
 
 export function WaitFields({ node, onChange }: WaitFieldsProps) {
   const waitTemplate = getNodeDataString(node, 'wait_template');
   const waitForTrigger = getNodeData<TriggerNodeData[]>(node, 'wait_for_trigger');
-  const timeout = getNodeDataString(node, 'timeout', '00:01:00');
 
   const waitType = waitForTrigger !== undefined ? 'trigger' : 'template';
 
@@ -55,6 +59,11 @@ export function WaitFields({ node, onChange }: WaitFieldsProps) {
     const newTriggers = waitForTrigger.filter((_, i) => i !== index);
     onChange('wait_for_trigger', newTriggers);
   };
+
+  // Toggle between string and object for timeout
+  // removed unused handleTimeoutToggle
+
+  // removed unused handleTimeoutObjChange
 
   return (
     <>
@@ -140,14 +149,12 @@ export function WaitFields({ node, onChange }: WaitFieldsProps) {
         </div>
       )}
 
-      <FormField label="Timeout" description="Maximum time to wait before continuing (HH:MM:SS)">
-        <Input
-          type="text"
-          value={timeout}
-          onChange={(e) => onChange('timeout', e.target.value)}
-          placeholder="00:01:00"
-        />
-      </FormField>
+      <DurationField
+        label="Timeout"
+        description="Maximum time to wait before continuing"
+        value={node.data.timeout ?? ''}
+        onChange={(val) => onChange('timeout', val)}
+      />
     </>
   );
 }

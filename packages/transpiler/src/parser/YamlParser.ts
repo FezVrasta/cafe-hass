@@ -1187,26 +1187,26 @@ export class YamlParser {
           ? (conditionType as ValidConditionType)
           : 'template';
 
-          // Use Zod schema for parsing and type safety
-          let parsedData: ConditionNode['data'] | undefined;
-          try {
-            parsedData = HAConditionSchema.parse(act);
-          } catch (e) {
-            warnings.push(
-              `Inline condition at index ${index} failed schema validation: ${e instanceof Error ? e.message : JSON.stringify(e)}`
-            );
-            parsedData = {
-              condition_type: validatedType,
-              alias: typeof act.alias === 'string' ? act.alias : undefined,
-              value_template: JSON.stringify(act),
-            };
-          }
-          const conditionNode: ConditionNode = {
-            id: nodeId,
-            type: 'condition',
-            position: { x: 0, y: 0 },
-            data: parsedData,
+        // Use Zod schema for parsing and type safety
+        let parsedData: ConditionNode['data'] | undefined;
+        try {
+          parsedData = HAConditionSchema.parse(act);
+        } catch (e) {
+          warnings.push(
+            `Inline condition at index ${index} failed schema validation: ${e instanceof Error ? e.message : JSON.stringify(e)}`
+          );
+          parsedData = {
+            condition_type: validatedType,
+            alias: typeof act.alias === 'string' ? act.alias : undefined,
+            value_template: JSON.stringify(act),
           };
+        }
+        const conditionNode: ConditionNode = {
+          id: nodeId,
+          type: 'condition',
+          position: { x: 0, y: 0 },
+          data: parsedData,
+        };
 
         nodes.push(conditionNode);
         createEdgesFromCurrent(nodeId);

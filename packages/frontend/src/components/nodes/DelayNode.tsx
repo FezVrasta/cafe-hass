@@ -4,6 +4,7 @@ import { memo } from 'react';
 import { cn } from '@/lib/utils';
 import type { DelayNodeData } from '@/store/flow-store';
 import { useFlowStore } from '@/store/flow-store';
+import { formatDuration } from './formatDuration';
 
 interface DelayNodeProps extends NodeProps {
   data: DelayNodeData;
@@ -15,17 +16,8 @@ export const DelayNode = memo(function DelayNode({ id, data, selected }: DelayNo
   const isActive = activeNodeId === id;
   const stepNumber = getExecutionStepNumber(id);
 
-  // Format delay for display
-  const delayDisplay = (() => {
-    if (typeof data.delay === 'string') {
-      return data.delay;
-    }
-    const parts = [];
-    if (data.delay.hours) parts.push(`${data.delay.hours}h`);
-    if (data.delay.minutes) parts.push(`${data.delay.minutes}m`);
-    if (data.delay.seconds) parts.push(`${data.delay.seconds}s`);
-    return parts.join(' ') || '0s';
-  })();
+  // Format delay for display (reuse shared util)
+  const delayDisplay = formatDuration(data.delay);
 
   return (
     <div
