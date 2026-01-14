@@ -149,9 +149,10 @@ To cut a new release, follow these steps:
      - Bug fixes
      - Breaking changes
    - Example:
-     ```bash
-     gh release create v0.1.9 --title "C.A.F.E. v0.1.9" --notes "<release notes>"
-     ```
+    ```bash
+    # IMPORTANT: Use real newlines in the --notes argument, not literal \n. For multiline notes, write each line on a new line inside the string.
+    gh release create v0.1.9 --title "C.A.F.E. v0.1.9" --notes "<release notes>"
+    ```
 
 4. **Verify release on GitHub**
    - Check the Releases page to confirm the new release is published.
