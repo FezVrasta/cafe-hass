@@ -1,3 +1,9 @@
+## Coding Guidelines
+
+- **Never use IIFEs (Immediately Invoked Function Expressions) in React components or TypeScript files.**
+   - Always extract logic into a named component or custom hook instead of using IIFEs.
+   - Use plain variables or helper functions for local logic, but prefer components for UI logic.
+   - IIFEs are forbidden in all React and TypeScript code.
 # Project Overview
 
 **C.A.F.E.** (Complex Automation Flow Editor) is a visual flow editor for Home Assistant automations, inspired by Node-RED. It allows users to design automations as diagrams and transpiles them to 100% native Home Assistant YAML—no vendor lock-in. Automations remain editable in HA’s built-in editor.

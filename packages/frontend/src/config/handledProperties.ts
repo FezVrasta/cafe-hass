@@ -71,6 +71,7 @@ export const HANDLED_PROPERTIES = {
     'service',
     'data',
     'target',
+    'response_variable', // Response variable for script fields
     // Legacy/alternative action formats
     'entity_id', // Legacy: often shows up instead of target.entity_id
     'action', // Alternative field name for service
