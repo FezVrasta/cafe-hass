@@ -96,12 +96,19 @@ export interface WaitNodeData {
   [key: string]: unknown;
 }
 
+export interface SetVariablesNodeData {
+  alias?: string;
+  variables: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
 export type FlowNodeData =
   | TriggerNodeData
   | ConditionNodeData
   | ActionNodeData
   | DelayNodeData
-  | WaitNodeData;
+  | WaitNodeData
+  | SetVariablesNodeData;
 
 /**
  * Flow store state

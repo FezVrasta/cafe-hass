@@ -14,7 +14,14 @@ import {
 } from '@xyflow/react';
 import { type DragEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { DeletableEdge } from '@/components/edges';
-import { ActionNode, ConditionNode, DelayNode, TriggerNode, WaitNode } from '@/components/nodes';
+import {
+  ActionNode,
+  ConditionNode,
+  DelayNode,
+  SetVariablesNode,
+  TriggerNode,
+  WaitNode,
+} from '@/components/nodes';
 import { useCopyPaste } from '@/hooks/useCopyPaste';
 import { useDarkMode } from '@/hooks/useDarkMode';
 import { useFlowStore } from '@/store/flow-store';
@@ -26,6 +33,7 @@ const nodeTypes: NodeTypes = {
   action: ActionNode,
   delay: DelayNode,
   wait: WaitNode,
+  set_variables: SetVariablesNode,
 };
 
 const edgeTypes: EdgeTypes = {
@@ -239,6 +247,8 @@ export function FlowCanvas() {
                 return 'fill-purple-50 stroke-purple-400';
               case 'wait':
                 return 'fill-orange-50 stroke-orange-400';
+              case 'set_variables':
+                return 'fill-cyan-50 stroke-cyan-400';
               default:
                 return 'fill-slate-100 stroke-slate-400';
             }

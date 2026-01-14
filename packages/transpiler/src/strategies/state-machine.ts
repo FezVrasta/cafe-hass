@@ -5,6 +5,7 @@ import type {
   FlowEdge,
   FlowGraph,
   FlowNode,
+  SetVariablesNode,
   TriggerNode,
   WaitNode,
 } from '@cafe/shared';
@@ -208,6 +209,8 @@ export class StateMachineStrategy extends BaseStrategy {
         return this.generateDelayBlock(node, outgoingEdges);
       case 'wait':
         return this.generateWaitBlock(node, outgoingEdges);
+      case 'set_variables':
+        return this.generateSetVariablesBlock(node, outgoingEdges);
       default:
         return this.generatePassthroughBlock(node, outgoingEdges);
     }
@@ -371,6 +374,43 @@ export class StateMachineStrategy extends BaseStrategy {
       ],
       sequence: [
         waitAction,
+        {
+          variables: {
+            current_node: nextNode,
+          },
+        },
+      ],
+    };
+  }
+
+  /**
+   * Generate block for set_variables node
+   */
+  private generateSetVariablesBlock(
+    node: SetVariablesNode,
+    edges: FlowEdge[]
+  ): Record<string, unknown> {
+    const nextNodeId = edges[0]?.target ?? 'END';
+    const nextNode = nextNodeId === 'END' ? 'END' : nextNodeId;
+    const currentNodeId = node.id;
+
+    const setVarsAction: Record<string, unknown> = {
+      variables: node.data.variables,
+    };
+
+    if (node.data.alias) {
+      setVarsAction.alias = node.data.alias;
+    }
+
+    return {
+      conditions: [
+        {
+          condition: 'template',
+          value_template: `{{ current_node == "${currentNodeId}" }}`,
+        },
+      ],
+      sequence: [
+        setVarsAction,
         {
           variables: {
             current_node: nextNode,

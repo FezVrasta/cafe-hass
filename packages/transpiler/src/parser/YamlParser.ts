@@ -348,6 +348,7 @@ import type {
   FlowEdge,
   FlowGraph,
   FlowNode,
+  SetVariablesNode,
   TriggerNode,
   WaitNode,
 } from '@cafe/shared';
@@ -1214,19 +1215,19 @@ export class YamlParser {
         localConditionNodeIds.add(nodeId);
         currentNodeIds = [nodeId];
       } else if (isVariablesAction(action)) {
-        // Variables block - create action node with just variables
-        const nodeId = getNextNodeId('action');
+        // Variables block - create set_variables node
+        const nodeId = getNextNodeId('set_variables');
         const act = action as Record<string, unknown>;
-        const actionNode: ActionNode = {
+        const setVariablesNode: SetVariablesNode = {
           id: nodeId,
-          type: 'action',
+          type: 'set_variables',
           position: { x: 0, y: 0 },
           data: {
-            alias: typeof act.alias === 'string' ? act.alias : 'Set Variables',
-            variables: act.variables as Record<string, unknown>,
+            alias: typeof act.alias === 'string' ? act.alias : undefined,
+            variables: (act.variables as Record<string, unknown>) || {},
           },
         };
-        nodes.push(actionNode);
+        nodes.push(setVariablesNode);
         createEdgesFromCurrent(nodeId);
         currentNodeIds = [nodeId];
       } else if (isDelayAction(action)) {
