@@ -48,6 +48,7 @@ import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PortalContainer } from '@/contexts/PortalContainer';
 import { cn } from '@/lib/utils';
+import { version } from '../../../custom_components/cafe/manifest.json';
 import { useHass } from './contexts/HassContext';
 import { useFlowStore } from './store/flow-store';
 
@@ -369,6 +370,7 @@ function App() {
               {/* Footer */}
               <footer className="flex h-8 items-center justify-between border-border border-t bg-card px-4 text-muted-foreground text-xs">
                 <div className="flex items-center gap-4">
+                  <span>C.A.F.E. v{version}</span>
                   {actualIsRemote && config.url && (
                     <span className="text-green-600">
                       Connected to {new URL(config.url).hostname}
