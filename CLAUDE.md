@@ -1,9 +1,10 @@
 ## Coding Guidelines
 
 - **Never use IIFEs (Immediately Invoked Function Expressions) in React components or TypeScript files.**
-   - Always extract logic into a named component or custom hook instead of using IIFEs.
-   - Use plain variables or helper functions for local logic, but prefer components for UI logic.
-   - IIFEs are forbidden in all React and TypeScript code.
+  - Always extract logic into a named component or custom hook instead of using IIFEs.
+  - Use plain variables or helper functions for local logic, but prefer components for UI logic.
+  - IIFEs are forbidden in all React and TypeScript code.
+
 # Project Overview
 
 **C.A.F.E.** (Complex Automation Flow Editor) is a visual flow editor for Home Assistant automations, inspired by Node-RED. It allows users to design automations as diagrams and transpiles them to 100% native Home Assistant YAML—no vendor lock-in. Automations remain editable in HA’s built-in editor.
@@ -115,52 +116,62 @@ The codebase should compile with zero TypeScript errors and maintain type safety
 - **Copy-pasting code**: Avoid duplicating blocks of code. If you find yourself copying and pasting, it's a sign that a reusable function or component is needed.
 - **Redundant Type Definitions**: Do not redefine types or interfaces that already exist in `@cafe/shared` or can be derived from existing schemas.
 
-
 # Cutting a New Release
 
 To cut a new release, follow these steps:
 
 **Important:** Before tagging and releasing, always bump the version in `custom_components/cafe/manifest.json` to match the new release version.
 
+**All information for the release (version number and release notes) must be automatically derived from the git commit history since the last release.**
+
+- The version number should be determined based on semantic versioning and recent changes.
+- The release notes should be compiled from user-facing changes in the commit history (new features, bug fixes, breaking changes), without requiring user input.
+
 1. **Commit your changes**
-   - Ensure all changes are staged and committed with a clear message.
-   - Bump the version in `custom_components/cafe/manifest.json` to the new release version (e.g., "0.1.9").
-   - Example:
-     ```bash
-     # Edit manifest.json and update the version field
-     git add .
-     git commit -m "Release: v0.x.x - <short description>"
-     ```
+
+- Ensure all changes are staged and committed with a clear message.
+- Bump the version in `custom_components/cafe/manifest.json` to the new release version (e.g., "0.1.9").
+- Example:
+  ```bash
+  # Edit manifest.json and update the version field
+  git add .
+  git commit -m "Release: v0.x.x - <short description>"
+  ```
 
 2. **Create a new git tag**
-   - Use semantic versioning (e.g., v0.1.9). For 1.x.x.
-   - Example:
-     ```bash
-     git tag v0.1.9
-     ```
+
+- Use semantic versioning (e.g., v0.1.9). For 1.x.x.
+- Example:
+  ```bash
+  git tag v0.1.9
+  ```
 
 3. **Push changes to remote**
-   - Push your commits and tags to the remote repository.
-   - Example:
-     ```bash
-     git push origin main
-     git push origin --tags
-     ```
+
+- Push your commits and tags to the remote repository.
+- Example:
+  ```bash
+  git push origin main
+  git push origin --tags
+  ```
 
 4. **Create a GitHub release**
-   - Use the GitHub CLI (`gh`) to create a release.
-   - **Include the changelog in the GitHub release notes. Do NOT create a literal CHANGELOG.md file.**
-   - Read the git commit history since the last release to compile the changelog. Focus on user-facing changes. Make sure to include:
-     - New features
-     - Bug fixes
-     - Breaking changes
-   - Example:
-    ```bash
-    # IMPORTANT: Use real newlines in the --notes argument, not literal \n. For multiline notes, write each line on a new line inside the string.
-    gh release create v0.1.9 --title "C.A.F.E. v0.1.9" --notes "<release notes>"
-    ```
 
-4. **Verify release on GitHub**
-   - Check the Releases page to confirm the new release is published.
+- Use the GitHub CLI (`gh`) to create a release.
+- **Include the changelog in the GitHub release notes. Do NOT create a literal CHANGELOG.md file.**
+- The changelog must be compiled automatically from the git commit history since the last release, focusing on user-facing changes:
+  - New features
+  - Bug fixes
+  - Breaking changes
+- Example:
+
+```bash
+# IMPORTANT: Use real newlines in the --notes argument, not literal \n. For multiline notes, write each line on a new line inside the string.
+gh release create v0.1.9 --title "C.A.F.E. v0.1.9" --notes "<release notes>"
+```
+
+5. **Verify release on GitHub**
+
+- Check the Releases page to confirm the new release is published.
 
 **Note:** Do not cut a release without explicit user approval. Always confirm before pushing tags or creating releases.
