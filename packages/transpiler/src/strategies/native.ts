@@ -4,6 +4,7 @@ import type {
   DelayNode,
   FlowGraph,
   FlowNode,
+  SetVariablesNode,
   TriggerNode,
   WaitNode,
 } from '@cafe/shared';
@@ -196,6 +197,9 @@ export class NativeStrategy extends BaseStrategy {
       case 'wait':
         return this.buildWait(node);
 
+      case 'set_variables':
+        return this.buildSetVariables(node);
+
       default:
         return null;
     }
@@ -314,5 +318,20 @@ export class NativeStrategy extends BaseStrategy {
     }
 
     return wait;
+  }
+
+  /**
+   * Build set variables action
+   */
+  private buildSetVariables(node: SetVariablesNode): Record<string, unknown> {
+    const setVars: Record<string, unknown> = {
+      variables: node.data.variables,
+    };
+
+    if (node.data.alias) {
+      setVars.alias = node.data.alias;
+    }
+
+    return setVars;
   }
 }

@@ -1,8 +1,9 @@
-import type { FlowNode } from '@cafe/shared';
+import type { FlowNode, SetVariablesNode } from '@cafe/shared';
 import type { HassEntity } from '@/types/hass';
 import { ActionFields } from './node-fields/ActionFields';
 import { ConditionFields } from './node-fields/ConditionFields';
 import { DelayFields } from './node-fields/DelayFields';
+import { SetVariablesFields } from './node-fields/SetVariablesFields';
 import { TriggerFields } from './node-fields/TriggerFields';
 import { WaitFields } from './node-fields/WaitFields';
 
@@ -32,6 +33,9 @@ export function NodeFields({ node, onChange, entities }: NodeFieldsProps) {
 
     case 'wait':
       return <WaitFields node={node} onChange={onChange} />;
+
+    case 'set_variables':
+      return <SetVariablesFields node={node as SetVariablesNode} onChange={onChange} />;
 
     default:
       return null;

@@ -82,6 +82,9 @@ export const HANDLED_PROPERTIES = {
 
   // Wait properties handled by WaitFields component
   wait: ['wait_template', 'timeout', 'wait_for_trigger'],
+
+  // Set Variables properties handled by SetVariablesFields component
+  set_variables: ['variables'],
 } as const;
 
 /**

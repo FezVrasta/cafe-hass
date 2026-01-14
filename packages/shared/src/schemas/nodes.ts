@@ -290,6 +290,28 @@ export const WaitNodeSchema = z.object({
 export type WaitNode = z.infer<typeof WaitNodeSchema>;
 
 // ============================================
+// SET VARIABLES NODE
+// ============================================
+
+/**
+ * Data schema for set variables nodes
+ * Allows setting one or more variables in the automation
+ */
+export const SetVariablesDataSchema = z.object({
+  alias: z.string().optional(),
+  variables: z.record(z.string(), z.unknown()),
+});
+export type SetVariablesData = z.infer<typeof SetVariablesDataSchema>;
+
+export const SetVariablesNodeSchema = z.object({
+  id: z.string().min(1),
+  type: z.literal('set_variables'),
+  position: PositionSchema,
+  data: SetVariablesDataSchema,
+});
+export type SetVariablesNode = z.infer<typeof SetVariablesNodeSchema>;
+
+// ============================================
 // DISCRIMINATED UNION
 // ============================================
 
@@ -303,6 +325,7 @@ export const NodeSchema = z.discriminatedUnion('type', [
   ActionNodeSchema,
   DelayNodeSchema,
   WaitNodeSchema,
+  SetVariablesNodeSchema,
 ]);
 export type FlowNode = z.infer<typeof NodeSchema>;
 
@@ -327,4 +350,8 @@ export function isDelayNode(node: FlowNode): node is DelayNode {
 
 export function isWaitNode(node: FlowNode): node is WaitNode {
   return node.type === 'wait';
+}
+
+export function isSetVariablesNode(node: FlowNode): node is SetVariablesNode {
+  return node.type === 'set_variables';
 }

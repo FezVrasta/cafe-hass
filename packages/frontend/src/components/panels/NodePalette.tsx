@@ -1,4 +1,4 @@
-import { Clock, GitBranch, Hourglass, Play, Zap } from 'lucide-react';
+import { Clock, GitBranch, Hourglass, Play, Variable, Zap } from 'lucide-react';
 import { type DragEvent, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -59,6 +59,15 @@ export const nodeTypes: NodeTypeConfig[] = [
     defaultData: {
       wait_template: '',
       timeout: '00:01:00',
+    },
+  },
+  {
+    type: 'set_variables',
+    label: 'Set Variables',
+    icon: Variable,
+    color: 'bg-cyan-100 border-cyan-400 text-cyan-700 hover:bg-cyan-200',
+    defaultData: {
+      variables: {},
     },
   },
 ];
