@@ -24,6 +24,7 @@ import {
 } from '@/components/nodes';
 import { useCopyPaste } from '@/hooks/useCopyPaste';
 import { useDarkMode } from '@/hooks/useDarkMode';
+import { generateNodeId } from '@/lib/utils';
 import { useFlowStore } from '@/store/flow-store';
 import { isMacOS } from '@/utils/useAgentPlatform';
 
@@ -120,7 +121,7 @@ export function FlowCanvas() {
         };
 
         const newNode = {
-          id: `${type}_${Date.now()}`,
+          id: generateNodeId(type),
           type,
           position,
           data: { ...defaultData },

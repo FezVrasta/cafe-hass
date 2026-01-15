@@ -1,7 +1,7 @@
 import { Clock, GitBranch, Hourglass, Play, Variable, Zap } from 'lucide-react';
 import { type DragEvent, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { cn, generateNodeId } from '@/lib/utils';
 import { useFlowStore } from '@/store/flow-store';
 
 export interface NodeTypeConfig {
@@ -83,7 +83,7 @@ export function NodePalette() {
       const baseY = 150;
 
       addNode({
-        id: `${config.type}_${Date.now()}`,
+        id: generateNodeId(config.type),
         type: config.type,
         position: { x: baseX, y: baseY },
         data: { ...config.defaultData },

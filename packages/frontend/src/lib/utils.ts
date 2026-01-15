@@ -18,3 +18,11 @@ export function generateUUID(): string {
     return v.toString(16);
   });
 }
+
+/**
+ * Generate a unique node ID with the standard format: {type}_{timestamp}
+ * This format is used throughout the app for consistent node identification.
+ */
+export function generateNodeId(type: string): string {
+  return `${type}_${Date.now()}`;
+}
