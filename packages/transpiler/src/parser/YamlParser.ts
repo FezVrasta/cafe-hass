@@ -810,10 +810,24 @@ export class YamlParser {
     }
 
     // Create edges
-    // Connect triggers to entry node
+    // Connect triggers to entry node(s)
     if (entryNodeId) {
-      for (const trigger of triggerNodes) {
-        edges.push(this.createEdge(trigger.id, entryNodeId));
+      // Check if entryNodeId is a Jinja2 template for trigger routing
+      const triggerRouting = this.parseEntryNodeTemplate(entryNodeId);
+
+      if (triggerRouting && triggerRouting.size > 0) {
+        // Different triggers route to different nodes
+        for (let i = 0; i < triggerNodes.length; i++) {
+          const targetNodeId = triggerRouting.get(i);
+          if (targetNodeId) {
+            edges.push(this.createEdge(triggerNodes[i].id, targetNodeId));
+          }
+        }
+      } else {
+        // All triggers route to same node (simple case)
+        for (const trigger of triggerNodes) {
+          edges.push(this.createEdge(trigger.id, entryNodeId));
+        }
       }
     }
 
@@ -838,6 +852,42 @@ export class YamlParser {
     }
 
     return { nodes, edges };
+  }
+
+  /**
+   * Parse Jinja2 entry node template to extract trigger-to-node routing
+   *
+   * Template format: {% if trigger.idx == 0 %}"action_0"{% elif trigger.idx == 1 %}"action_1"{% else %}"action_2"{% endif %}
+   * Returns a Map where key = trigger index, value = target node ID
+   */
+  private parseEntryNodeTemplate(entryNodeId: string): Map<number, string> | null {
+    // Check if it's a Jinja2 template
+    if (!entryNodeId.includes('{%') || !entryNodeId.includes('trigger.idx')) {
+      return null;
+    }
+
+    const routing = new Map<number, string>();
+
+    // Match {% if trigger.idx == N %}"nodeId" or {% elif trigger.idx == N %}"nodeId"
+    const ifPattern = /{%\s*(?:if|elif)\s+trigger\.idx\s*==\s*(\d+)\s*%}\s*["']([^"']+)["']/g;
+    const matches = entryNodeId.matchAll(ifPattern);
+
+    for (const match of matches) {
+      const triggerIdx = parseInt(match[1], 10);
+      const nodeId = match[2];
+      routing.set(triggerIdx, nodeId);
+    }
+
+    // Match {% else %}"nodeId" for the default case (last trigger if not explicitly matched)
+    const elseMatch = entryNodeId.match(/{%\s*else\s*%}\s*["']([^"']+)["']/);
+    if (elseMatch && routing.size > 0) {
+      // The else branch is for the last trigger index not explicitly matched
+      // Find the highest trigger index and add 1
+      const maxIdx = Math.max(...routing.keys());
+      routing.set(maxIdx + 1, elseMatch[1]);
+    }
+
+    return routing.size > 0 ? routing : null;
   }
 
   /**
