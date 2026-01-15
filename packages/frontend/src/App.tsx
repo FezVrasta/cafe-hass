@@ -306,6 +306,22 @@ function App() {
                       <li>Backspace/Delete key</li>
                     </ul>
                   </div>
+
+                  <div className="mt-auto flex flex-col gap-2 p-4">
+                    <div className="flex items-center gap-4">
+                      {actualIsRemote && config.url && (
+                        <span className="text-green-600 text-xs">
+                          Connected to {new URL(config.url).hostname}
+                        </span>
+                      )}
+                      {actualConnectionError && (
+                        <span className="text-red-600 text-xs">{actualConnectionError}</span>
+                      )}
+                    </div>
+                    <div className="text-muted-foreground text-xs">
+                      <span>C.A.F.E. v{version}</span>
+                    </div>
+                  </div>
                 </aside>
 
                 {/* Canvas */}
@@ -367,27 +383,6 @@ function App() {
                   </Tabs>
                 </ResizablePanel>
               </div>
-
-              {/* Footer */}
-              <footer className="flex h-8 items-center justify-between border-border border-t bg-card px-4 text-muted-foreground text-xs">
-                <div className="flex items-center gap-4">
-                  {actualIsRemote && config.url && (
-                    <span className="text-green-600">
-                      Connected to {new URL(config.url).hostname}
-                    </span>
-                  )}
-                  {!actualIsRemote && (
-                    <span className="text-green-600">Connected via Home Assistant panel</span>
-                  )}
-                  {actualConnectionError && (
-                    <span className="text-red-600">{actualConnectionError}</span>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  <Info className="h-3 w-3" />
-                  <span>C.A.F.E. v{version} - Complex Automation Flow Editor</span>
-                </div>
-              </footer>
             </div>
 
             {/* Settings modal - Only show when not in panel mode */}
