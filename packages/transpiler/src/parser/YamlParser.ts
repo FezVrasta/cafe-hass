@@ -153,6 +153,27 @@ function isChooseAction(action: unknown): action is Record<string, unknown> {
   return typeof action === 'object' && action !== null && 'choose' in action;
 }
 
+/** Returns true if the action is a device action (type + device_id + domain) */
+function isDeviceAction(action: unknown): action is Record<string, unknown> {
+  return (
+    typeof action === 'object' &&
+    action !== null &&
+    'type' in action &&
+    'device_id' in action &&
+    'domain' in action
+  );
+}
+
+/** Returns true if the action is a parallel block */
+function isParallelAction(action: unknown): action is Record<string, unknown> {
+  return (
+    typeof action === 'object' &&
+    action !== null &&
+    'parallel' in action &&
+    Array.isArray((action as Record<string, unknown>).parallel)
+  );
+}
+
 /** Returns true if the action is an if/then/else block */
 function isIfThenAction(action: unknown): action is Record<string, unknown> {
   return (
@@ -1359,6 +1380,106 @@ export class YamlParser {
           }
         }
         currentNodeIds = ifResult.outputNodeIds;
+      } else if (isDeviceAction(action)) {
+        // Device action (type + device_id + domain)
+        const nodeId = getNextNodeId('action');
+        const act = action as Record<string, unknown>;
+        // Convert device action to service-like format for the action node
+        const actionNode: ActionNode = {
+          id: nodeId,
+          type: 'action',
+          position: { x: 0, y: 0 },
+          data: {
+            alias: typeof act.alias === 'string' ? act.alias : undefined,
+            // Store the device action fields directly
+            service: `${act.domain}.${act.type}`,
+            target: {
+              device_id: act.device_id as string,
+            },
+            // Preserve original device action data
+            data: {
+              type: act.type,
+              device_id: act.device_id,
+              domain: act.domain,
+              entity_id: act.entity_id,
+              subtype: act.subtype,
+            } as Record<string, unknown>,
+            enabled: typeof act.enabled === 'boolean' ? act.enabled : undefined,
+          },
+        };
+        nodes.push(actionNode);
+        createEdgesFromCurrent(nodeId);
+        currentNodeIds = [nodeId];
+      } else if (isParallelAction(action)) {
+        // Parallel block - all branches start from the same source nodes
+        const act = action as Record<string, unknown>;
+        const parallelActions = act.parallel as unknown[];
+
+        // Store the starting nodes - all parallel branches connect FROM these
+        const parallelStartNodes = [...currentNodeIds];
+        // Collect the end nodes from all branches
+        const allBranchEndNodes: string[] = [];
+
+        // Parse each parallel branch - each starts from the same source
+        for (const parallelItem of parallelActions) {
+          if (Array.isArray(parallelItem)) {
+            // It's a sequence array
+            const seqResult = this.parseActions(
+              parallelItem as Record<string, unknown>[],
+              warnings,
+              parallelStartNodes,
+              getNextNodeId,
+              localConditionNodeIds
+            );
+            if (seqResult.nodes.length > 0) {
+              nodes.push(...seqResult.nodes);
+              edges.push(...seqResult.edges);
+              // Find the last nodes of this branch
+              const nodesWithOutgoing = new Set(seqResult.edges.map((e) => e.source));
+              const lastNodes = seqResult.nodes.filter((n) => !nodesWithOutgoing.has(n.id));
+              allBranchEndNodes.push(...lastNodes.map((n) => n.id));
+            }
+          } else if (typeof parallelItem === 'object' && parallelItem !== null) {
+            const item = parallelItem as Record<string, unknown>;
+            if ('sequence' in item && Array.isArray(item.sequence)) {
+              // Nested sequence in parallel
+              const seqResult = this.parseActions(
+                item.sequence as Record<string, unknown>[],
+                warnings,
+                parallelStartNodes,
+                getNextNodeId,
+                localConditionNodeIds
+              );
+              if (seqResult.nodes.length > 0) {
+                nodes.push(...seqResult.nodes);
+                edges.push(...seqResult.edges);
+                const nodesWithOutgoing = new Set(seqResult.edges.map((e) => e.source));
+                const lastNodes = seqResult.nodes.filter((n) => !nodesWithOutgoing.has(n.id));
+                allBranchEndNodes.push(...lastNodes.map((n) => n.id));
+              }
+            } else {
+              // Single action in parallel - parse it as a single-item array
+              const singleResult = this.parseActions(
+                [parallelItem] as Record<string, unknown>[],
+                warnings,
+                parallelStartNodes,
+                getNextNodeId,
+                localConditionNodeIds
+              );
+              if (singleResult.nodes.length > 0) {
+                nodes.push(...singleResult.nodes);
+                edges.push(...singleResult.edges);
+                // For a single action, the last node is just the last one parsed
+                const lastNode = singleResult.nodes[singleResult.nodes.length - 1];
+                allBranchEndNodes.push(lastNode.id);
+              }
+            }
+          }
+        }
+
+        // After parallel block, all branch end nodes become the current nodes
+        // (subsequent actions will connect from all of them)
+        currentNodeIds = allBranchEndNodes.length > 0 ? allBranchEndNodes : parallelStartNodes;
       } else if (isServiceAction(action)) {
         // Regular service call action (support both 'service' and 'action' fields)
         const nodeId = getNextNodeId('action');

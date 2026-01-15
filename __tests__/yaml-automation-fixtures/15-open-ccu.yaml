@@ -1,0 +1,75 @@
+
+alias: Zapfenstreich Automatisierung
+description: ""
+triggers:
+  - entity_id:
+      - input_boolean.zapfenstreich
+    from: "off"
+    to: "on"
+    id: ZapfenstreichAn
+    trigger: state
+conditions: []
+actions:
+  - alias: WoZi und Flur Aus und Rollade runter
+    choose:
+      - conditions:
+          - condition: and
+            conditions:
+              - condition: state
+                entity_id: input_boolean.zapfenstreich
+                state: "on"
+              - condition: trigger
+                id:
+                  - ZapfenstreichAn
+        sequence:
+          - target:
+              entity_id: input_boolean.gartenbeleuchtung
+            data: {}
+            action: input_boolean.turn_off
+          - type: turn_off
+            device_id: 5c52f5c8c8e59972a9f7d359a5bcaf2f
+            entity_id: 4906302ad1fd63fb7a358ce3e30146e4
+            domain: switch
+          - type: turn_off
+            device_id: ee8b0db24fc5d9ca7cf1e9ad4d406e45
+            entity_id: 616e70061d2add8d6295bd2204b25f7d
+            domain: switch
+          - type: turn_off
+            device_id: b8ac21757194c9fba5cac089fd8ede51
+            entity_id: cace6d6a39ec897bc6560f945c7fc689
+            domain: switch
+          - type: turn_off
+            device_id: 8255c85496be5b6962a278ebdd7411e8
+            entity_id: 62f9263c0006b6f9acdf12a35139e095
+            domain: switch
+          - parallel:
+              - device_id: ad7a2c892d7118cbfcdc89d2e2b3323d
+                domain: cover
+                entity_id: 63bff85b1243e4da6edf77f186725bc6
+                type: close
+                enabled: true
+              - sequence:
+                  - delay:
+                      hours: 0
+                      minutes: 0
+                      seconds: 10
+                      milliseconds: 0
+                  - type: turn_off
+                    device_id: e2a191a70faa1f7d07a4068b51b417fb
+                    entity_id: fe1b6aecf59b3bdd146aec7d8e589496
+                    domain: light
+                  - target:
+                      entity_id: input_boolean.zapfenstreich
+                    data: {}
+                    action: input_boolean.turn_off
+                alias: Licht Esstisch nach x Sek ausschalten
+              - action: input_boolean.turn_off
+                metadata: {}
+                data: {}
+                target:
+                  entity_id: input_boolean.gartenbeleuchtung
+          - type: turn_off
+            device_id: 38156e5e85c33bd4d2129e9c7a67c5af
+            entity_id: f7cbd6770bbb3bb5276c3d8e991e9b4d
+            domain: switch
+mode: single
