@@ -1,124 +1,112 @@
 > [!WARNING]
-> The project is still in beta, features may be broken so please make sure to backup your automations before editing them with CAFE!
+> The project is still in beta. While it is designed to be non-destructive, please make sure to backup your automations before editing them with C.A.F.E.!
 
 # ☕ C.A.F.E.
 
 ### **C**omplex **A**utomation **F**low **E**ditor
 
-**The "Third Way" for Home Assistant Automations.**
+**The "Third Way" for Home Assistant: Visual Logic with 0% Overhead.**
 
 [![HACS Badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Stars](https://img.shields.io/github/stars/FezVrasta/cafe-hass?style=flat&color=gold)](https://github.com/FezVrasta/cafe-hass)
 
-**C.A.F.E.** is a visual flow editor that brings Node-RED-style logic to Home Assistant **without the external engine**. It transpiles your visual diagrams into 100% compliant, native Home Assistant logic stored directly in the core system.
+**C.A.F.E.** is a visual flow editor that brings Node-RED-style power to Home Assistant **without the external engine**. It transpiles your visual diagrams into 100% compliant, native Home Assistant logic stored directly in the core system.
+
+---
+
+## 📺 Featured In
+
+> "THIS Home Assistant Automation Integration Is Absolutely INCREDIBLE!"
+> — **Byte of Geek** [![Watch the review](https://img.shields.io/badge/YouTube-Watch%20Review-red?logo=youtube)](https://www.youtube.com/watch?v=9PVBo0CtHz0)
+
+---
 
 ## 🧐 Why C.A.F.E.?
 
 For years, Home Assistant users had to choose: the **stability** of native YAML or the **clarity** of Node-RED flows. **C.A.F.E. eliminates the trade-off.**
 
-- **Native YAML:** C.A.F.E. works with Home Assistant's native YAML automations. No side files, no external databases, and no proprietary formats.
-- **Zero Overhead:** No secondary engine, no extra Docker container, and no background resource consumption. Once deployed, the logic runs in the HA Core.
-- **Complex Logic:** Cross-branching, loops, and state-based logic are made possible through our proprietary **State-Machine Transpiler**.
-- **Trace-Integrated:** Debug your visual flows using the official Home Assistant **Trace View**. CAFE maps execution paths back to your canvas.
+- **Native YAML:** No side files, no external databases, and no proprietary formats. Everything is stored in HASS.
+- **Zero Overhead:** No secondary engine or extra Docker containers. Once saved, the logic runs in the HA Core with zero extra resource consumption.
+- **Optimized YAML Generation:** C.A.F.E. produces standard, linear sequences for simple flows and automatically utilizes a robust **State-Machine** pattern for complex logic like loops.
+- **Trace-Integrated:** Debug your visual flows using the official Home Assistant **Trace View**. C.A.F.E. maps execution paths back to your canvas.
 
 ![side by side image of CAFE editor and Home Assistant trace view](./docs/images/side-by-side.png)
 
-## 📁 Where is the logic stored?
-
-Unlike other tools that use proprietary JSON files, **C.A.F.E.** is a pure interface for the **Home Assistant Automation Engine**.
-
-- **Zero Side-Files:** There is no `cafe_data.json`. Everything lives within the Home Assistant `.storage` system, you can even export your automations as YAML and use them elsewhere.
-- **Metadata Persistence:** We embed the visual layout (node positions, and edge metadata) as a hidden object inside the automation's `variables` block. This ensures your visual layout is bundled with your logic.
-- **HACS-Ready:** Designed to be installed as a light-weight custom component that adds a first-class panel to your sidebar.
-
-## 🔄 Round-Trip & Legacy Support
-
-C.A.F.E. isn't just for new automations—it's the best way to visualize your entire library.
-
-- **Import Existing Automations:** You can load **any** existing Home Assistant automation. C.A.F.E. parses the YAML and reconstructs it on the canvas.
-- **Heuristic Auto-Layout:** If an automation wasn't created in C.A.F.E. (and thus lacks coordinate metadata), our engine automatically calculates an optimal tree-layout so you can see your logic clearly from the moment you open it.
-- **Safe Editing:** Edit manual automations visually and save them back to HASS storage. C.A.F.E. respects the native structure while adding the metadata needed to remember your node positions for next time.
+---
 
 ## 🔒 No Vendor Lock-In: Your Automations, Your Way
 
-**C.A.F.E. gives you freedom, not dependency.**
+- **Stop Using C.A.F.E. Anytime:** If you uninstall C.A.F.E., your automations keep working exactly as before. The logic is standard YAML; you only lose the visual layout metadata.
+- **Built-in Editor Compatible:** You can switch between C.A.F.E. and the native HASS automation editor seamlessly. They edit the same source of truth.
+- **Zero Side-Files:** There is no `cafe_data.json`. Visual metadata (node positions, etc.) is stored as a harmless object inside the automation's `variables` block.
 
-- **100% Home Assistant Native:** Every automation created in C.A.F.E. is a standard Home Assistant automation. No proprietary formats, no external dependencies.
-- **Built-in Editor Compatible:** Your C.A.F.E. automations work perfectly in Home Assistant's built-in automation editor. You can switch between visual and YAML editing anytime.
-- **Export & Share:** Export your automations as standard YAML files. Share them in the Home Assistant community, version control them, or migrate to different instances.
-- **Stop Using C.A.F.E. Anytime:** If you ever decide to uninstall C.A.F.E., your automations continue working exactly as before. The only thing you lose is the visual layout—the logic remains 100% intact.
-- **No Data Loss:** All automation logic is stored in Home Assistant's core system. Visual metadata is stored as harmless variables that don't affect execution.
+---
 
-**Your automations belong to you and Home Assistant, not to C.A.F.E.**
+## 🛠 Engineering Quality & Architecture
 
-## 🛠 How it Works: The "State-Machine" Transpiler
+C.A.F.E. is architected with strict engineering principles to ensure your home remains reliable:
 
-The most common question from power users is: _"How do you handle loops in native HASS?"_
+- **Intelligent Transpiler:** The engine analyzes your flow and chooses the optimal target structure. It generates clean, human-readable YAML for standard sequences, and utilizes a **Native State Machine** (repeat/choose dispatcher) only when needed to unlock complex non-linear "jumps" and loops.
+- **Zod Validation:** Every node, edge, and schema is validated via **Zod**. This ensures that malformed UI data never reaches your Home Assistant API.
+- **Heuristic Auto-Layout:** Our engine can "read" existing, manual YAML and instantly reconstruct a visual map, making it the perfect tool for auditing and cleaning up "spaghetti" automations.
 
-Standard automations are linear, but C.A.F.E. treats them like assembly language. When you create a complex flow with jumps or loops, C.A.F.E. compiles it into a **Native State Machine** using a master `repeat` loop and a `choose` dispatcher.
+---
 
-```yaml
-# A simplified look at what CAFE generates under the hood
-variables:
-  current_node: 'START'
-  _cafe_ui: { ...metadata... } # Your layout is stored here
-action:
-  - repeat:
-      while: "{{ current_node != 'EXIT' }}"
-      sequence:
-        - choose:
-            - conditions: "{{ current_node == 'LIGHTS_ON' }}"
-              sequence:
-                - service: light.turn_on
-                  target: { entity_id: light.kitchen }
-                - variables:
-                    current_node: 'CHECK_SUN'
-```
+## ✨ Power Features
 
-This means you can draw "spaghetti" logic on the canvas, and Home Assistant sees a clean, efficient, and 100% native execution loop.
-
-## ✨ Features
-
-- **Node-RED Parity:** Visualizing logic paths, branching, and complex triggers.
+- **Script Responses:** Full support for `call_service` responses. Call a script, capture its output, and use it in subsequent nodes via native Jinja templates.
+- **Set Variables Node:** Create and update flow-scoped variables dynamically within your automation logic.
 - **Entity Intelligence:** Full autocomplete and state-awareness via the native HASS WebSocket API.
 - **Visual Import:** Load any native automation and see it mapped instantly to nodes.
+
+---
 
 ## 🚀 Getting Started
 
 ### Installation via HACS (Recommended)
 
-1. **Install HACS**: First, ensure you have [HACS](https://hacs.xyz/) installed in your Home Assistant instance.
-
+1. **Install HACS**: Ensure [HACS](https://hacs.xyz/) is installed.
 2. **Add Custom Repository**:
-   - Go to **HACS** in your Home Assistant sidebar
-   - Click the **⋮** (three dots) menu in the top right
-   - Select **Custom repositories**
-   - Add this repository URL: `https://github.com/FezVrasta/cafe-hass`
-   - **Important**: Set the category type to **"Integration"**
-   - Click **Add**
+   - Go to **HACS** → **Integrations**
+   - Click the **⋮** menu → **Custom repositories**
+   - Add: `https://github.com/FezVrasta/cafe-hass` as an **Integration**.
+3. **Install & Restart**: Find **C.A.F.E.** in HACS, download it, and restart Home Assistant.
+4. **Enable**: Go to **Settings** → **Devices & Services** → **Add Integration** → Search for **C.A.F.E.**
 
-3. **Install C.A.F.E.**:
-   - In HACS, go to the **Integrations** tab
-   - Search for **C.A.F.E.**
-   - Click **Download** to install
+---
 
-4. **Restart Home Assistant**: After installation, restart your Home Assistant instance.
+## 💬 Frequently Asked Questions
 
-5. **Enable the Integration**:
-   - Go to **Settings** → **Devices & Services**
-   - Click **Add Integration**
-   - Search for **C.A.F.E.**
-   - Click on it to add the integration
-   - The C.A.F.E. panel will automatically appear in your sidebar
+### How do I use script responses and variables?
 
-### Manual Installation
+When you call a script and set a `response_variable` (e.g., `weather_data`), those values become available to all subsequent nodes in the flow. You can access them using standard Home Assistant Jinja syntax in any text field:
+`The temperature is {{ weather_data.temp }} degrees.`
 
-1. Download the latest release from the [Releases page](https://github.com/FezVrasta/cafe-hass/releases)
-2. Extract the `cafe-{version}.zip` file
-3. Copy the `cafe` folder to your `custom_components` directory
-4. Restart Home Assistant
-5. Add the panel as described above
+### Does C.A.F.E. slow down my Home Assistant instance?
+
+**No.** Unlike Node-RED, C.A.F.E. is not an execution engine; it is a specialized compiler. Once you hit "Save," the resulting logic is pure, native Home Assistant code. It consumes zero CPU or RAM in the background because the logic runs directly within the HA Core automation engine.
+
+### Can I still use the built-in Home Assistant automation editor?
+
+**Yes.** C.A.F.E. and the native editor are two different "lenses" for the same data. You can open a C.A.F.E. automation in the native editor to make a quick change, and C.A.F.E. will pick up those changes (and attempt to preserve your layout) the next time you open it.
+
+### What happens if I uninstall C.A.F.E.?
+
+Your house keeps running. Because C.A.F.E. stores everything as native YAML, your automations are independent of the editor. You will lose the visual layout (the positions of the boxes), but the logic itself remains 100% intact and editable via YAML.
+
+### Why does my YAML look different sometimes?
+
+C.A.F.E. uses an **Optimized Compilation** strategy.
+
+- For **Linear flows**, it generates standard YAML sequences.
+- For **Complex flows** (with loops or jumps), it generates a **Native State Machine**.
+  Both are 100% compliant with Home Assistant; C.A.F.E. simply chooses the best structure for the job.
+
+### Is this safe to use for "mission-critical" automations?
+
+While C.A.F.E. is in Beta, we recommend keeping backups. However, because it targets the native HA engine, it is inherently more stable than external engines. If the editor has a bug, it might mess up your YAML, but it can't "crash" your automation engine or cause a background memory leak.
 
 ## ⚖️ License
 
-MIT License. High-performance Italian engineering for your smart home.
+MIT License. Created by [Federico Zivolo](https://github.com/FezVrasta).
