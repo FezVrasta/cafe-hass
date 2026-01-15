@@ -7,10 +7,10 @@ export type { ValidationError, ValidationResult } from './analyzer/validator';
 export { formatValidationErrors, validateFlowGraph } from './analyzer/validator';
 export type { TranspileResult, YamlOptions } from './FlowTranspiler';
 export { FlowTranspiler, transpiler } from './FlowTranspiler';
+export { applyHeuristicLayout } from './parser/layout';
 export type { ParseResult } from './parser/YamlParser';
 // Parser
 export { YamlParser, yamlParser } from './parser/YamlParser';
-export { applyHeuristicLayout } from './parser/layout';
 export type { HAYamlOutput, TranspilerStrategy } from './strategies/base';
 // Strategies
 export { BaseStrategy } from './strategies/base';

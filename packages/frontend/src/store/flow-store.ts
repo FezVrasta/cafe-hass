@@ -573,9 +573,7 @@ export const useFlowStore = create<FlowState>((set, get) => ({
     if (!sourceNode || sourceNode.type !== 'condition') return true;
 
     // Count outgoing edges from this condition node (excluding the one being deleted)
-    const outgoingEdges = state.edges.filter(
-      (e) => e.source === edge.source && e.id !== edgeId
-    );
+    const outgoingEdges = state.edges.filter((e) => e.source === edge.source && e.id !== edgeId);
 
     // Allow deletion only if at least one outgoing edge remains
     return outgoingEdges.length > 0;
