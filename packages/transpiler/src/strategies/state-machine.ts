@@ -39,10 +39,10 @@ export class StateMachineStrategy extends BaseStrategy {
   generate(flow: FlowGraph, analysis: TopologyAnalysis): HAYamlOutput {
     const warnings: string[] = [];
 
-    // Find the entry node (first trigger's first connected node)
-    const entryNodeId = this.findFirstActionNode(flow, analysis);
+    // Build trigger-to-action mapping for routing
+    const triggerRouting = this.buildTriggerRouting(flow);
 
-    if (!entryNodeId) {
+    if (triggerRouting.size === 0) {
       warnings.push('No action nodes found after triggers');
       // Extract triggers to determine output format
       const triggers = this.extractTriggers(flow);
@@ -89,6 +89,11 @@ export class StateMachineStrategy extends BaseStrategy {
     // Extract triggers for the automation wrapper
     const triggers = this.extractTriggers(flow);
 
+    // Generate the initial node expression
+    // If all triggers lead to the same node, use that directly
+    // Otherwise, use a Jinja2 template to route based on trigger.idx
+    const entryNodeExpr = this.generateEntryNodeExpression(triggerRouting);
+
     // Build the action sequence for the state machine
     // In HA automations, actions are a flat list - we use:
     // 1. A variables action to initialize state
@@ -97,7 +102,7 @@ export class StateMachineStrategy extends BaseStrategy {
       // Initialize the state machine variables
       {
         variables: {
-          current_node: entryNodeId,
+          current_node: entryNodeExpr,
           flow_context: {},
         },
       },
@@ -158,16 +163,60 @@ export class StateMachineStrategy extends BaseStrategy {
   }
 
   /**
-   * Find the first action node after triggers
+   * Build a mapping from trigger index to first action node
+   * Returns a Map where key = trigger index, value = first action node ID
    */
-  private findFirstActionNode(flow: FlowGraph, analysis: TopologyAnalysis): string | null {
-    for (const entryId of analysis.entryNodes) {
-      const outgoing = this.getOutgoingEdges(flow, entryId);
+  private buildTriggerRouting(flow: FlowGraph): Map<number, string> {
+    const routing = new Map<number, string>();
+
+    // Get trigger nodes in order (they will be output in this order)
+    const triggerNodes = flow.nodes.filter((n): n is TriggerNode => n.type === 'trigger');
+
+    triggerNodes.forEach((trigger, index) => {
+      const outgoing = this.getOutgoingEdges(flow, trigger.id);
       if (outgoing.length > 0) {
-        return outgoing[0].target;
+        routing.set(index, outgoing[0].target);
       }
+    });
+
+    return routing;
+  }
+
+  /**
+   * Generate the entry node expression for initialization
+   * If all triggers lead to the same node, return that node ID
+   * Otherwise, return a Jinja2 template that routes based on trigger.idx
+   */
+  private generateEntryNodeExpression(triggerRouting: Map<number, string>): string {
+    const uniqueTargets = new Set(triggerRouting.values());
+
+    // If all triggers lead to the same node (or there's only one trigger)
+    if (uniqueTargets.size === 1) {
+      return [...uniqueTargets][0];
     }
-    return null;
+
+    // Multiple different targets - generate routing template
+    // Using trigger.idx which is 0-based index of which trigger fired
+    const entries = [...triggerRouting.entries()].sort((a, b) => a[0] - b[0]);
+
+    // Build a Jinja2 if/elif chain
+    const parts: string[] = [];
+    entries.forEach(([idx, nodeId], i) => {
+      if (i === 0) {
+        parts.push(`{% if trigger.idx == ${idx} %}"${nodeId}"`);
+      } else if (i === entries.length - 1) {
+        parts.push(`{% else %}"${nodeId}"{% endif %}`);
+      } else {
+        parts.push(`{% elif trigger.idx == ${idx} %}"${nodeId}"`);
+      }
+    });
+
+    // Handle edge case where we have only one entry
+    if (entries.length === 1) {
+      return entries[0][1];
+    }
+
+    return parts.join('');
   }
 
   /**

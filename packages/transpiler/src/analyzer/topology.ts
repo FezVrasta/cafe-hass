@@ -30,6 +30,12 @@ export interface TopologyAnalysis {
    */
   hasConvergingPaths: boolean;
   /**
+   * True if different triggers lead to different action paths
+   * (e.g., trigger A → action 1, trigger B → action 2)
+   * This requires state machine to route based on which trigger fired
+   */
+  hasDivergentTriggerPaths: boolean;
+  /**
    * Node IDs that serve as entry points (triggers)
    */
   entryNodes: string[];
@@ -89,12 +95,16 @@ export function analyzeTopology(flow: FlowGraph): TopologyAnalysis {
   // Check for converging paths (multiple edges pointing to same node)
   const hasConvergingPaths = detectConvergingPaths(flow);
 
+  // Check for divergent trigger paths (different triggers → different actions)
+  const hasDivergentTriggerPaths = detectDivergentTriggerPaths(g, flow);
+
   // A tree structure has:
   // - No cycles
   // - Single entry point
   // - No cross-links
   // - No converging paths (except for condition branches that merge)
-  const isTree = !hasCycles && !hasCrossLinks && !hasConvergingPaths;
+  // - No divergent trigger paths (all triggers lead to same actions)
+  const isTree = !hasCycles && !hasCrossLinks && !hasConvergingPaths && !hasDivergentTriggerPaths;
 
   // Determine recommended strategy
   const recommendedStrategy = isTree ? 'native' : 'state-machine';
@@ -105,6 +115,7 @@ export function analyzeTopology(flow: FlowGraph): TopologyAnalysis {
     hasMultipleEntryPoints: entryNodes.length > 1,
     hasCrossLinks,
     hasConvergingPaths,
+    hasDivergentTriggerPaths,
     entryNodes,
     exitNodes,
     topologicalOrder,
@@ -166,6 +177,46 @@ function detectCrossLinks(
       // Backward edge (not a full cycle, but goes to earlier level)
       if (targetLevel < sourceLevel) {
         return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Detect divergent trigger paths: different triggers lead to different action chains
+ * In native HA, all triggers run the same action sequence, so if triggers have
+ * different targets, we need the state machine to route based on which trigger fired.
+ */
+function detectDivergentTriggerPaths(g: GraphInstance, flow: FlowGraph): boolean {
+  // Find all trigger nodes
+  const triggerNodes = flow.nodes.filter((n) => n.type === 'trigger');
+
+  // If 0 or 1 trigger, no divergence possible
+  if (triggerNodes.length <= 1) {
+    return false;
+  }
+
+  // Get the immediate targets of each trigger
+  const triggerTargets = triggerNodes.map((trigger) => {
+    const successors = g.successors(trigger.id) || [];
+    return new Set(successors);
+  });
+
+  // Check if all triggers have the same targets
+  const firstTargets = triggerTargets[0];
+  for (let i = 1; i < triggerTargets.length; i++) {
+    const currentTargets = triggerTargets[i];
+
+    // Check if sets are equal
+    if (firstTargets.size !== currentTargets.size) {
+      return true; // Different number of targets = divergent
+    }
+
+    for (const target of firstTargets) {
+      if (!currentTargets.has(target)) {
+        return true; // Different targets = divergent
       }
     }
   }

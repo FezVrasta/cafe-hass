@@ -1,9 +1,9 @@
 import type { Node as FlowNode, ReactFlowInstance } from '@xyflow/react';
-
-type DOMNode = globalThis.Node;
-
 import type { RefObject } from 'react';
 import { useCallback, useEffect } from 'react';
+import { generateNodeId } from '@/lib/utils';
+
+type DOMNode = globalThis.Node;
 
 function isEditableElement(el: Element | null): boolean {
   if (!el) return false;
@@ -54,13 +54,12 @@ export function useCopyPaste(
         | FlowNode[]
         | undefined;
       if (nodes && nodes.length > 0) {
-        const randomId = () => Math.random().toString(16).slice(2);
         rfInstance.setNodes([
           ...rfInstance.getNodes().map((n) => ({ ...n, selected: false })),
           ...nodes.map((n) => ({
             ...n,
             selected: true,
-            id: randomId(),
+            id: generateNodeId(n.type ?? 'node'),
             position: { x: n.position.x + 10, y: n.position.y + 10 },
           })),
         ]);
