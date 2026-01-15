@@ -1,4 +1,4 @@
-import type { TriggerPlatform } from '@cafe/shared';
+import type { TriggerPlatform, WaitNode } from '@cafe/shared';
 import { Trash2Icon } from 'lucide-react';
 import { FormField } from '@/components/forms/FormField';
 import { Button } from '@/components/ui/button';
@@ -10,16 +10,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { getTriggerFields, TRIGGER_PLATFORM_FIELDS } from '@/config/triggerFields';
 import type { TriggerNodeData } from '@/store/flow-store';
 import { getNodeData, getNodeDataString } from '@/utils/nodeData';
-// Input import removed
 import { DurationField } from './DurationField';
-// Switch import removed
-// removed unused useState import
-
-import type { WaitNode } from '@cafe/shared';
 
 interface WaitFieldsProps {
   node: WaitNode;
@@ -151,10 +147,22 @@ export function WaitFields({ node, onChange }: WaitFieldsProps) {
 
       <DurationField
         label="Timeout"
-        description="Maximum time to wait before continuing"
+        description="Maximum time to wait before continuing. Leave empty to wait indefinitely."
         value={node.data.timeout ?? ''}
-        onChange={(val) => onChange('timeout', val)}
+        onChange={(val) => onChange('timeout', val || undefined)}
       />
+
+      {node.data.timeout && (
+        <FormField
+          label="Continue on Timeout"
+          description="If enabled, the automation continues when timeout expires. If disabled, the automation stops."
+        >
+          <Switch
+            checked={node.data.continue_on_timeout ?? true}
+            onCheckedChange={(checked) => onChange('continue_on_timeout', checked)}
+          />
+        </FormField>
+      )}
     </>
   );
 }
