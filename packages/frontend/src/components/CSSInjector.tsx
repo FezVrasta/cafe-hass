@@ -1,4 +1,6 @@
 import { useDarkMode } from '@/hooks/useDarkMode';
+// @ts-expect-error: handld by vite
+import indexCss from '../index.css?inline';
 
 /**
  * Component that injects CSS using React's dangerouslySetInnerHTML
@@ -25,7 +27,7 @@ export function CSSInjector({
       <style
         data-cafe-injected="true"
         // biome-ignore lint/security/noDangerouslySetInnerHtml: Need to inject CSS dynamically
-        dangerouslySetInnerHTML={{ __html: css }}
+        dangerouslySetInnerHTML={{ __html: css + indexCss }}
       />
       {children}
     </div>

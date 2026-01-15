@@ -1,6 +1,3 @@
-// Import CSS first - the vite-plugin-css-injected-by-js will automatically inject it
-import './index.css';
-
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
