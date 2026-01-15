@@ -89,16 +89,8 @@ function validateSemantics(graph: FlowGraph): ValidationError[] {
         message: `Condition node "${node.id}" has no outgoing edges`,
         path: ['nodes', node.id],
       });
-    } else if (!hasTrue) {
-      errors.push({
-        code: 'CONDITION_MISSING_TRUE',
-        message: `Condition node "${node.id}" is missing 'true' branch`,
-        path: ['nodes', node.id],
-      });
-    } else if (!hasFalse) {
-      // This is a warning, not an error - single branch conditions are valid
-      // The missing branch implicitly ends the flow
     }
+    // Either branch alone is valid - the missing branch implicitly ends the flow
   }
 
   // Check that action nodes have valid service format

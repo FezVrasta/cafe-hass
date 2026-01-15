@@ -26,6 +26,7 @@ export function DeletableEdge({
 }: EdgeProps) {
   const { setEdges } = useReactFlow();
   const setUnsavedChanges = useFlowStore((state) => state.setUnsavedChanges);
+  const canDeleteEdge = useFlowStore((state) => state.canDeleteEdge);
 
   const [edgePath, labelX, labelY] = getSmoothStepPath({
     sourceX,
@@ -36,8 +37,11 @@ export function DeletableEdge({
     targetPosition,
   });
 
+  const canDelete = canDeleteEdge(id);
+
   const handleDelete = (event: React.MouseEvent) => {
     event.stopPropagation();
+    if (!canDelete) return;
     setEdges((edges) => edges.filter((edge) => edge.id !== id));
     setUnsavedChanges(true);
   };
@@ -54,7 +58,7 @@ export function DeletableEdge({
   return (
     <>
       <BaseEdge id={id} path={edgePath} style={selectedStyle} markerEnd={markerEnd} />
-      {selected && (
+      {selected && canDelete && (
         <EdgeLabelRenderer>
           <div
             className="nodrag nopan pointer-events-auto absolute"

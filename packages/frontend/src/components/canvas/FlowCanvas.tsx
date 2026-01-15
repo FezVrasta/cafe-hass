@@ -1,4 +1,4 @@
-import type { ReactFlowInstance } from '@xyflow/react';
+import type { OnBeforeDelete, ReactFlowInstance } from '@xyflow/react';
 import {
   Background,
   BackgroundVariant,
@@ -55,6 +55,7 @@ export function FlowCanvas() {
     executionPath,
     isShowingTrace,
     traceExecutionPath,
+    canDeleteEdge,
   } = useFlowStore();
 
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
@@ -83,6 +84,15 @@ export function FlowCanvas() {
     event.preventDefault();
     event.dataTransfer.dropEffect = 'move';
   }, []);
+
+  // Prevent deletion of edges that would leave a condition node with no outgoing connections
+  const onBeforeDelete = useCallback<OnBeforeDelete>(
+    async ({ nodes: nodesToDelete, edges: edgesToDelete }) => {
+      const allowedEdges = edgesToDelete.filter((edge) => canDeleteEdge(edge.id));
+      return { nodes: nodesToDelete, edges: allowedEdges };
+    },
+    [canDeleteEdge]
+  );
 
   const onDrop = useCallback(
     (event: DragEvent<HTMLDivElement>) => {
@@ -199,6 +209,7 @@ export function FlowCanvas() {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
+        onBeforeDelete={onBeforeDelete}
         onSelectionChange={onSelectionChange}
         onDragOver={onDragOver}
         onDrop={onDrop}

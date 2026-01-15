@@ -8,10 +8,11 @@ import { useFlowStore } from '@/store/flow-store';
 interface YamlEditorProps {
   yaml: string;
   errors: string[];
+  warnings: string[];
   onYamlChange?: (yaml: string) => void;
 }
 
-export function YamlEditor({ yaml, errors, onYamlChange }: YamlEditorProps) {
+export function YamlEditor({ yaml, errors, warnings, onYamlChange }: YamlEditorProps) {
   const fromFlowGraph = useFlowStore((s) => s.fromFlowGraph);
   const isDark = useDarkMode();
 
@@ -55,9 +56,15 @@ export function YamlEditor({ yaml, errors, onYamlChange }: YamlEditorProps) {
           whiteSpace: 'pre-wrap',
         }}
       />
+
       {errors && errors.length > 0 && (
         <div className="border-red-200 border-t bg-red-50 px-3 py-2 text-red-600 text-xs">
           {errors.join('\n')}
+        </div>
+      )}
+      {warnings && warnings.length > 0 && (
+        <div className="border-yellow-200 border-t bg-yellow-50 px-3 py-2 text-xs text-yellow-600">
+          {warnings.join('\n')}
         </div>
       )}
     </div>

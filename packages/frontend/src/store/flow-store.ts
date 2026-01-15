@@ -184,6 +184,9 @@ interface FlowState {
   setSimulationSpeed: (speed: number) => void;
   getExecutionStepNumber: (nodeId: string) => number | null;
 
+  // Edge validation
+  canDeleteEdge: (edgeId: string) => boolean;
+
   // Import/Export
   toFlowGraph: () => FlowGraph;
   fromFlowGraph: (graph: FlowGraph) => void;
@@ -558,6 +561,24 @@ export const useFlowStore = create<FlowState>((set, get) => ({
       return stepIndex >= 0 ? stepIndex + 1 : null;
     }
     return null;
+  },
+
+  canDeleteEdge: (edgeId) => {
+    const state = get();
+    const edge = state.edges.find((e) => e.id === edgeId);
+    if (!edge) return true;
+
+    // Find the source node
+    const sourceNode = state.nodes.find((n) => n.id === edge.source);
+    if (!sourceNode || sourceNode.type !== 'condition') return true;
+
+    // Count outgoing edges from this condition node (excluding the one being deleted)
+    const outgoingEdges = state.edges.filter(
+      (e) => e.source === edge.source && e.id !== edgeId
+    );
+
+    // Allow deletion only if at least one outgoing edge remains
+    return outgoingEdges.length > 0;
   },
 
   toFlowGraph: (): FlowGraph => {
