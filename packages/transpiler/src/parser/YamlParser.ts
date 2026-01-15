@@ -107,8 +107,10 @@ export const HATriggerSchema = z
   .transform((input) => {
     // Always output a defined platform property
     const platform = input.platform ?? input.trigger ?? 'state';
+    // Remove the 'trigger' key to avoid outputting both 'platform' and 'trigger'
+    const { trigger: _trigger, ...rest } = input;
     return {
-      ...input,
+      ...rest,
       platform: platform,
     };
   });
