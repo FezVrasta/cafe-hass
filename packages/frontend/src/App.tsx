@@ -6,7 +6,6 @@ import {
   FileCode,
   FileDown,
   FileUp,
-  Info,
   Loader2,
   Save,
   Settings,
