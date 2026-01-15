@@ -1,118 +1,91 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { z } from 'zod';
 import { useHass } from '@/contexts/HassContext';
 
 // Zod schema for translation API response
 const TranslationResponseSchema = z.object({
   resources: z.record(z.string(), z.unknown()).transform((resources) => {
-    // Filter to only include string values
     const stringResources: Record<string, string> = {};
-    Object.entries(resources).forEach(([key, value]) => {
+    for (const [key, value] of Object.entries(resources)) {
       if (typeof value === 'string') {
         stringResources[key] = value;
       }
-    });
+    }
     return stringResources;
   }),
 });
 
 /**
  * Hook to manage Home Assistant translation loading.
- * Extracts the complex translation logic from PropertyPanel.
+ * Uses the unified hass instance from context and fetches device_automation translations.
  */
 export function useTranslations() {
   const { hass } = useHass();
-  const [translations, setTranslations] = useState<Record<string, string>>({});
+  const [wsTranslations, setWsTranslations] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const loadTranslations = async () => {
-      setIsLoading(true);
-
-      // Try to get translations from hass object
-      const hassWindow = window as unknown as {
-        hass?: {
-          resources?: Record<string, string>;
-          localize?: (key: string) => string;
-          translationMetadata?: {
-            fragments?: string[];
-            translations?: Record<string, Record<string, string>>;
-          };
-        };
-      };
-
-      // Try multiple locations for translations
-      if (hassWindow.hass?.resources) {
-        console.log('Found translations in hass.resources');
-        setTranslations(hassWindow.hass.resources);
-      } else if (hassWindow.hass?.translationMetadata?.translations) {
-        console.log('Found translations in hass.translationMetadata');
-        // Flatten nested translations
-        const flatTranslations: Record<string, string> = {};
-        Object.values(hassWindow.hass.translationMetadata.translations).forEach(
-          (langTranslations) => {
-            Object.assign(flatTranslations, langTranslations);
-          }
-        );
-        setTranslations(flatTranslations);
-      } else if (window.parent && window.parent !== window) {
-        // Try parent window
-        try {
-          const parentHass = (
-            window.parent as unknown as {
-              hass?: {
-                resources?: Record<string, string>;
-                translationMetadata?: {
-                  translations?: Record<string, Record<string, string>>;
-                };
-              };
-            }
-          ).hass;
-
-          if (parentHass?.resources) {
-            console.log('Found translations in parent hass.resources');
-            setTranslations(parentHass.resources);
-          } else if (parentHass?.translationMetadata?.translations) {
-            console.log('Found translations in parent hass.translationMetadata');
-            const flatTranslations: Record<string, string> = {};
-            Object.values(parentHass.translationMetadata.translations).forEach(
-              (langTranslations) => {
-                Object.assign(flatTranslations, langTranslations);
-              }
-            );
-            setTranslations(flatTranslations);
-          }
-        } catch {
-          console.log('Cross-origin access blocked for parent window');
+  // Get base translations from hass.resources (already unified via HassContext)
+  // Note: At runtime, HA provides resources as a flat Record<string, string> for the current language,
+  // but the custom-card-helpers type defines it as nested { [lang]: { [key]: string } }
+  const baseTranslations = useMemo(() => {
+    const resources = hass?.resources;
+    if (!resources || Object.keys(resources).length === 0) {
+      return {};
+    }
+    // Check if it's already flat (string values) or nested (object values)
+    const firstValue = Object.values(resources)[0];
+    if (typeof firstValue === 'string') {
+      // Already flat - cast since HA runtime differs from type definition
+      return resources as unknown as Record<string, string>;
+    }
+    // Nested structure - flatten for current language
+    if (typeof firstValue === 'object' && firstValue !== null) {
+      const flat: Record<string, string> = {};
+      for (const langTranslations of Object.values(resources)) {
+        if (typeof langTranslations === 'object' && langTranslations !== null) {
+          Object.assign(flat, langTranslations);
         }
       }
+      return flat;
+    }
+    return {};
+  }, [hass?.resources]);
 
-      // Always try to fetch translations via WebSocket as fallback or to get more complete data
+  // Fetch device_automation translations via WebSocket
+  useEffect(() => {
+    if (!hass) {
+      setIsLoading(false);
+      return;
+    }
+
+    const fetchTranslations = async () => {
+      setIsLoading(true);
       try {
-        const result = await hass?.sendWS({
+        const result = await hass.callWS({
           type: 'frontend/get_translations',
           language: navigator.language.split('-')[0] || 'en',
           category: 'device_automation',
         });
 
-        console.log('Translation fetch result:', result);
-
-        const parseResult = TranslationResponseSchema.safeParse(result);
-        if (parseResult.success) {
-          setTranslations((prev) => ({ ...prev, ...parseResult.data.resources }));
-        } else {
-          console.log('Failed to parse translation response:', parseResult.error);
+        const parsed = TranslationResponseSchema.safeParse(result);
+        if (parsed.success) {
+          setWsTranslations(parsed.data.resources);
         }
-      } catch (error) {
-        console.log('Failed to fetch translations via WebSocket:', error);
-        // This is expected if the message type doesn't exist, so we don't console.error
+      } catch {
+        // Expected if message type doesn't exist
       } finally {
         setIsLoading(false);
       }
     };
 
-    loadTranslations();
+    fetchTranslations();
   }, [hass]);
+
+  // Merge base translations with WS-fetched translations
+  const translations = useMemo(
+    () => ({ ...baseTranslations, ...wsTranslations }),
+    [baseTranslations, wsTranslations]
+  );
 
   return { translations, isLoading };
 }
