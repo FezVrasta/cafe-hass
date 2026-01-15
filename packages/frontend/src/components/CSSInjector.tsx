@@ -2,6 +2,11 @@ import { useDarkMode } from '@/hooks/useDarkMode';
 // @ts-expect-error: handld by vite
 import indexCss from '../index.css?inline';
 
+function convertToHostSelector(css: string, isPanelMode: boolean): string {
+  console.log('isPanelMode', isPanelMode);
+  return isPanelMode ? css.replace(/:root/g, ':host') : css;
+}
+
 /**
  * Component that injects CSS using React's dangerouslySetInnerHTML
  * This ensures CSS is properly scoped and managed by React
@@ -11,7 +16,7 @@ export function CSSInjector({
   isPanelMode,
 }: {
   children?: React.ReactNode;
-  isPanelMode?: boolean;
+  isPanelMode: boolean;
 }) {
   // Get the CSS from the window object set by vite-plugin-css-injected-by-js
   const cssCode =
@@ -20,14 +25,16 @@ export function CSSInjector({
       : '';
   const isDarkMode = useDarkMode();
 
-  const css = isPanelMode ? cssCode.replace(':root', ':host') : cssCode;
-
   return (
     <div className={isDarkMode ? 'dark contents' : 'contents'}>
       <style
         data-cafe-injected="true"
         // biome-ignore lint/security/noDangerouslySetInnerHtml: Need to inject CSS dynamically
-        dangerouslySetInnerHTML={{ __html: css + indexCss }}
+        dangerouslySetInnerHTML={{
+          __html:
+            convertToHostSelector(cssCode, isPanelMode) +
+            convertToHostSelector(indexCss, isPanelMode),
+        }}
       />
       {children}
     </div>
