@@ -70,7 +70,7 @@ interface HassContextProps {
 const HassContext = createContext<HassContextProps | undefined>(undefined);
 
 export const HassProvider: FC<
-  PropsWithChildren<{ forceMode?: 'remote'; externalHass?: HomeAssistant }>
+  PropsWithChildren<{ forceMode?: 'remote' | 'embedded'; externalHass?: HomeAssistant }>
 > = ({ children, forceMode, externalHass }) => {
   const [config, setConfigState] = useState<HassConfig>(
     forceMode ? loadConfig() : { url: '', token: '' }

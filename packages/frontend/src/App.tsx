@@ -371,7 +371,6 @@ function App() {
               {/* Footer */}
               <footer className="flex h-8 items-center justify-between border-border border-t bg-card px-4 text-muted-foreground text-xs">
                 <div className="flex items-center gap-4">
-                  <span>C.A.F.E. v{version}</span>
                   {actualIsRemote && config.url && (
                     <span className="text-green-600">
                       Connected to {new URL(config.url).hostname}
@@ -386,7 +385,7 @@ function App() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Info className="h-3 w-3" />
-                  <span>Complex Automation Flow Editor</span>
+                  <span>C.A.F.E. v{version} - Complex Automation Flow Editor</span>
                 </div>
               </footer>
             </div>

@@ -31,6 +31,7 @@ class CafePanel extends HTMLElement {
   private _narrow: boolean = false;
   private _route: HassRoute | null = null;
   private _panel: HassPanel | null = null;
+  private _forceMode: 'remote' | 'embedded' | undefined = undefined;
 
   constructor() {
     super();
@@ -104,6 +105,24 @@ class CafePanel extends HTMLElement {
     if (this.root) this.render();
   }
 
+  get forceMode() {
+    return this._forceMode;
+  }
+  set forceMode(value: unknown) {
+    if (value === null || value === undefined) {
+      this._forceMode = undefined;
+    } else if (value === 'remote' || value === 'embedded') {
+      this._forceMode = value;
+    } else if (typeof value === 'string') {
+      this._forceMode = value as 'remote' | 'embedded';
+    } else {
+      logger.warn('Invalid forceMode provided, ignoring');
+      return;
+    }
+
+    if (this.root) this.render();
+  }
+
   connectedCallback() {
     logger.debug('CafePanel custom element connected to DOM');
     if (!this.root) {
@@ -132,10 +151,25 @@ class CafePanel extends HTMLElement {
   }
 
   static get observedAttributes() {
-    return ['hass', 'narrow', 'route', 'panel'];
+    return ['hass', 'narrow', 'route', 'panel', 'force-mode'];
   }
 
-  attributeChangedCallback() {
+  attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null) {
+    if (oldValue === newValue) return;
+
+    switch (name) {
+      case 'force-mode':
+        this.forceMode = newValue ?? undefined;
+        break;
+      case 'narrow':
+        // booleanish attribute
+        this.narrow = newValue !== null && newValue !== 'false';
+        break;
+      default:
+        // For other attributes (hass, route, panel) HA sets properties directly.
+        break;
+    }
+
     if (this.root) {
       this.render();
     }
@@ -149,11 +183,12 @@ class CafePanel extends HTMLElement {
         narrow: this._narrow,
         routePath: this._route?.path,
         panelTitle: this._panel?.title,
+        forceMode: this._forceMode,
       });
 
       this.root.render(
         <React.StrictMode>
-          <HassProvider externalHass={this._hass ?? undefined}>
+          <HassProvider externalHass={this._hass ?? undefined} forceMode={this._forceMode}>
             <App />
           </HassProvider>
         </React.StrictMode>
@@ -170,22 +205,23 @@ if (!customElements.get('cafe-panel')) {
   logger.warn('CafePanel custom element already registered');
 }
 
-// For standalone development (when there's a root element)
+// For standalone development (when there's a root element) always use the web component
 if (typeof document !== 'undefined') {
   const rootElement = document.getElementById('root');
 
   if (rootElement) {
-    logger.debug('Rendering in standalone mode');
+    logger.debug('Rendering in standalone mode via cafe-panel');
     try {
-      ReactDOM.createRoot(rootElement).render(
-        <React.StrictMode>
-          <HassProvider forceMode="remote">
-            <App />
-          </HassProvider>
-        </React.StrictMode>
-      );
+      // Create the custom element and attach it to the DOM so all rendering goes through it
+      let panelEl = document.querySelector('cafe-panel') as HTMLElement | null;
+      if (!panelEl) {
+        panelEl = document.createElement('cafe-panel');
+        // force remote mode for standalone dev
+        panelEl.setAttribute('force-mode', 'remote');
+        rootElement.appendChild(panelEl);
+      }
     } catch (error) {
-      logger.error('Error creating standalone React root:', error);
+      logger.error('Error creating cafe-panel element for standalone mode:', error);
     }
   } else {
     logger.debug('No #root element found, assuming custom element mode');
