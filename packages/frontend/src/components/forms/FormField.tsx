@@ -20,7 +20,7 @@ interface FormFieldProps {
  */
 export function FormField({ label, required, description, children }: FormFieldProps) {
   return (
-    <div className="space-y-2">
+    <div className="flex flex-col gap-2">
       <Label className="font-medium text-muted-foreground text-xs">
         {label}
         {required && <span className="ml-1 text-destructive">*</span>}

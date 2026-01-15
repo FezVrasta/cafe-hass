@@ -82,7 +82,7 @@ export const HANDLED_PROPERTIES = {
   delay: ['delay'],
 
   // Wait properties handled by WaitFields component
-  wait: ['wait_template', 'timeout', 'wait_for_trigger'],
+  wait: ['wait_template', 'timeout', 'wait_for_trigger', 'continue_on_timeout'],
 
   // Set Variables properties handled by SetVariablesFields component
   set_variables: ['variables'],
