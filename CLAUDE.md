@@ -12,7 +12,7 @@
 # Repository Structure
 
 ```
-hflow/
+cafe-hass/
 ├── packages/
 │   ├── shared/          # @cafe/shared - Types and Zod schemas
 │   ├── frontend/        # @cafe/frontend - React UI (Vite + Tailwind)
