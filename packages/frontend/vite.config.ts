@@ -7,7 +7,10 @@ export default defineConfig({
   plugins: [
     react(),
     cssInjectedByJsPlugin({
-      topExecutionPriority: false,
+      dev: {
+        enableDev: true,
+      },
+      topExecutionPriority: true,
       jsAssetsFilterFunction: function customJsAssetsfilterFunction(outputChunk) {
         return outputChunk.isEntry;
       },
