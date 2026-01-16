@@ -107,6 +107,10 @@ C.A.F.E. uses an **Optimized Compilation** strategy.
 
 While C.A.F.E. is in Beta, we recommend keeping backups. However, because it targets the native HA engine, it is inherently more stable than external engines. If the editor has a bug, it might mess up your YAML, but it can't "crash" your automation engine or cause a background memory leak.
 
+### What's the C.A.F.E. alternative to Node-Red's "Function" node?
+
+You can use Jinja2 templates directly in any text field within C.A.F.E. For more complex logic, the "Set Variables" node allows you to create and manipulate flow-scoped variables dynamically. This combination provides similar flexibility to Node-RED's "Function" node while staying within the native Home Assistant framework.
+
 ## ⚖️ License
 
 MIT License. Created by [Federico Zivolo](https://github.com/FezVrasta).
