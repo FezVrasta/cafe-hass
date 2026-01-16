@@ -1,4 +1,4 @@
-import type { AutomationConfig, Connection, HassEntity, HomeAssistant } from '@/types/hass';
+import type { AutomationConfig, HassEntity, HomeAssistant } from '@/types/hass';
 
 export interface CafeMetadata {
   version: number;
@@ -62,7 +62,6 @@ export interface TraceListItem {
  */
 export class HomeAssistantAPI {
   public hass: HomeAssistant | null = null;
-  private connection: Connection | null = null;
   private baseUrl?: string;
   private token?: string;
 
@@ -141,11 +140,11 @@ export class HomeAssistantAPI {
    * Send a websocket message
    */
   async sendMessage(message: Record<string, unknown> & { type: string }): Promise<unknown> {
-    if (!this.connection) {
+    if (!this.hass?.connection) {
       throw new Error('No Home Assistant connection available');
     }
 
-    return await this.connection.sendMessagePromise(message);
+    return await this.hass.connection.sendMessagePromise(message);
   }
 
   /**
@@ -162,8 +161,10 @@ export class HomeAssistantAPI {
       // Combine serviceData and target into data object for the interface
       const data = { ...serviceData, ...(target && { target }) };
       return await this.hass.callService(domain, service, data);
-    } else if (this.connection) {
-      // Use websocket message (standalone mode)
+    }
+
+    if (this.hass?.connection) {
+      // Use websocket message
       return await this.sendMessage({
         type: 'call_service',
         domain,
@@ -171,9 +172,9 @@ export class HomeAssistantAPI {
         service_data: serviceData,
         target,
       });
-    } else {
-      throw new Error('No service calling method available');
     }
+
+    throw new Error('No service calling method available');
   }
 
   /**
@@ -244,7 +245,7 @@ export class HomeAssistantAPI {
   async getAutomationConfigs(): Promise<AutomationConfig[]> {
     try {
       // First try websocket approach
-      if (this.connection) {
+      if (this.hass?.connection) {
         try {
           const result = await this.sendMessage({
             type: 'config/automation/list',
@@ -280,7 +281,7 @@ export class HomeAssistantAPI {
   async getAutomationConfig(automationId: string): Promise<AutomationConfig | null> {
     try {
       // Try websocket approach first
-      if (this.connection) {
+      if (this.hass?.connection) {
         try {
           const config = await this.sendMessage({
             type: 'config/automation/get',
@@ -323,22 +324,21 @@ export class HomeAssistantAPI {
   }
 
   /**
-   * Get automation trace (fallback method for getting config)
+   * Get automation config from trace (fallback method for getting config)
    */
-  async getAutomationTrace(automationId: string): Promise<unknown | null> {
+  async getAutomationConfigFromTrace(automationId: string): Promise<unknown | null> {
     try {
-      const result = await this.sendMessage({
-        type: 'automation/trace/get',
-        automation_id: automationId,
-      });
-
-      if (Array.isArray(result) && result.length > 0) {
-        return result[0].config;
+      // First get the list of traces
+      const traces = await this.getAutomationTraces(automationId);
+      if (!traces || traces.length === 0) {
+        return null;
       }
 
-      return null;
+      // Get the most recent trace details which includes config
+      const traceDetails = await this.getAutomationTraceDetails(automationId, traces[0].run_id);
+      return traceDetails?.config || null;
     } catch (error) {
-      console.error('C.A.F.E.: Failed to get automation trace:', error);
+      console.error('C.A.F.E.: Failed to get automation config from trace:', error);
       return null;
     }
   }
@@ -352,8 +352,8 @@ export class HomeAssistantAPI {
   ): Promise<AutomationConfig | null> {
     try {
       // Method 1: Try to get from automation trace (most reliable WebSocket method)
-      if (this.connection) {
-        const config = await this.getAutomationTrace(automationId);
+      if (this.hass?.connection) {
+        const config = await this.getAutomationConfigFromTrace(automationId);
         if (config) {
           return config as AutomationConfig;
         }
@@ -415,40 +415,18 @@ export class HomeAssistantAPI {
       }
 
       // Step 2: Reload automations to make it active
-      // Try different available methods
       if (this.hass?.callService) {
-        try {
-          await this.hass.callService('automation', 'reload', {});
-          return automationId;
-        } catch (serviceError) {
-          console.error('C.A.F.E.: callService failed:', serviceError);
-        }
+        await this.hass.callService('automation', 'reload', {});
+        return automationId;
       }
 
-      if (this.connection) {
-        try {
-          await this.sendMessage({
-            type: 'call_service',
-            domain: 'automation',
-            service: 'reload',
-          });
-          return automationId;
-        } catch (wsError) {
-          console.error('C.A.F.E.: sendMessage failed:', wsError);
-        }
-      }
-
-      if (this.connection) {
-        try {
-          await this.sendMessage({
-            type: 'call_service',
-            domain: 'automation',
-            service: 'reload',
-          });
-          return automationId;
-        } catch (connError) {
-          console.error('C.A.F.E.: connection sendMessage failed:', connError);
-        }
+      if (this.hass?.connection) {
+        await this.sendMessage({
+          type: 'call_service',
+          domain: 'automation',
+          service: 'reload',
+        });
+        return automationId;
       }
 
       throw new Error('No working Home Assistant connection method found');

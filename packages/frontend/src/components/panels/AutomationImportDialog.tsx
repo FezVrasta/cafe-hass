@@ -93,10 +93,8 @@ export function AutomationImportDialog({ isOpen, onClose }: AutomationImportDial
         automation.attributes.friendly_name
       );
 
-      // Reset current flow and set name and ID
+      // Reset current flow
       reset();
-      setFlowName(automation.attributes.friendly_name || automationId);
-      setAutomationId(automationId); // Set the automation ID for future updates
 
       if (config) {
         // Convert automation config to YAML and use the transpiler for parsing
@@ -126,12 +124,16 @@ export function AutomationImportDialog({ isOpen, onClose }: AutomationImportDial
           }, 50);
         }
 
+        // Set name and ID AFTER fromFlowGraph (which resets automationId)
+        setFlowName(automation.attributes.friendly_name || automationId);
+        setAutomationId(automationId);
+
         toast.success(
           `Automation "${automation.attributes.friendly_name || automationId}" imported successfully!`
         );
       } else {
-        // Even if we couldn't fetch config, still set the automation ID
-        // so that if user creates a flow with the same name, it will update instead of create new
+        // Set the automation ID so that if user creates a flow, it will update instead of create new
+        setFlowName(automation.attributes.friendly_name || automationId);
         setAutomationId(automationId);
 
         toast.warning(
