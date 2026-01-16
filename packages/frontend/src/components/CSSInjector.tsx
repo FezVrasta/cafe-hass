@@ -3,7 +3,6 @@ import { useDarkMode } from '@/hooks/useDarkMode';
 import indexCss from '../index.css?inline';
 
 function convertToHostSelector(css: string, isPanelMode: boolean): string {
-  console.log('isPanelMode', isPanelMode);
   return isPanelMode ? css.replace(/:root/g, ':host') : css;
 }
 

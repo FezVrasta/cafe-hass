@@ -27,8 +27,9 @@ interface ComboboxProps {
   className?: string;
   buttonClassName?: string;
   disabled?: boolean;
+  renderOption?: (option: ComboboxOption) => JSX.Element;
+  renderValue?: (option: ComboboxOption | undefined) => JSX.Element | null;
 }
-
 export function Combobox({
   options,
   value,
@@ -37,6 +38,8 @@ export function Combobox({
   className,
   buttonClassName,
   disabled = false,
+  renderOption,
+  renderValue,
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false);
 
@@ -52,7 +55,7 @@ export function Combobox({
           className={cn('flex w-full justify-between', buttonClassName)}
           disabled={disabled}
         >
-          {selected ? selected.label : placeholder}
+          {selected ? (renderValue ? renderValue(selected) : selected.label) : placeholder}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
@@ -71,7 +74,7 @@ export function Combobox({
                     setOpen(false);
                   }}
                 >
-                  {option.label}
+                  {renderOption ? renderOption(option) : option.label}
                   <Check
                     className={cn(
                       'ml-auto h-4 w-4',

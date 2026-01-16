@@ -18,6 +18,29 @@ import {
 import type { HassEntity, HassService, HomeAssistant } from '@/types/hass';
 
 /**
+ * Device registry entry from Home Assistant
+ */
+interface DeviceRegistryEntry {
+  id: string;
+  name: string | null;
+  name_by_user: string | null;
+  manufacturer: string | null;
+  model: string | null;
+  area_id: string | null;
+}
+
+/**
+ * Entity registry entry from Home Assistant
+ */
+interface EntityRegistryEntry {
+  entity_id: string;
+  device_id: string | null;
+  area_id: string | null;
+  name: string | null;
+  original_name: string | null;
+}
+
+/**
  * Configuration for connecting to Home Assistant
  */
 export interface HassConfig {
@@ -65,6 +88,7 @@ interface HassContextProps {
   getEntitiesByDomain: (domain: string) => HassEntity[];
   getAllServices: () => Array<{ domain: string; service: string; definition: HassService }>;
   getServiceDefinition: (fullServiceName: string) => HassService | null;
+  getDeviceNameForEntity: (entityId: string) => string | null;
 }
 
 const HassContext = createContext<HassContextProps | undefined>(undefined);
@@ -77,6 +101,8 @@ export const HassProvider: FC<
   );
   const [remoteEntities, setRemoteEntities] = useState<HassEntity[]>([]);
   const [remoteServices, setRemoteServices] = useState<HassServices>({});
+  const [deviceRegistry, setDeviceRegistry] = useState<Map<string, DeviceRegistryEntry>>(new Map());
+  const [entityRegistry, setEntityRegistry] = useState<Map<string, EntityRegistryEntry>>(new Map());
   const [isLoading, setIsLoading] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [wsConnection, setWsConnection] = useState<Connection | null>(null);
@@ -93,6 +119,8 @@ export const HassProvider: FC<
     // Reset state when config changes
     setRemoteEntities([]);
     setRemoteServices({});
+    setDeviceRegistry(new Map());
+    setEntityRegistry(new Map());
     setConnectionError(null);
   }, []);
 
@@ -147,6 +175,34 @@ export const HassProvider: FC<
           setRemoteServices(services as Record<string, Record<string, HassService>>);
         });
 
+        // Fetch device and entity registries
+        const fetchRegistries = async () => {
+          try {
+            // Fetch device registry
+            const devices = (await connection.sendMessagePromise({
+              type: 'config/device_registry/list',
+            })) as DeviceRegistryEntry[];
+            const deviceMap = new Map<string, DeviceRegistryEntry>();
+            for (const device of devices) {
+              deviceMap.set(device.id, device);
+            }
+            setDeviceRegistry(deviceMap);
+
+            // Fetch entity registry
+            const entities = (await connection.sendMessagePromise({
+              type: 'config/entity_registry/list',
+            })) as EntityRegistryEntry[];
+            const entityMap = new Map<string, EntityRegistryEntry>();
+            for (const entity of entities) {
+              entityMap.set(entity.entity_id, entity);
+            }
+            setEntityRegistry(entityMap);
+          } catch (error) {
+            console.error('C.A.F.E.: Failed to fetch registries:', error);
+          }
+        };
+        fetchRegistries();
+
         // Cleanup function
         return () => {
           unsubscribeEntities();
@@ -171,6 +227,39 @@ export const HassProvider: FC<
       }
     };
   }, [shouldUseRemote, config.url, config.token]);
+
+  // Fetch registries when using externalHass (panel mode)
+  useEffect(() => {
+    if (!externalHass?.connection) return;
+
+    const fetchRegistries = async () => {
+      try {
+        // Fetch device registry
+        const devices = (await externalHass.connection.sendMessagePromise({
+          type: 'config/device_registry/list',
+        })) as DeviceRegistryEntry[];
+        const deviceMap = new Map<string, DeviceRegistryEntry>();
+        for (const device of devices) {
+          deviceMap.set(device.id, device);
+        }
+        setDeviceRegistry(deviceMap);
+
+        // Fetch entity registry
+        const entities = (await externalHass.connection.sendMessagePromise({
+          type: 'config/entity_registry/list',
+        })) as EntityRegistryEntry[];
+        const entityMap = new Map<string, EntityRegistryEntry>();
+        for (const entity of entities) {
+          entityMap.set(entity.entity_id, entity);
+        }
+        setEntityRegistry(entityMap);
+      } catch (error) {
+        console.error('C.A.F.E.: Failed to fetch registries from externalHass:', error);
+      }
+    };
+
+    fetchRegistries();
+  }, [externalHass?.connection]);
 
   // Build the hass API object
   const hass = useMemo<HomeAssistant | undefined>(() => {
@@ -290,6 +379,24 @@ export const HassProvider: FC<
     [services]
   );
 
+  const getDeviceNameForEntity = useCallback(
+    (entityId: string): string | null => {
+      // Look up entity in entity registry to get device_id
+      const entityEntry = entityRegistry.get(entityId);
+      if (!entityEntry?.device_id) {
+        return null;
+      }
+      // Look up device in device registry
+      const device = deviceRegistry.get(entityEntry.device_id);
+      if (!device) {
+        return null;
+      }
+      // Prefer user-defined name, fall back to device name
+      return device.name_by_user || device.name || null;
+    },
+    [entityRegistry, deviceRegistry]
+  );
+
   const value: HassContextProps = {
     hass,
     isRemote: shouldUseRemote,
@@ -302,6 +409,7 @@ export const HassProvider: FC<
     getEntitiesByDomain,
     getAllServices,
     getServiceDefinition,
+    getDeviceNameForEntity,
   };
 
   return <HassContext.Provider value={value}>{children}</HassContext.Provider>;

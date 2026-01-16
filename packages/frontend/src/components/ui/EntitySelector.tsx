@@ -1,29 +1,22 @@
-import { ChevronDown, X } from 'lucide-react';
-import { useMemo, useRef, useState } from 'react';
-import { Button } from '@/components/ui/button';
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '@/components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { useHass } from '@/contexts/HassContext';
-import { usePortalContainer } from '@/contexts/PortalContainer';
-import { cn } from '@/lib/utils';
-import type { HassEntity } from '@/types/hass';
-
-interface EntitySelectorProps {
+type OptionWithDomain = {
   value: string;
-  onChange: (value: string) => void;
-  /** Optional entities list. If not provided, auto-fetches from useHass() */
-  entities?: HassEntity[];
-  placeholder?: string;
-  className?: string;
-}
+  label: string;
+  domainLabel: string;
+  domainColor: string;
+  deviceLabel?: string;
+};
 
+function isOptionWithDomain(option: unknown): option is OptionWithDomain {
+  return (
+    typeof option === 'object' &&
+    option !== null &&
+    'domainLabel' in option &&
+    'domainColor' in option &&
+    'deviceLabel' in option
+  );
+}
+// Extend ComboboxOption for this component
+//
 // Map domain to display name and color
 const DOMAIN_INFO: Record<string, { label: string; color: string }> = {
   light: {
@@ -170,6 +163,21 @@ function getDomainInfo(entityId: string | undefined | null): { label: string; co
   );
 }
 
+import { useMemo } from 'react';
+import { Combobox } from '@/components/ui/Combobox';
+import { useHass } from '@/contexts/HassContext';
+import { cn } from '@/lib/utils';
+import type { HassEntity } from '@/types/hass';
+
+interface EntitySelectorProps {
+  value: string;
+  onChange: (value: string) => void;
+  /** Optional entities list. If not provided, auto-fetches from useHass() */
+  entities?: HassEntity[];
+  placeholder?: string;
+  className?: string;
+}
+
 function getEntityName(entity: HassEntity): string {
   return (entity.attributes.friendly_name as string) || entity.entity_id;
 }
@@ -181,151 +189,82 @@ export function EntitySelector({
   placeholder = 'Select entity...',
   className,
 }: EntitySelectorProps) {
-  const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState('');
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const portalContainer = usePortalContainer();
-  const { entities: contextEntities } = useHass();
+  const { entities: contextEntities, getDeviceNameForEntity } = useHass();
 
   // Use provided entities or fall back to context entities
   const entities = entitiesProp ?? contextEntities;
 
-  // Filter and sort entities
-  const filteredEntities = useMemo(() => {
-    const searchLower = search.toLowerCase();
-    return entities
-      .filter((entity) => {
-        const name = getEntityName(entity).toLowerCase();
-        const id = entity.entity_id.toLowerCase();
-        return name.includes(searchLower) || id.includes(searchLower);
-      })
-      .sort((a, b) => {
-        // Sort by domain first, then by name
-        const domainA = a.entity_id.split('.')[0];
-        const domainB = b.entity_id.split('.')[0];
-        if (domainA !== domainB) {
-          return domainA.localeCompare(domainB);
-        }
-        return getEntityName(a).localeCompare(getEntityName(b));
-      });
-  }, [entities, search]);
-
-  // Group entities by domain
-  const groupedEntities = useMemo(() => {
-    const groups: Record<string, HassEntity[]> = {};
-    for (const entity of filteredEntities) {
-      const domain = entity.entity_id.split('.')[0];
-      if (!groups[domain]) {
-        groups[domain] = [];
-      }
-      groups[domain].push(entity);
-    }
-    return groups;
-  }, [filteredEntities]);
+  // Map entities to ComboboxOption with domain info
+  const options: OptionWithDomain[] = useMemo(
+    () =>
+      entities.map((entity) => {
+        const domainInfo = getDomainInfo(entity.entity_id);
+        return {
+          value: entity.entity_id,
+          label: getEntityName(entity),
+          domainLabel: domainInfo.label,
+          domainColor: domainInfo.color,
+          deviceLabel: getDeviceNameForEntity(entity.entity_id) ?? undefined,
+        };
+      }),
+    [entities, getDeviceNameForEntity]
+  );
 
   // Handle case where value might be an array
   const normalizedValue = Array.isArray(value) ? value[0] : value;
   const selectedEntity = entities.find((e) => e.entity_id === normalizedValue);
-  const selectedInfo = normalizedValue ? getDomainInfo(normalizedValue) : null;
+  //
   const isUnknown = normalizedValue && !selectedEntity;
 
-  const handleSelect = (entityId: string) => {
+  const handleChange = (entityId: string) => {
     onChange(entityId);
-    setOpen(false);
-    setSearch('');
-  };
-
-  const handleClear = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onChange('');
-    setSearch('');
   };
 
   return (
     <div className={cn('relative', className)}>
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            ref={triggerRef}
-            variant="outline"
-            role="combobox"
-            aria-expanded={open}
-            className={cn('w-full justify-between', !normalizedValue && 'text-muted-foreground')}
-          >
-            <div className="flex min-w-0 flex-1 items-center gap-2">
-              {selectedEntity ? (
-                <>
-                  <span
-                    className={cn(
-                      'flex-shrink-0 rounded px-1.5 py-0.5 font-medium text-xs',
-                      selectedInfo?.color
-                    )}
-                  >
-                    {selectedInfo?.label}
+      <Combobox
+        options={options}
+        value={normalizedValue || ''}
+        onChange={handleChange}
+        placeholder={placeholder}
+        buttonClassName={cn(!normalizedValue && 'text-muted-foreground')}
+        disabled={options.length === 0}
+        renderOption={(option) =>
+          isOptionWithDomain(option) ? (
+            <div className="flex flex-col gap-2 min-w-0">
+              <span>{option.label}</span>
+
+              <div className="flex items-center gap-2 min-w-0">
+                <span
+                  className={cn('rounded px-1.5 py-0.5 font-medium text-xs', option.domainColor)}
+                >
+                  {option.domainLabel}
+                </span>
+                {option.deviceLabel && (
+                  <span className="truncate text-xs text-muted-foreground">
+                    {option.deviceLabel}
                   </span>
-                  <span className="truncate">{getEntityName(selectedEntity)}</span>
-                </>
-              ) : isUnknown ? (
-                <span className="truncate font-mono text-red-600">{normalizedValue}</span>
-              ) : (
-                <span>{placeholder}</span>
-              )}
+                )}
+              </div>
             </div>
-            <div className="flex flex-shrink-0 items-center gap-1">
-              {normalizedValue && (
-                <X className="h-4 w-4 opacity-50 hover:opacity-100" onClick={handleClear} />
-              )}
-              <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
+          ) : (
+            <span>{option.label}</span>
+          )
+        }
+        renderValue={(option) =>
+          option && isOptionWithDomain(option) ? (
+            <div className="flex min-w-0 items-center gap-2">
+              <span className={cn('rounded px-1.5 py-0.5 font-medium text-xs', option.domainColor)}>
+                {option.domainLabel}
+              </span>
+              <span className="truncate">{option.label}</span>
             </div>
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent
-          className="w-[--radix-popover-trigger-width] min-w-[360px] p-0"
-          align="start"
-          container={portalContainer}
-        >
-          <Command>
-            <CommandInput
-              placeholder="Search entities..."
-              value={search}
-              onValueChange={setSearch}
-            />
-            <CommandEmpty>No entities found.</CommandEmpty>
-            <CommandList className="max-h-64">
-              {Object.entries(groupedEntities).map(([domain, domainEntities]) => {
-                const domainInfo = getDomainInfo(`${domain}.x`);
-                return (
-                  <CommandGroup
-                    key={domain}
-                    heading={`${domainInfo.label} (${domainEntities.length})`}
-                  >
-                    {domainEntities.map((entity) => (
-                      <CommandItem
-                        key={entity.entity_id}
-                        value={`${getEntityName(entity)} ${entity.entity_id}`}
-                        onSelect={() => handleSelect(entity.entity_id)}
-                        className="flex items-start gap-3"
-                      >
-                        <div className="min-w-0 flex-1">
-                          <div className="truncate font-medium text-sm leading-5">
-                            {getEntityName(entity)}
-                          </div>
-                          <div className="mt-0.5 truncate font-mono text-muted-foreground text-xs">
-                            {entity.entity_id}
-                          </div>
-                        </div>
-                        <span className="flex-shrink-0 rounded bg-muted px-2 py-1 font-medium text-muted-foreground text-xs">
-                          {entity.state}
-                        </span>
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                );
-              })}
-            </CommandList>
-          </Command>
-        </PopoverContent>
-      </Popover>
+          ) : option ? (
+            <span className="truncate">{option.label}</span>
+          ) : null
+        }
+      />
+      {isUnknown && <div className="mt-1 truncate font-mono text-red-600">{normalizedValue}</div>}
     </div>
   );
 }
