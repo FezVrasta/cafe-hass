@@ -71,27 +71,7 @@ function renderApp() {
       );
     };
 
-    // Initial render
     renderWithParentHass();
-
-    // Re-render when parent hass changes
-    // We poll because we can't easily observe property changes on window.parent
-    let lastStatesCount = 0;
-    const pollInterval = setInterval(() => {
-      const parentHass = getParentHass();
-      const currentStatesCount = parentHass?.states ? Object.keys(parentHass.states).length : 0;
-
-      // Re-render if states count changed (simple change detection)
-      if (currentStatesCount !== lastStatesCount) {
-        lastStatesCount = currentStatesCount;
-        renderWithParentHass();
-      }
-    }, 1000);
-
-    // Cleanup on unload
-    window.addEventListener('unload', () => {
-      clearInterval(pollInterval);
-    });
   } else {
     // Standalone mode - use remote connection
     logger.debug('Running in standalone mode');

@@ -109,8 +109,8 @@ export function DynamicFieldRenderer({
   let selectorType: string | null = null;
   let selectorConfig: Record<string, unknown> = {};
 
-  if ('type' in field) {
-    // Static FieldConfig
+  if ('type' in field && field.type) {
+    // Static FieldConfig or TriggerField with type
     selectorType = field.type;
   } else if ('selector' in field && field.selector) {
     // Dynamic TriggerField from API
@@ -171,8 +171,20 @@ export function DynamicFieldRenderer({
         let options: Array<{ value: string; label: string }> = [];
 
         if ('options' in field && field.options) {
-          // Static config options
-          options = field.options;
+          // Options can be tuple format [value, label][] from HA API or object format from static config
+          const rawOptions = field.options;
+          if (rawOptions.length > 0) {
+            // Check if it's tuple format (HA API returns [["value", "label"], ...])
+            if (Array.isArray(rawOptions[0])) {
+              options = (rawOptions as [string, string][]).map(([value, label]) => ({
+                value,
+                label,
+              }));
+            } else {
+              // Object format from static config
+              options = rawOptions as Array<{ value: string; label: string }>;
+            }
+          }
         } else if (selectorConfig.options && Array.isArray(selectorConfig.options)) {
           // API config options
           options = selectorConfig.options as Array<{ value: string; label: string }>;

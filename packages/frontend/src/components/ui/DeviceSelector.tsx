@@ -20,7 +20,7 @@ interface DeviceSelectorProps {
 
 /**
  * DeviceSelector: Dropdown for device selection with fallback to manual input.
- * Reusable for device_id fields in triggers/conditions.
+ * Shows the raw device ID in red if value doesn't match any known device.
  */
 export function DeviceSelector({
   value,
@@ -40,12 +40,26 @@ export function DeviceSelector({
   const devices = hass?.devices ?? {};
   const hasDevices = Object.keys(devices).length > 0;
 
+  // Check if the current value matches any known device
+  const isUnknownDevice = value && hasDevices && !devices[value];
+
+  // Get display name for the current value
+  const getDisplayValue = () => {
+    if (!value) return undefined;
+    const device = devices[value];
+    if (device) {
+      return device.name_by_user || device.name || device.id;
+    }
+    // Unknown device - return raw ID
+    return value;
+  };
+
   return (
     <FormField label={label} required={required}>
       {hasDevices ? (
         <Select value={value} onValueChange={onChange}>
-          <SelectTrigger>
-            <SelectValue placeholder={placeholder} />
+          <SelectTrigger className={isUnknownDevice ? 'font-mono text-red-600' : undefined}>
+            <SelectValue placeholder={placeholder}>{getDisplayValue()}</SelectValue>
           </SelectTrigger>
           <SelectContent>
             {Object.values(devices).map((device) => (
@@ -56,20 +70,20 @@ export function DeviceSelector({
           </SelectContent>
         </Select>
       ) : (
-        <Input
-          type="text"
-          value={inputValue}
-          onChange={(e) => {
-            setInputValue(e.target.value);
-            onChange(e.target.value);
-          }}
-          placeholder="Enter device ID manually"
-        />
-      )}
-      {!hasDevices && (
-        <p className="text-muted-foreground text-xs">
-          No devices found. Enter device ID manually or check your Home Assistant connection.
-        </p>
+        <>
+          <Input
+            type="text"
+            value={inputValue}
+            onChange={(e) => {
+              setInputValue(e.target.value);
+              onChange(e.target.value);
+            }}
+            placeholder="Enter device ID manually"
+          />
+          <p className="text-muted-foreground text-xs">
+            No devices found. Enter device ID manually or check your Home Assistant connection.
+          </p>
+        </>
       )}
     </FormField>
   );

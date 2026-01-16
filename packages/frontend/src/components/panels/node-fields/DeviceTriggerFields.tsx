@@ -38,6 +38,8 @@ export function DeviceTriggerFields({ node, onChange, entities }: DeviceTriggerF
   const deviceId = getNodeDataString(node, 'device_id');
   const selectedTriggerType = getNodeDataString(node, 'type');
   const domain = getNodeDataString(node, 'domain');
+  const entityId = getNodeDataString(node, 'entity_id');
+
 
   // Fetch triggers when device is selected
   useEffect(() => {
@@ -67,14 +69,17 @@ export function DeviceTriggerFields({ node, onChange, entities }: DeviceTriggerF
       return;
     }
 
-    const triggerConfig: Partial<DeviceTrigger> = {
-      device_id: deviceId,
-      domain: domain,
-      type: selectedTriggerType,
-      platform: 'device',
-    };
+    // Find the full trigger object from the list - HA API needs the complete trigger
+    const trigger = availableDeviceTriggers.find(
+      (t) => t.type === selectedTriggerType && t.domain === domain
+    );
 
-    getTriggerCapabilities(triggerConfig)
+    if (!trigger) {
+      setTriggerCapabilities([]);
+      return;
+    }
+
+    getTriggerCapabilities(trigger)
       .then((capabilities) => {
         setTriggerCapabilities(capabilities.extra_fields || []);
       })
@@ -82,7 +87,7 @@ export function DeviceTriggerFields({ node, onChange, entities }: DeviceTriggerF
         console.error('Failed to load trigger capabilities:', error);
         setTriggerCapabilities([]);
       });
-  }, [deviceId, selectedTriggerType, domain, getTriggerCapabilities]);
+  }, [deviceId, selectedTriggerType, domain, availableDeviceTriggers, getTriggerCapabilities]);
 
   return (
     <>
@@ -95,8 +100,8 @@ export function DeviceTriggerFields({ node, onChange, entities }: DeviceTriggerF
         placeholder="Select device..."
       />
 
-      {/* Trigger type selector */}
-      {deviceId && availableDeviceTriggers.length > 0 && (
+      {/* Trigger type selector - show dropdown if API data available, otherwise show as text */}
+      {deviceId && availableDeviceTriggers.length > 0 ? (
         <FormField label="Trigger Type" required>
           <Select
             value={selectedTriggerType}
@@ -113,13 +118,38 @@ export function DeviceTriggerFields({ node, onChange, entities }: DeviceTriggerF
               <SelectValue placeholder="Select trigger type..." />
             </SelectTrigger>
             <SelectContent>
-              {availableDeviceTriggers.map((trigger) => (
+              {/* Deduplicate triggers by domain+type since multiple entities can have the same trigger type */}
+              {Array.from(
+                new Map(
+                  availableDeviceTriggers.map((t) => [`${t.domain}-${t.type}`, t])
+                ).values()
+              ).map((trigger) => (
                 <SelectItem key={`${trigger.domain}-${trigger.type}`} value={trigger.type}>
                   {trigger.type} ({trigger.domain})
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
+        </FormField>
+      ) : (
+        /* Show existing type/domain as read-only when API not available */
+        deviceId &&
+        selectedTriggerType && (
+          <FormField label="Trigger Type">
+            <div className="truncate rounded-md border bg-muted px-3 py-2 font-mono text-sm">
+              {selectedTriggerType}
+              {domain && <span className="text-muted-foreground"> ({domain})</span>}
+            </div>
+          </FormField>
+        )
+      )}
+
+      {/* Entity ID - show if present and no API data */}
+      {deviceId && entityId && availableDeviceTriggers.length === 0 && (
+        <FormField label="Entity ID">
+          <div className="truncate rounded-md border bg-muted px-3 py-2 font-mono text-sm">
+            {entityId}
+          </div>
         </FormField>
       )}
 

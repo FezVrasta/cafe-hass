@@ -41,13 +41,18 @@ export type SelectorType =
 
 /**
  * Field configuration returned by trigger/capabilities API
+ * HA returns fields with either 'type' (older format) or 'selector' (newer format)
  */
 export interface TriggerField {
   name: string;
   required?: boolean;
   optional?: boolean;
   default?: unknown;
-  selector: Partial<Record<SelectorType, Record<string, unknown>>>;
+  // Newer selector format
+  selector?: Partial<Record<SelectorType, Record<string, unknown>>>;
+  // Older type format (e.g., "select", "number", etc.)
+  type?: string;
+  options?: [string, string][];
 }
 
 /**
@@ -68,13 +73,17 @@ export function useDeviceAutomation() {
    */
   const getDeviceTriggers = useCallback(
     async (deviceId: string): Promise<DeviceTrigger[]> => {
+      if (!hass?.callWS) {
+        console.warn('callWS not available');
+        return [];
+      }
       try {
-        const response = (await hass?.sendWS({
+        const response = (await hass.callWS({
           type: 'device_automation/trigger/list',
           device_id: deviceId,
-        })) as { resources: DeviceTrigger[] } | undefined;
+        })) as DeviceTrigger[] | undefined;
 
-        return response?.resources || [];
+        return response || [];
       } catch (error) {
         console.error('Failed to fetch device triggers:', error);
         throw error;
@@ -88,12 +97,16 @@ export function useDeviceAutomation() {
    */
   const getTriggerCapabilities = useCallback(
     async (trigger: Partial<DeviceTrigger>): Promise<TriggerCapabilities> => {
+      if (!hass?.callWS) {
+        console.warn('callWS not available');
+        return { extra_fields: [] };
+      }
       try {
-        const response = await hass?.sendWS({
+        const response = await hass.callWS({
           type: 'device_automation/trigger/capabilities',
           trigger,
         });
-        return response || { extra_fields: [] };
+        return (response as TriggerCapabilities) || { extra_fields: [] };
       } catch (error) {
         console.error('Failed to fetch trigger capabilities:', error);
         throw error;

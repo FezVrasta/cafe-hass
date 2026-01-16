@@ -1,0 +1,19 @@
+alias: Kitchen.Freezer_Temp.Automation
+description: ""
+trigger:
+  - platform: device
+    entity_id: 05dfa830b43a4f97adfb34a06c2bce50
+    for:
+      hours: 0
+      minutes: 15
+      seconds: 0
+    above: 20
+    device_id: 7239e87f810ebbd9be93fe71f3977211
+    domain: sensor
+    type: temperature
+action:
+  - service: notify.e_mail
+    data:
+      message: The Freezer in the Kitchen is Open!
+      title: Alert!
+mode: single

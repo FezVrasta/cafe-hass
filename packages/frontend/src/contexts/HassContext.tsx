@@ -300,7 +300,7 @@ export const HassProvider: FC<
         sendWS: async (...args) => {
           wsConnection.sendMessage(...args);
         },
-        callWS: wsConnection.sendMessagePromise,
+        callWS: (msg) => wsConnection.sendMessagePromise(msg),
         states: Object.fromEntries(remoteEntities.map((e) => [e.entity_id, e])),
         services: remoteServices,
         connection: wsConnection as unknown as HomeAssistant['connection'],
