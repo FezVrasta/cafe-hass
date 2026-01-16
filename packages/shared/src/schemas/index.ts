@@ -47,6 +47,7 @@ export {
   ConditionDataSchema,
   type ConditionNode,
   ConditionNodeSchema,
+  type NestedCondition,
   type DelayData,
   DelayDataSchema,
   type DelayNode,

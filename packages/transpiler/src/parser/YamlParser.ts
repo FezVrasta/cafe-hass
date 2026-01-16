@@ -411,20 +411,32 @@ const VALID_CONDITION_TYPES = [
 type ValidConditionType = (typeof VALID_CONDITION_TYPES)[number];
 
 /**
- * Nested condition type (limited to one level per schema)
+ * Nested condition type (supports recursive nesting)
  */
 type NestedCondition = NonNullable<ConditionNode['data']['conditions']>[number];
 
 /**
+ * Transform an array of Home Assistant conditions to internal format
+ */
+function transformConditions(conditions: unknown[]): NestedCondition[] {
+  return conditions.map((c) => transformToNestedCondition(c as Record<string, unknown>));
+}
+
+/**
  * Transform Home Assistant condition format to internal nested condition format
  * HA uses 'condition' field, internal schema uses 'condition_type'
- * Note: Nested conditions are limited to one level per the schema
+ * Recursively handles nested conditions for and/or/not
  */
 function transformToNestedCondition(condition: Record<string, unknown>): NestedCondition {
   const conditionType = (condition.condition as string) || 'template';
   const validatedType = VALID_CONDITION_TYPES.includes(conditionType as ValidConditionType)
     ? (conditionType as ValidConditionType)
     : 'template';
+
+  // Recursively transform nested conditions if present
+  const nestedConditions = Array.isArray(condition.conditions)
+    ? transformConditions(condition.conditions)
+    : undefined;
 
   return {
     condition_type: validatedType,
@@ -443,14 +455,10 @@ function transformToNestedCondition(condition: Record<string, unknown>): NestedC
     before: condition.before as string | undefined,
     after_offset: condition.after_offset as string | undefined,
     before_offset: condition.before_offset as string | undefined,
+    for: condition.for as string | { hours?: number; minutes?: number; seconds?: number } | undefined,
+    id: condition.id as string | string[] | undefined,
+    conditions: nestedConditions,
   };
-}
-
-/**
- * Transform an array of Home Assistant conditions to internal format
- */
-function transformConditions(conditions: unknown[]): NestedCondition[] {
-  return conditions.map((c) => transformToNestedCondition(c as Record<string, unknown>));
 }
 
 /**
@@ -1750,45 +1758,76 @@ export class YamlParser {
     const conditionId = getNextNodeId('condition');
     const ifConditions = Array.isArray(ifAction.if) ? ifAction.if : [ifAction.if];
 
-    // Use the first condition's type or default to 'template'
+    // Get the first condition for analysis
     const firstCondition = ifConditions[0] as Record<string, unknown> | undefined;
-    const rawConditionType = (firstCondition?.condition as string) || 'numeric_state';
-    // Validate condition type against known types
-    const conditionType = VALID_CONDITION_TYPES.includes(rawConditionType as ValidConditionType)
-      ? (rawConditionType as ValidConditionType)
-      : 'template';
 
-    // Extract template value (Home Assistant uses value_template)
-    const templateValue =
-      (firstCondition?.template as string | undefined) ||
-      (firstCondition?.value_template as string | undefined);
+    // Determine how to structure the condition node:
+    // - If multiple conditions in if: array, treat as implicit AND
+    // - If single condition with nested conditions (or/and/not), preserve structure
+    // - If single simple condition, use its properties directly
+    let conditionNode: ConditionNode;
 
-    const conditionNode: ConditionNode = {
-      id: conditionId,
-      type: 'condition',
-      position: { x: 0, y: 0 },
-      data: {
-        alias: ifAction.alias,
-        condition_type: conditionType,
-        entity_id:
-          typeof firstCondition?.entity_id === 'string' || Array.isArray(firstCondition?.entity_id)
-            ? firstCondition?.entity_id
-            : undefined,
-        state: firstCondition?.state as string | string[] | undefined,
-        above: firstCondition?.above as number | string | undefined,
-        below: firstCondition?.below as number | string | undefined,
-        attribute: firstCondition?.attribute as string | undefined,
-        template: templateValue,
-        value_template: firstCondition?.value_template as string | undefined,
-        zone: firstCondition?.zone as string | undefined,
-        // Store all conditions if there are multiple, or if there are nested conditions in the first condition
-        conditions: Array.isArray(firstCondition?.conditions)
-          ? transformConditions(firstCondition.conditions)
-          : ifConditions.length > 1
-            ? transformConditions(ifConditions)
-            : undefined,
-      },
-    };
+    if (ifConditions.length > 1) {
+      // Multiple conditions in the if: array - implicit AND
+      conditionNode = {
+        id: conditionId,
+        type: 'condition',
+        position: { x: 0, y: 0 },
+        data: {
+          alias: ifAction.alias,
+          condition_type: 'and',
+          conditions: transformConditions(ifConditions),
+        },
+      };
+    } else if (firstCondition && Array.isArray(firstCondition.conditions)) {
+      // Single condition with nested conditions (or/and/not)
+      const rawConditionType = (firstCondition.condition as string) || 'and';
+      const conditionType = VALID_CONDITION_TYPES.includes(rawConditionType as ValidConditionType)
+        ? (rawConditionType as ValidConditionType)
+        : 'template';
+
+      conditionNode = {
+        id: conditionId,
+        type: 'condition',
+        position: { x: 0, y: 0 },
+        data: {
+          alias: ifAction.alias,
+          condition_type: conditionType,
+          conditions: transformConditions(firstCondition.conditions),
+        },
+      };
+    } else {
+      // Single simple condition - use its properties directly
+      const rawConditionType = (firstCondition?.condition as string) || 'numeric_state';
+      const conditionType = VALID_CONDITION_TYPES.includes(rawConditionType as ValidConditionType)
+        ? (rawConditionType as ValidConditionType)
+        : 'template';
+
+      const templateValue =
+        (firstCondition?.template as string | undefined) ||
+        (firstCondition?.value_template as string | undefined);
+
+      conditionNode = {
+        id: conditionId,
+        type: 'condition',
+        position: { x: 0, y: 0 },
+        data: {
+          alias: ifAction.alias,
+          condition_type: conditionType,
+          entity_id:
+            typeof firstCondition?.entity_id === 'string' || Array.isArray(firstCondition?.entity_id)
+              ? firstCondition?.entity_id
+              : undefined,
+          state: firstCondition?.state as string | string[] | undefined,
+          above: firstCondition?.above as number | string | undefined,
+          below: firstCondition?.below as number | string | undefined,
+          attribute: firstCondition?.attribute as string | undefined,
+          template: templateValue,
+          value_template: firstCondition?.value_template as string | undefined,
+          zone: firstCondition?.zone as string | undefined,
+        },
+      };
+    }
 
     nodes.push(conditionNode);
     localConditionIds.add(conditionId);

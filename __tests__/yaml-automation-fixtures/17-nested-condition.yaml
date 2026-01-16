@@ -1,0 +1,64 @@
+alias: "Auto light TV : Handle supposed state"
+triggers:
+  - trigger: state
+    entity_id:
+      - binary_sensor.xxx_presence_sensor
+    to:
+      - "on"
+    id: Occupancy detected
+  - trigger: state
+    entity_id:
+      - binary_sensor.xxx_presence_sensor
+    to:
+      - "off"
+    for:
+      hours: 0
+      minutes: 0
+      seconds: 30
+    id: Occupancy clear for x
+  - trigger: numeric_state
+    entity_id:
+      - sensor.xxx_light_level
+    id: Illuminance below
+    below: 60
+  - trigger: numeric_state
+    entity_id:
+      - sensor.xxx_light_level
+    id: Illuminance above
+    above: 90
+actions:
+  - if:
+      - condition: or
+        conditions:
+          - condition: and
+            conditions:
+              - condition: trigger
+                id:
+                  - Occupancy detected
+              - condition: numeric_state
+                entity_id: sensor.xxx_light_level
+                below: 60
+          - condition: and
+            conditions:
+              - condition: trigger
+                id:
+                  - Illuminance below
+              - condition: not
+                conditions:
+                  - condition: state
+                    entity_id: xxx_presence_sensor
+                    state:
+                      - "off"
+                    for:
+                      hours: 0
+                      minutes: 0
+                      seconds: 30
+    then:
+      - action: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.tv_light_supposed_state
+    else:
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.tv_light_supposed_state
+mode: single

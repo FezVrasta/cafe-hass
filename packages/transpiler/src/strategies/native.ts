@@ -209,22 +209,7 @@ export class NativeStrategy extends BaseStrategy {
    * Build a choose block for a condition node
    */
   private buildConditionChoose(node: ConditionNode): Record<string, unknown> {
-    // Check if this node has multiple conditions stored in the conditions array
-    // (from if/then/else blocks with multiple conditions)
-    if (Array.isArray(node.data.conditions) && node.data.conditions.length > 0) {
-      // Output the conditions array directly as the 'if' value
-      const ifConditions = node.data.conditions.map((cond) =>
-        this.mapSingleCondition(cond as Record<string, unknown>)
-      );
-      return {
-        alias: node.data.alias,
-        if: ifConditions,
-        then: [], // Will be filled by the caller
-        else: [], // Will be filled by the caller
-      };
-    }
-
-    // Single condition - build normally
+    // Build the full condition including any nested conditions
     const condition = this.buildCondition(node);
 
     return {
