@@ -465,7 +465,20 @@ export class YamlParser {
 
     try {
       // Step 1: Parse YAML string
-      const parsed = yamlLoad(yamlString) as Record<string, unknown>;
+      let parsed = yamlLoad(yamlString) as Record<string, unknown> | unknown[];
+
+      // Handle array format (list of automations) - use the first one
+      if (Array.isArray(parsed)) {
+        if (parsed.length === 0) {
+          return {
+            success: false,
+            errors: ['Empty automation array'],
+            warnings,
+            hadMetadata: false,
+          };
+        }
+        parsed = parsed[0] as Record<string, unknown>;
+      }
 
       if (!parsed || typeof parsed !== 'object') {
         return {

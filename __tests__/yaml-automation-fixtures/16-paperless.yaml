@@ -1,0 +1,31 @@
+# Paperless AI Container Management
+- id: paperless_ai_auto_shutdown
+  alias: "Paperless AI - Auto Shutdown After 4 Hours"
+  description: "Automatically shutdown Paperless AI container after 4 hours of runtime"
+  triggers:
+    - platform: state
+      entity_id: binary_sensor.lxc_paperless_ai_209_status
+      to: "on"
+      for:
+        hours: 4
+  condition:
+    - condition: state
+      entity_id: binary_sensor.lxc_paperless_ai_209_status
+      state: "on"
+  action:
+    - action: persistent_notification.create
+      data:
+        title: "Container Auto-Shutdown"
+        message: "Paperless AI (209) has been running for 4 hours and will be shut down now."
+        notification_id: "paperless_ai_shutdown"
+    - action: button.press
+      target:
+        entity_id: button.lxc_paperless_ai_209_shutdown
+    - delay:
+        seconds: 5
+    - action: persistent_notification.create
+      data:
+        title: "Container Shutdown Complete"
+        message: "Paperless AI (209) has been shut down successfully."
+        notification_id: "paperless_ai_shutdown_complete"
+  mode: single

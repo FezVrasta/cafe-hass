@@ -22,8 +22,11 @@ describe('Roundtrip Import/Export Tests', () => {
       console.log(`\n=== Testing ${filename} ===`);
       console.log('Original YAML:', originalYamlContent);
 
-      // Parse the original YAML
-      const originalConfig = yaml.load(originalYamlContent) as Record<string, unknown>;
+      // Parse the original YAML (handle array format - use first automation)
+      let originalConfig = yaml.load(originalYamlContent) as Record<string, unknown> | unknown[];
+      if (Array.isArray(originalConfig)) {
+        originalConfig = originalConfig[0] as Record<string, unknown>;
+      }
       expect(originalConfig).toBeDefined();
       expect(originalConfig.alias).toBeDefined();
 
