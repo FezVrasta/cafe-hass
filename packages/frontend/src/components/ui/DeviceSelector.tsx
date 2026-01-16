@@ -8,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useDeviceRegistry } from '@/hooks/useDeviceRegistry';
+import { useHass } from '@/contexts/HassContext';
 
 interface DeviceSelectorProps {
   value: string;
@@ -29,7 +29,7 @@ export function DeviceSelector({
   required = false,
   placeholder = 'Select device...',
 }: DeviceSelectorProps) {
-  const { devices, isLoading } = useDeviceRegistry();
+  const { hass } = useHass();
   const [inputValue, setInputValue] = useState(value);
 
   // Keep inputValue in sync with value prop
@@ -37,19 +37,20 @@ export function DeviceSelector({
     setInputValue(value);
   }, [value]);
 
+  const devices = hass?.devices ?? {};
+  const hasDevices = Object.keys(devices).length > 0;
+
   return (
     <FormField label={label} required={required}>
-      {isLoading ? (
-        <div className="text-muted-foreground text-sm">Loading devices...</div>
-      ) : devices.length > 0 ? (
+      {hasDevices ? (
         <Select value={value} onValueChange={onChange}>
           <SelectTrigger>
             <SelectValue placeholder={placeholder} />
           </SelectTrigger>
           <SelectContent>
-            {devices.map((device) => (
+            {Object.values(devices).map((device) => (
               <SelectItem key={device.id} value={device.id}>
-                {device.name}
+                {device.name_by_user || device.name || device.id}
               </SelectItem>
             ))}
           </SelectContent>
@@ -65,7 +66,7 @@ export function DeviceSelector({
           placeholder="Enter device ID manually"
         />
       )}
-      {!isLoading && devices.length === 0 && (
+      {!hasDevices && (
         <p className="text-muted-foreground text-xs">
           No devices found. Enter device ID manually or check your Home Assistant connection.
         </p>

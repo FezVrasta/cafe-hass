@@ -3,9 +3,22 @@ import type { HassServices } from 'home-assistant-js-websocket';
 
 export type { Connection, HassConfig, HassEntity, HassService } from 'home-assistant-js-websocket';
 
+/**
+ * Device registry entry from Home Assistant
+ */
+export interface HassDevice {
+  id: string;
+  name: string | null;
+  name_by_user: string | null;
+  manufacturer: string | null;
+  model: string | null;
+  area_id: string | null;
+}
+
 export interface HomeAssistant extends Omit<CustomCardHomeAssistant, 'services' | 'themes'> {
   themes: { darkMode: boolean };
   services: HassServices;
+  devices: Record<string, HassDevice>;
 }
 
 /**

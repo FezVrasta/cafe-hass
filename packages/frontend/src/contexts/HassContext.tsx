@@ -287,6 +287,7 @@ export const HassProvider: FC<
         locale: {} as unknown as HomeAssistant['locale'],
         selectedLanguage: null,
         resources: {},
+        devices: Object.fromEntries(deviceRegistry),
         localize: () => '',
         translationMetadata: {
           fragments: [],
@@ -349,6 +350,7 @@ export const HassProvider: FC<
     wsConnection,
     config.url,
     config.token,
+    deviceRegistry,
   ]);
 
   const entities = useMemo(() => Object.values(hass?.states ?? {}), [hass?.states]);
