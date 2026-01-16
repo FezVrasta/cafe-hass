@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { useFlowStore } from '@/store/flow-store';
+import { copyToClipboard } from '@/utils/copy-to-clipboard';
 import { YamlEditor } from './YamlEditor';
 
 export function YamlPreview() {
@@ -62,11 +63,11 @@ export function YamlPreview() {
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(yaml);
+      await copyToClipboard(yaml);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch {
-      console.error('Failed to copy');
+    } catch (error) {
+      console.error('Failed to copy', error);
     }
   };
 

@@ -55,7 +55,7 @@ class CafePanelWrapper extends HTMLElement {
     this.iframe.style.border = 'none';
     this.iframe.style.display = 'block';
     // Allow same-origin access
-    this.iframe.setAttribute('allow', 'clipboard-read; clipboard-write');
+    this.iframe.setAttribute('allow', 'clipboard-read *; clipboard-write *');
 
     this.appendChild(this.iframe);
   }
