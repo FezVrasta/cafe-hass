@@ -209,6 +209,22 @@ export class NativeStrategy extends BaseStrategy {
    * Build a choose block for a condition node
    */
   private buildConditionChoose(node: ConditionNode): Record<string, unknown> {
+    // Check if this node has multiple conditions stored in the conditions array
+    // (from if/then/else blocks with multiple conditions)
+    if (Array.isArray(node.data.conditions) && node.data.conditions.length > 0) {
+      // Output the conditions array directly as the 'if' value
+      const ifConditions = node.data.conditions.map((cond) =>
+        this.mapSingleCondition(cond as Record<string, unknown>)
+      );
+      return {
+        alias: node.data.alias,
+        if: ifConditions,
+        then: [], // Will be filled by the caller
+        else: [], // Will be filled by the caller
+      };
+    }
+
+    // Single condition - build normally
     const condition = this.buildCondition(node);
 
     return {
@@ -217,6 +233,28 @@ export class NativeStrategy extends BaseStrategy {
       then: [], // Will be filled by the caller
       else: [], // Will be filled by the caller
     };
+  }
+
+  /**
+   * Map a single condition object (used for individual conditions in an array)
+   */
+  private mapSingleCondition(data: Record<string, unknown>): Record<string, unknown> {
+    const { condition_type, conditions, alias, template, ...rest } = data;
+    const out: Record<string, unknown> = {
+      condition: condition_type,
+      ...rest,
+    };
+    // For template conditions, ensure value_template is set from template if needed
+    if (condition_type === 'template' && !rest.value_template && template) {
+      out.value_template = template;
+    }
+    // Recursively map nested group conditions
+    if (Array.isArray(conditions) && conditions.length > 0) {
+      out.conditions = (conditions as Record<string, unknown>[])
+        .map((c) => this.mapSingleCondition(c))
+        .filter((c) => c && (!Array.isArray(c.conditions) || (c.conditions as unknown[]).length > 0));
+    }
+    return Object.fromEntries(Object.entries(out).filter(([, v]) => v !== undefined && v !== ''));
   }
 
   /**
