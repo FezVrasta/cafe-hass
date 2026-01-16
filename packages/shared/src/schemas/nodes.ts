@@ -44,8 +44,11 @@ export const TriggerDataSchema = z
     // Event trigger
     event_type: z.string().optional(),
     event_data: z.record(z.string(), z.unknown()).optional(),
-    // Sun trigger (sunrise/sunset) or Zone trigger (enter/leave)
-    event: z.enum(['sunrise', 'sunset', 'enter', 'leave']).optional(),
+    // Event field used by multiple trigger types:
+    // - homeassistant trigger: start, shutdown
+    // - sun trigger: sunrise, sunset
+    // - zone trigger: enter, leave
+    event: z.enum(['start', 'shutdown', 'sunrise', 'sunset', 'enter', 'leave']).optional(),
     offset: z.string().optional(),
     // Numeric state trigger
     above: z.union([z.number(), z.string()]).optional(),
