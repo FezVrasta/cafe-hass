@@ -25,18 +25,17 @@ async def async_register_panel(hass: HomeAssistant) -> None:
         StaticPathConfig("/cafe-hass", str(www_path), False)
     ])
 
-    # Find the main JS file
-    js_files = [f for f in (www_path / "assets").glob("index-*.js") if not f.name.endswith('.map')]
-    if not js_files:
-        _LOGGER.error("No JavaScript files found in assets directory")
+    # The panel wrapper has a fixed name (not hashed)
+    wrapper_path = www_path / "assets" / "panel-wrapper.js"
+    if not wrapper_path.exists():
+        _LOGGER.error("panel-wrapper.js not found in assets directory")
         _LOGGER.error(f"www path: {www_path}, assets exist: {(www_path / 'assets').exists()}")
         return
-    
-    js_filename = js_files[0].name
+
     # Add cache-busting parameter to force fresh load
     import time
     cache_bust = int(time.time())
-    module_url = f"/cafe-hass/assets/{js_filename}?v={cache_bust}"
+    module_url = f"/cafe-hass/assets/panel-wrapper.js?v={cache_bust}"
 
     # First try to unregister any existing panel
     try:
@@ -58,7 +57,7 @@ async def async_register_panel(hass: HomeAssistant) -> None:
         config_panel_domain=DOMAIN,
     )
 
-    _LOGGER.info("C.A.F.E. panel registered successfully with module: %s", js_filename)
+    _LOGGER.info("C.A.F.E. panel registered successfully with iframe wrapper")
 
 
 def async_unregister_panel(hass: HomeAssistant) -> None:

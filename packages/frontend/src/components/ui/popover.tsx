@@ -1,6 +1,5 @@
 import * as PopoverPrimitive from '@radix-ui/react-popover';
 import * as React from 'react';
-import { usePortalContainer } from '@/contexts/PortalContainer';
 import { cn } from '@/lib/utils';
 
 const Popover = PopoverPrimitive.Root;
@@ -15,9 +14,8 @@ const PopoverContent = React.forwardRef<
     container?: HTMLElement | null;
   }
 >(({ className, align = 'center', sideOffset = 4, container, ...props }, ref) => {
-  const portalContainer = usePortalContainer();
   return (
-    <PopoverPrimitive.Portal container={container ?? portalContainer}>
+    <PopoverPrimitive.Portal container={container}>
       <PopoverPrimitive.Content
         ref={ref}
         align={align}

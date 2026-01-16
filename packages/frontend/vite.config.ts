@@ -1,30 +1,9 @@
 import path from 'node:path';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
-import cssInjectedByJsPlugin from 'vite-plugin-css-injected-by-js';
 
 export default defineConfig({
-  plugins: [
-    react(),
-    cssInjectedByJsPlugin({
-      dev: {
-        enableDev: true,
-      },
-      topExecutionPriority: true,
-      jsAssetsFilterFunction: function customJsAssetsfilterFunction(outputChunk) {
-        return outputChunk.isEntry;
-      },
-      injectCode: (cssCode: string, _options) => {
-        return `try{
-          if(typeof window != 'undefined'){
-            window.__CAFE_CSS__ = ${cssCode};
-          }
-        }catch(e){
-          console.error('[C.A.F.E.] CSS setup failed:', e);
-        }`;
-      },
-    }),
-  ],
+  plugins: [react()],
   base: '/cafe-hass/',
   resolve: {
     alias: {
@@ -34,6 +13,23 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: true,
+    rollupOptions: {
+      input: {
+        // Main app entry (loaded by iframe via index.html)
+        main: path.resolve(__dirname, 'index.html'),
+        // Panel wrapper entry (loaded by HA as module)
+        'panel-wrapper': path.resolve(__dirname, 'src/panel-wrapper.ts'),
+      },
+      output: {
+        // Ensure panel-wrapper has a predictable name for HA to load
+        entryFileNames: (chunkInfo) => {
+          if (chunkInfo.name === 'panel-wrapper') {
+            return 'assets/panel-wrapper.js';
+          }
+          return 'assets/[name]-[hash].js';
+        },
+      },
+    },
   },
   server: {
     port: 5173,
