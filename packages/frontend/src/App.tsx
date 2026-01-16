@@ -150,10 +150,14 @@ function App() {
 
   const status = getConnectionStatus();
 
+  const reloadApp = () => {
+    window.location.reload();
+  };
+
   return (
     <ErrorBoundary
-      FallbackComponent={({ error, resetErrorBoundary }) => (
-        <Dialog open={true} onOpenChange={resetErrorBoundary}>
+      FallbackComponent={({ error }) => (
+        <Dialog open={true} onOpenChange={reloadApp}>
           <DialogContent className="flex w-[90vw] max-w-full flex-col">
             <DialogHeader>
               <DialogTitle>Unexpected Error</DialogTitle>
@@ -173,7 +177,7 @@ function App() {
                 Please try refreshing the page. If the problem persists, consider reporting the
                 issue on our GitHub repository.
               </div>
-              <Button onClick={resetErrorBoundary}>Refresh</Button>
+              <Button onClick={reloadApp}>Refresh</Button>
             </div>
           </DialogContent>
         </Dialog>
