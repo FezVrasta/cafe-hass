@@ -1,7 +1,6 @@
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
 import * as React from 'react';
-import { usePortalContainer } from '@/contexts/PortalContainer';
 import { cn } from '@/lib/utils';
 
 const Dialog = DialogPrimitive.Root;
@@ -33,9 +32,8 @@ const DialogContent = React.forwardRef<
     container?: HTMLElement | null;
   }
 >(({ className, children, container, ...props }, ref) => {
-  const portalContainer = usePortalContainer();
   return (
-    <DialogPortal container={container ?? portalContainer}>
+    <DialogPortal container={container}>
       <DialogOverlay />
       <DialogPrimitive.Content
         ref={ref}

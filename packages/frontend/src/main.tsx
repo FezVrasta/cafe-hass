@@ -5,222 +5,107 @@ import { HassProvider } from './contexts/HassContext';
 import { logger } from './lib/logger';
 import type { HomeAssistant } from './types/hass';
 
-// Define proper types for Home Assistant panel integration
-interface HassRoute {
-  path: string;
-  prefix?: string;
-  [key: string]: unknown;
+// Global types are declared in types/global.d.ts
+
+/**
+ * Check if we're running inside an iframe within Home Assistant
+ */
+function isInHaIframe(): boolean {
+  try {
+    // Check if we're in an iframe and parent has hass
+    return window.parent !== window && 'hass' in window.parent;
+  } catch {
+    // Cross-origin access will throw
+    return false;
+  }
 }
 
-interface HassPanel {
-  component_name?: string;
-  config?: Record<string, unknown>;
-  icon?: string;
-  title?: string;
-  url_path?: string;
-  [key: string]: unknown;
+/**
+ * Get hass from parent window (when running in iframe)
+ */
+function getParentHass(): HomeAssistant | undefined {
+  try {
+    const parentHass = window.parent.hass;
+    if (parentHass && typeof parentHass === 'object' && 'states' in parentHass) {
+      return parentHass as HomeAssistant;
+    }
+  } catch {
+    // Cross-origin or not available
+  }
+  return undefined;
 }
 
-// Create a web component for Home Assistant panel integration
-class CafePanel extends HTMLElement {
-  private root: ReactDOM.Root | null = null;
-  private _hass: HomeAssistant | null = null;
-  private _narrow: boolean = false;
-  private _route: HassRoute | null = null;
-  private _panel: HassPanel | null = null;
-  private _forceMode: 'remote' | 'embedded' | undefined = undefined;
-
-  constructor() {
-    super();
-    logger.debug('CafePanel custom element constructed');
+/**
+ * Main app renderer - handles both iframe and standalone modes
+ */
+function renderApp() {
+  const rootElement = document.getElementById('root');
+  if (!rootElement) {
+    logger.error('No #root element found');
+    return;
   }
 
-  // Properties that HA will set
-  get hass() {
-    return this._hass;
-  }
-  set hass(value: unknown) {
-    // Type guard to ensure value conforms to HassInstance
-    if (value === null || value === undefined) {
-      this._hass = null;
-    } else if (typeof value === 'object' && value !== null && 'states' in value) {
-      this._hass = value as HomeAssistant;
-    } else {
-      logger.warn('Invalid hass object provided, ignoring');
-      return;
-    }
+  const inHaIframe = isInHaIframe();
+  logger.info('C.A.F.E. starting', { inHaIframe });
 
-    logger.debug('Setting hass object in custom element', {
-      hasHass: !!this._hass,
-      statesCount: this._hass?.states ? Object.keys(this._hass.states).length : 0,
-      servicesCount: this._hass?.services ? Object.keys(this._hass.services).length : 0,
-      hasConnection: !!this._hass?.connection,
-    });
+  if (inHaIframe) {
+    // Running inside HA iframe - use parent's hass object
+    logger.debug('Running in HA iframe mode');
 
-    if (this.root) this.render();
-  }
+    const root = ReactDOM.createRoot(rootElement);
 
-  get narrow() {
-    return this._narrow;
-  }
-  set narrow(value: boolean) {
-    this._narrow = value;
-    if (this.root) this.render();
-  }
-
-  get route() {
-    return this._route;
-  }
-  set route(value: unknown) {
-    // Type guard to ensure value conforms to HassRoute
-    if (value === null || value === undefined) {
-      this._route = null;
-    } else if (typeof value === 'object' && value !== null && 'path' in value) {
-      this._route = value as HassRoute;
-    } else {
-      logger.warn('Invalid route object provided, ignoring');
-      return;
-    }
-
-    if (this.root) this.render();
-  }
-
-  get panel() {
-    return this._panel;
-  }
-  set panel(value: unknown) {
-    // Type guard to ensure value conforms to HassPanel
-    if (value === null || value === undefined) {
-      this._panel = null;
-    } else if (typeof value === 'object' && value !== null) {
-      this._panel = value as HassPanel;
-    } else {
-      logger.warn('Invalid panel object provided, ignoring');
-      return;
-    }
-
-    if (this.root) this.render();
-  }
-
-  get forceMode() {
-    return this._forceMode;
-  }
-  set forceMode(value: unknown) {
-    if (value === null || value === undefined) {
-      this._forceMode = undefined;
-    } else if (value === 'remote' || value === 'embedded') {
-      this._forceMode = value;
-    } else if (typeof value === 'string') {
-      this._forceMode = value as 'remote' | 'embedded';
-    } else {
-      logger.warn('Invalid forceMode provided, ignoring');
-      return;
-    }
-
-    if (this.root) this.render();
-  }
-
-  connectedCallback() {
-    logger.debug('CafePanel custom element connected to DOM');
-    if (!this.root) {
-      this.style.display = 'block';
-      this.style.width = '100%';
-      this.style.height = '100%';
-      // Ensure the custom element has proper styling context
-      this.style.position = 'relative';
-      this.style.isolation = 'isolate';
-      this.style.contain = 'layout style';
-
-      this.root = ReactDOM.createRoot(this);
-
-      this.render();
-    }
-  }
-
-  disconnectedCallback() {
-    logger.debug('CafePanel custom element disconnected from DOM');
-
-    // Clean up React root
-    if (this.root) {
-      this.root.unmount();
-      this.root = null;
-    }
-  }
-
-  static get observedAttributes() {
-    return ['hass', 'narrow', 'route', 'panel', 'force-mode'];
-  }
-
-  attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null) {
-    if (oldValue === newValue) return;
-
-    switch (name) {
-      case 'force-mode':
-        this.forceMode = newValue ?? undefined;
-        break;
-      case 'narrow':
-        // booleanish attribute
-        this.narrow = newValue !== null && newValue !== 'false';
-        break;
-      default:
-        // For other attributes (hass, route, panel) HA sets properties directly.
-        break;
-    }
-
-    if (this.root) {
-      this.render();
-    }
-  }
-
-  render() {
-    if (this.root) {
-      logger.debug('Rendering CafePanel', {
-        hasHass: !!this._hass,
-        statesCount: this._hass?.states ? Object.keys(this._hass.states).length : 0,
-        narrow: this._narrow,
-        routePath: this._route?.path,
-        panelTitle: this._panel?.title,
-        forceMode: this._forceMode,
+    // Initial render with current parent hass
+    const renderWithParentHass = () => {
+      const parentHass = getParentHass();
+      logger.debug('Rendering with parent hass', {
+        hasHass: !!parentHass,
+        statesCount: parentHass?.states ? Object.keys(parentHass.states).length : 0,
       });
 
-      this.root.render(
+      root.render(
         <React.StrictMode>
-          <HassProvider externalHass={this._hass ?? undefined} forceMode={this._forceMode}>
+          <HassProvider externalHass={parentHass}>
             <App />
           </HassProvider>
         </React.StrictMode>
       );
-    }
-  }
-}
+    };
 
-// Always define the custom element - HA will use it when needed
-if (!customElements.get('cafe-panel')) {
-  customElements.define('cafe-panel', CafePanel);
-  logger.info('CafePanel custom element registered successfully');
-} else {
-  logger.warn('CafePanel custom element already registered');
-}
+    // Initial render
+    renderWithParentHass();
 
-// For standalone development (when there's a root element) always use the web component
-if (typeof document !== 'undefined') {
-  const rootElement = document.getElementById('root');
+    // Re-render when parent hass changes
+    // We poll because we can't easily observe property changes on window.parent
+    let lastStatesCount = 0;
+    const pollInterval = setInterval(() => {
+      const parentHass = getParentHass();
+      const currentStatesCount = parentHass?.states ? Object.keys(parentHass.states).length : 0;
 
-  if (rootElement) {
-    logger.debug('Rendering in standalone mode via cafe-panel');
-    try {
-      // Create the custom element and attach it to the DOM so all rendering goes through it
-      let panelEl = document.querySelector('cafe-panel') as HTMLElement | null;
-      if (!panelEl) {
-        panelEl = document.createElement('cafe-panel');
-        // force remote mode for standalone dev
-        panelEl.setAttribute('force-mode', 'remote');
-        rootElement.appendChild(panelEl);
+      // Re-render if states count changed (simple change detection)
+      if (currentStatesCount !== lastStatesCount) {
+        lastStatesCount = currentStatesCount;
+        renderWithParentHass();
       }
-    } catch (error) {
-      logger.error('Error creating cafe-panel element for standalone mode:', error);
-    }
+    }, 1000);
+
+    // Cleanup on unload
+    window.addEventListener('unload', () => {
+      clearInterval(pollInterval);
+    });
   } else {
-    logger.debug('No #root element found, assuming custom element mode');
+    // Standalone mode - use remote connection
+    logger.debug('Running in standalone mode');
+
+    const root = ReactDOM.createRoot(rootElement);
+    root.render(
+      <React.StrictMode>
+        <HassProvider forceMode="remote">
+          <App />
+        </HassProvider>
+      </React.StrictMode>
+    );
   }
 }
+
+// Start the app
+renderApp();

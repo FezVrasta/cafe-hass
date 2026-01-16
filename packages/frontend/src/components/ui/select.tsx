@@ -1,7 +1,6 @@
 import * as SelectPrimitive from '@radix-ui/react-select';
 import { Check, ChevronDown, ChevronUp } from 'lucide-react';
 import * as React from 'react';
-import { usePortalContainer } from '@/contexts/PortalContainer';
 import { cn } from '@/lib/utils';
 
 const Select = SelectPrimitive.Root;
@@ -64,9 +63,8 @@ const SelectContent = React.forwardRef<
     container?: HTMLElement | null;
   }
 >(({ className, children, position = 'popper', container, ...props }, ref) => {
-  const portalContainer = usePortalContainer();
   return (
-    <SelectPrimitive.Portal container={container ?? portalContainer}>
+    <SelectPrimitive.Portal container={container}>
       <SelectPrimitive.Content
         ref={ref}
         className={cn(
