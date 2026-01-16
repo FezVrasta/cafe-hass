@@ -125,13 +125,21 @@ const BaseConditionDataSchema = z.object({
   domain: z.string().optional(),
   type: z.string().optional(),
   subtype: z.string().optional(),
+  // Trigger condition
+  id: z.union([z.string(), z.array(z.string())]).optional(),
 });
 
 /**
  * Nested condition data schema for and/or/not conditions
- * Limited to one level of nesting for simplicity
+ * Supports recursive nesting for complex conditions
  */
-const NestedConditionSchema = BaseConditionDataSchema;
+export type NestedCondition = z.infer<typeof BaseConditionDataSchema> & {
+  conditions?: NestedCondition[];
+};
+
+const NestedConditionSchema: z.ZodType<NestedCondition> = BaseConditionDataSchema.extend({
+  conditions: z.lazy(() => z.array(NestedConditionSchema)).optional(),
+});
 
 /**
  * Data schema for condition nodes
