@@ -45,16 +45,23 @@ export function AutomationTraceViewer() {
       logger.info('Loaded automation traces:', traceList);
       setTraces(traceList || []);
 
-      // Auto-select the most recent trace
+      // Auto-select and load the most recent trace
       if (traceList && traceList.length > 0) {
-        setSelectedTraceRunId(traceList[0].run_id);
+        const firstRunId = traceList[0].run_id;
+        setSelectedTraceRunId(firstRunId);
+
+        // Also load the trace details for the first trace
+        const traceDetails = await api.getAutomationTraceDetails(automationId, firstRunId);
+        if (traceDetails) {
+          showTrace(traceDetails);
+        }
       }
     } catch (error) {
       logger.error('Failed to load automation traces:', error);
       setTraces([]);
     }
     setIsLoading(false);
-  }, [automationId, hass]);
+  }, [automationId, hass, showTrace]);
 
   // Load trace list when component mounts or automation ID changes
   useEffect(() => {
