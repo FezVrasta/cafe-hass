@@ -13,6 +13,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import type { HassEntity, HassService, HomeAssistant } from '@/types/hass';
@@ -261,7 +262,20 @@ export const HassProvider: FC<
     fetchRegistries();
   }, [externalHass?.connection]);
 
-  // Build the hass API object
+  // Use refs to store frequently changing data without triggering hass object recreation
+  const statesRef = useRef<Record<string, HassEntity>>({});
+  const servicesRef = useRef<Record<string, Record<string, HassService>>>({});
+  const devicesRef = useRef<Record<string, DeviceRegistryEntry>>({});
+
+  // Update refs when data changes
+  statesRef.current = useMemo(
+    () => Object.fromEntries(remoteEntities.map((e) => [e.entity_id, e])),
+    [remoteEntities]
+  );
+  servicesRef.current = remoteServices;
+  devicesRef.current = useMemo(() => Object.fromEntries(deviceRegistry), [deviceRegistry]);
+
+  // Build the hass API object - only recreate when connection/config changes, not on entity updates
   const hass = useMemo<HomeAssistant | undefined>(() => {
     if (externalHass) {
       // If externalHass is provided, use it
@@ -275,6 +289,7 @@ export const HassProvider: FC<
 
     if (shouldUseRemote) {
       // Use remote connection if configured
+      // Note: states/services/devices accessed via refs so hass object doesn't recreate on updates
       return {
         auth: null as unknown as HomeAssistant['auth'],
         connected: wsConnection.connected,
@@ -287,7 +302,9 @@ export const HassProvider: FC<
         locale: {} as unknown as HomeAssistant['locale'],
         selectedLanguage: null,
         resources: {},
-        devices: Object.fromEntries(deviceRegistry),
+        get devices() {
+          return devicesRef.current;
+        },
         localize: () => '',
         translationMetadata: {
           fragments: [],
@@ -301,8 +318,12 @@ export const HassProvider: FC<
           wsConnection.sendMessage(...args);
         },
         callWS: (msg) => wsConnection.sendMessagePromise(msg),
-        states: Object.fromEntries(remoteEntities.map((e) => [e.entity_id, e])),
-        services: remoteServices,
+        get states() {
+          return statesRef.current;
+        },
+        get services() {
+          return servicesRef.current;
+        },
         connection: wsConnection as unknown as HomeAssistant['connection'],
         callApi: async (method: string, path: string, data?: unknown) => {
           if (!config.url || !config.token) {
@@ -342,16 +363,7 @@ export const HassProvider: FC<
 
     // No connection available
     return undefined;
-  }, [
-    externalHass,
-    shouldUseRemote,
-    remoteEntities,
-    remoteServices,
-    wsConnection,
-    config.url,
-    config.token,
-    deviceRegistry,
-  ]);
+  }, [externalHass, shouldUseRemote, wsConnection, config.url, config.token]);
 
   const entities = useMemo(() => Object.values(hass?.states ?? {}), [hass?.states]);
 
