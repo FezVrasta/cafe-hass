@@ -1296,11 +1296,20 @@ export class YamlParser {
     let currentNodeIds = previousNodeIds;
     // Create a mutable copy so we can track condition nodes created during parsing
     const localConditionNodeIds = new Set(conditionNodeIds);
+    // Track condition nodes whose FALSE path should connect to next action
+    const falsePathConditionIds = new Set<string>();
 
     // Helper to create edges from current nodes to a target
     const createEdgesFromCurrent = (targetId: string): void => {
       for (const prevId of currentNodeIds) {
-        const sourceHandle = localConditionNodeIds.has(prevId) ? 'true' : undefined;
+        let sourceHandle: string | undefined;
+        if (falsePathConditionIds.has(prevId)) {
+          // This condition's FALSE path should connect to next action
+          sourceHandle = 'false';
+        } else if (localConditionNodeIds.has(prevId)) {
+          // This condition's TRUE path should connect to next action
+          sourceHandle = 'true';
+        }
         edges.push(this.createEdge(prevId, targetId, sourceHandle));
       }
     };
@@ -1465,15 +1474,23 @@ export class YamlParser {
           warnings,
           currentNodeIds,
           getNextNodeId,
-          localConditionNodeIds
+          localConditionNodeIds,
+          falsePathConditionIds
         );
         nodes.push(...chooseResult.nodes);
         edges.push(...chooseResult.edges);
         // Add any new condition nodes to our tracking set
+        // But NOT condition nodes that are outputs via FALSE path (no default choose)
         for (const outId of chooseResult.outputNodeIds) {
           const outNode = chooseResult.nodes.find((n) => n.id === outId);
           if (outNode?.type === 'condition') {
-            localConditionNodeIds.add(outId);
+            if (chooseResult.falsePathOutputIds.includes(outId)) {
+              // This condition's FALSE path should connect to subsequent actions
+              falsePathConditionIds.add(outId);
+            } else {
+              // This condition's TRUE path should connect to subsequent actions
+              localConditionNodeIds.add(outId);
+            }
           }
         }
         currentNodeIds = chooseResult.outputNodeIds;
@@ -1711,11 +1728,13 @@ export class YamlParser {
     warnings: string[],
     previousNodeIds: string[],
     getNextNodeId: (type: string) => string,
-    conditionNodeIds: Set<string> = new Set()
-  ): { nodes: FlowNode[]; edges: FlowEdge[]; outputNodeIds: string[] } {
+    conditionNodeIds: Set<string> = new Set(),
+    falsePathConditionIds: Set<string> = new Set()
+  ): { nodes: FlowNode[]; edges: FlowEdge[]; outputNodeIds: string[]; falsePathOutputIds: string[] } {
     const nodes: FlowNode[] = [];
     const edges: FlowEdge[] = [];
     const outputNodeIds: string[] = [];
+    const falsePathOutputIds: string[] = [];
     const localConditionIds = new Set(conditionNodeIds);
 
     const choices = Array.isArray(chooseAction.choose)
@@ -1754,6 +1773,8 @@ export class YamlParser {
           below: firstCondition.below,
           attribute: firstCondition.attribute,
           zone: firstCondition.zone,
+          // Preserve id for trigger conditions (e.g., condition: trigger, id: "playing")
+          id: firstCondition.id,
           // Store all conditions if there are multiple
           conditions:
             conditionsArray.length > 1
@@ -1771,10 +1792,18 @@ export class YamlParser {
       // For first condition, connect from original previousNodeIds
       // For subsequent conditions, connect from previous condition's FALSE path
       for (const prevId of currentPreviousIds) {
-        // If previous is a condition (from this choose block), use 'false' handle
-        const isFromChooseCondition =
-          index > 0 && localConditionIds.has(prevId) && !conditionNodeIds.has(prevId);
-        const sourceHandle = isFromChooseCondition ? 'false' : undefined;
+        let sourceHandle: string | undefined;
+        if (index > 0 && localConditionIds.has(prevId) && !conditionNodeIds.has(prevId)) {
+          // Previous is a condition from this choose block - use FALSE path
+          sourceHandle = 'false';
+        } else if (falsePathConditionIds.has(prevId)) {
+          // Previous is a condition whose FALSE path should connect here
+          sourceHandle = 'false';
+        } else if (conditionNodeIds.has(prevId)) {
+          // Previous is an external condition (e.g., root-level) - use TRUE path
+          sourceHandle = 'true';
+        }
+        // else: previous is not a condition - no sourceHandle needed
         edges.push(this.createEdge(prevId, conditionId, sourceHandle));
       }
 
@@ -1848,10 +1877,13 @@ export class YamlParser {
     } else if (validChoices.length > 0) {
       // No default - the last condition's false path is an implicit output
       // (the automation continues after the choose if no condition matches)
-      outputNodeIds.push(currentPreviousIds[0]);
+      const lastConditionId = currentPreviousIds[0];
+      outputNodeIds.push(lastConditionId);
+      // Track that this output should use FALSE path, not TRUE
+      falsePathOutputIds.push(lastConditionId);
     }
 
-    return { nodes, edges, outputNodeIds };
+    return { nodes, edges, outputNodeIds, falsePathOutputIds };
   }
 
   /**
@@ -1946,6 +1978,8 @@ export class YamlParser {
           template: templateValue,
           value_template: firstCondition?.value_template as string | undefined,
           zone: firstCondition?.zone as string | undefined,
+          // Preserve id for trigger conditions (e.g., condition: trigger, id: "playing")
+          id: firstCondition?.id as string | string[] | undefined,
         },
       };
     }

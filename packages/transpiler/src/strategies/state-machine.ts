@@ -390,7 +390,45 @@ export class StateMachineStrategy extends BaseStrategy {
     const falseTarget = falseTargetId === 'END' ? 'END' : falseTargetId;
     const currentNodeId = node.id;
 
-    // Generate Jinja2 template for condition evaluation
+    // Check if this is a complex template that can't be inlined into {% if %}
+    const needsNativeCondition = this.needsNativeConditionCheck(node);
+
+    if (needsNativeCondition) {
+      // Use native HA condition check instead of Jinja2 {% if %}
+      // This handles templates with {% set %} and other complex Jinja2
+      const condition = this.buildNativeCondition(node);
+
+      return {
+        conditions: [
+          {
+            condition: 'template',
+            value_template: `{{ current_node == "${currentNodeId}" }}`,
+          },
+        ],
+        sequence: [
+          {
+            alias: node.data.alias,
+            if: [condition],
+            then: [
+              {
+                variables: {
+                  current_node: trueTarget,
+                },
+              },
+            ],
+            else: [
+              {
+                variables: {
+                  current_node: falseTarget,
+                },
+              },
+            ],
+          },
+        ],
+      };
+    }
+
+    // Generate Jinja2 template for condition evaluation (simple case)
     const conditionTemplate = this.buildConditionTemplate(node);
 
     return {
@@ -409,6 +447,86 @@ export class StateMachineStrategy extends BaseStrategy {
         },
       ],
     };
+  }
+
+  /**
+   * Check if a condition node needs native HA condition check instead of Jinja2 {% if %}
+   */
+  private needsNativeConditionCheck(node: ConditionNode): boolean {
+    const data = node.data;
+
+    // Template conditions with {% %} statements need native check
+    if (data.condition_type === 'template') {
+      const template = data.template || data.value_template || '';
+      if (template.includes('{%')) {
+        return true;
+      }
+    }
+
+    // Nested conditions (and/or/not) with complex templates
+    if ((data.condition_type === 'and' || data.condition_type === 'or' || data.condition_type === 'not') &&
+        data.conditions) {
+      return data.conditions.some((c) => {
+        if (c.condition_type === 'template') {
+          const template = c.template || c.value_template || '';
+          return template.includes('{%');
+        }
+        return false;
+      });
+    }
+
+    return false;
+  }
+
+  /**
+   * Build native HA condition object for use in if/then/else
+   */
+  private buildNativeCondition(node: ConditionNode): Record<string, unknown> {
+    const data = node.data;
+    const condition: Record<string, unknown> = {
+      condition: data.condition_type,
+    };
+
+    // Copy relevant fields based on condition type
+    if (data.entity_id) condition.entity_id = data.entity_id;
+    if (data.state !== undefined) condition.state = data.state;
+    if (data.above !== undefined) condition.above = data.above;
+    if (data.below !== undefined) condition.below = data.below;
+    if (data.attribute) condition.attribute = data.attribute;
+    if (data.value_template) condition.value_template = data.value_template;
+    if (data.after) condition.after = data.after;
+    if (data.before) condition.before = data.before;
+    if (data.after_offset) condition.after_offset = data.after_offset;
+    if (data.before_offset) condition.before_offset = data.before_offset;
+    if (data.zone) condition.zone = data.zone;
+    if (data.weekday) condition.weekday = data.weekday;
+    if (data.id) condition.id = data.id;
+
+    // Handle nested conditions
+    if (data.conditions && data.conditions.length > 0) {
+      condition.conditions = data.conditions.map((c) => {
+        const nested: Record<string, unknown> = {
+          condition: c.condition_type,
+        };
+        if (c.entity_id) nested.entity_id = c.entity_id;
+        if (c.state !== undefined) nested.state = c.state;
+        if (c.above !== undefined) nested.above = c.above;
+        if (c.below !== undefined) nested.below = c.below;
+        if (c.attribute) nested.attribute = c.attribute;
+        if (c.value_template) nested.value_template = c.value_template;
+        if (c.template) nested.value_template = c.template;
+        if (c.after) nested.after = c.after;
+        if (c.before) nested.before = c.before;
+        if (c.after_offset) nested.after_offset = c.after_offset;
+        if (c.before_offset) nested.before_offset = c.before_offset;
+        if (c.zone) nested.zone = c.zone;
+        if (c.weekday) nested.weekday = c.weekday;
+        if (c.id) nested.id = c.id;
+        return Object.fromEntries(Object.entries(nested).filter(([, v]) => v !== undefined));
+      });
+    }
+
+    return Object.fromEntries(Object.entries(condition).filter(([, v]) => v !== undefined));
   }
 
   /**
@@ -596,6 +714,8 @@ export class StateMachineStrategy extends BaseStrategy {
 
       case 'template': {
         // Strip outer {{ }} if present - check both template and value_template
+        // Note: Complex templates with {% %} are handled via needsNativeConditionCheck
+        // and won't use this method
         let template = data.template || data.value_template || 'true';
         if (template.startsWith('{{') && template.endsWith('}}')) {
           template = template.slice(2, -2).trim();

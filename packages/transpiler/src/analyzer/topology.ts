@@ -261,9 +261,7 @@ function traceToParallelSourceBFS(
     }
 
     // Find predecessors
-    const predecessors = flow.edges
-      .filter((e) => e.target === nodeId)
-      .map((e) => e.source);
+    const predecessors = flow.edges.filter((e) => e.target === nodeId).map((e) => e.source);
 
     for (const pred of predecessors) {
       if (!visited.has(pred)) {
@@ -399,9 +397,7 @@ function checkParallelConvergence(
     const node = flow.nodes.find((n) => n.id === sourceId);
     return node?.type === 'condition';
   });
-  const allIncomingFromTruePath = incomingEdgesToTarget.every(
-    (e) => e.sourceHandle === 'true'
-  );
+  const allIncomingFromTruePath = incomingEdgesToTarget.every((e) => e.sourceHandle === 'true');
 
   if (allSourcesAreConditions && allIncomingFromTruePath) {
     // This is condition branching (multiple conditions' true paths converging)
