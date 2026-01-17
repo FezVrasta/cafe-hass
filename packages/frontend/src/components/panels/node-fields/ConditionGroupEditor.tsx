@@ -163,29 +163,52 @@ function ConditionTypeFields({
         </div>
       );
 
-    case 'time':
+    case 'time': {
+      // weekday is stored as an array, convert to/from comma-separated string
+      const weekdayArray = Array.isArray(cond.weekday) ? cond.weekday : [];
+      const weekdayString = weekdayArray.join(',');
+
+      const handleWeekdayChange = (value: string) => {
+        const days = value
+          .split(',')
+          .map((d) => d.trim().toLowerCase())
+          .filter((d) => d.length > 0);
+        onUpdate({ ...cond, weekday: days.length > 0 ? days : undefined });
+      };
+
       return (
-        <div className="grid grid-cols-2 gap-2">
+        <div className="flex flex-col gap-2">
+          <div className="grid grid-cols-2 gap-2">
+            <Label>
+              <div className="mb-1 block text-muted-foreground text-xs">After</div>
+              <Input
+                value={cond.after || ''}
+                onChange={(e) => onUpdate({ ...cond, after: e.target.value })}
+                placeholder="HH:MM"
+                type="time"
+              />
+            </Label>
+            <Label>
+              <div className="mb-1 block text-muted-foreground text-xs">Before</div>
+              <Input
+                value={cond.before || ''}
+                onChange={(e) => onUpdate({ ...cond, before: e.target.value })}
+                placeholder="HH:MM"
+                type="time"
+              />
+            </Label>
+          </div>
           <Label>
-            <div className="mb-1 block text-muted-foreground text-xs">After</div>
+            <div className="mb-1 block text-muted-foreground text-xs">Weekday</div>
             <Input
-              value={cond.after || ''}
-              onChange={(e) => onUpdate({ ...cond, after: e.target.value })}
-              placeholder="HH:MM"
-              type="time"
-            />
-          </Label>
-          <Label>
-            <div className="mb-1 block text-muted-foreground text-xs">Before</div>
-            <Input
-              value={cond.before || ''}
-              onChange={(e) => onUpdate({ ...cond, before: e.target.value })}
-              placeholder="HH:MM"
-              type="time"
+              value={weekdayString}
+              onChange={(e) => handleWeekdayChange(e.target.value)}
+              placeholder="mon,tue,wed,thu,fri,sat,sun"
             />
           </Label>
         </div>
       );
+    }
 
     default:
       return (

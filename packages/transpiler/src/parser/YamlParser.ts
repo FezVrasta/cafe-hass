@@ -3,7 +3,7 @@ import { applyHeuristicLayout } from './layout';
 
 // Zod schema for Home Assistant condition objects
 export const HAConditionSchema = z
-  .object({
+  .looseObject({
     alias: z.string().optional(),
     condition: z.string().optional(),
     entity_id: z.union([z.string(), z.array(z.string())]).optional(),
@@ -22,7 +22,6 @@ export const HAConditionSchema = z
     attribute: z.string().optional(),
     id: z.string().optional(),
   })
-  .passthrough() // Allow unknown keys to pass through
   .transform((input) => {
     // Normalize condition_type and template fields
     const condition_type = VALID_CONDITION_TYPES.includes(
@@ -455,6 +454,7 @@ function transformToNestedCondition(condition: Record<string, unknown>): NestedC
     before: condition.before as string | undefined,
     after_offset: condition.after_offset as string | undefined,
     before_offset: condition.before_offset as string | undefined,
+    weekday: toWeekdayArray(condition.weekday),
     for: condition.for as string | { hours?: number; minutes?: number; seconds?: number } | undefined,
     id: condition.id as string | string[] | undefined,
     conditions: nestedConditions,

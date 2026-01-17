@@ -1,0 +1,16 @@
+alias: Weekly Full Backup
+description: Weekly Full Backup
+mode: single
+triggers:
+  - at: "03:00:00"
+    trigger: time
+conditions:
+  - condition: and
+    conditions:
+      - condition: time
+        weekday:
+          - sat
+actions:
+  - data:
+      compressed: true
+    action: hassio.backup_full

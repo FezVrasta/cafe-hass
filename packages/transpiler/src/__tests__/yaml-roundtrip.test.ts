@@ -8,6 +8,50 @@ import { YamlParser } from '../parser/YamlParser';
 
 const FIXTURES_DIR = join(__dirname, '../../../../__tests__/yaml-automation-fixtures');
 
+/**
+ * Test that specifically verifies condition properties are preserved during roundtrip.
+ * This catches regressions like nested condition fields (weekday, after, before, etc.) being lost.
+ */
+describe('Condition property preservation', () => {
+  const parser = new YamlParser();
+  const transpiler = new FlowTranspiler();
+
+  it('should preserve weekday in nested time condition (19-nested-condition.yaml)', async () => {
+    const inputYaml = readFileSync(join(FIXTURES_DIR, '19-nested-condition.yaml'), 'utf8');
+
+    // Parse the YAML
+    const parseResult = await parser.parse(inputYaml);
+    expect(parseResult.success).toBe(true);
+    expect(parseResult.graph).toBeDefined();
+
+    // Find the condition node
+    const conditionNode = parseResult.graph!.nodes.find((n) => n.type === 'condition');
+    expect(conditionNode).toBeDefined();
+
+    // Verify the condition data has the weekday field preserved
+    const conditionData = conditionNode!.data as Record<string, unknown>;
+
+    // The condition should be an 'and' type with nested conditions
+    expect(conditionData.condition_type).toBe('and');
+    expect(conditionData.conditions).toBeDefined();
+    expect(Array.isArray(conditionData.conditions)).toBe(true);
+
+    // The nested condition should be a time condition with weekday
+    const nestedConditions = conditionData.conditions as Record<string, unknown>[];
+    expect(nestedConditions.length).toBeGreaterThan(0);
+
+    const timeCondition = nestedConditions.find((c) => c.condition_type === 'time');
+    expect(timeCondition).toBeDefined();
+    expect(timeCondition!.weekday).toBeDefined();
+    expect(timeCondition!.weekday).toEqual(['sat']);
+
+    // Convert back to YAML and verify the weekday is still present
+    const outputYaml = transpiler.toYaml(parseResult.graph!);
+    expect(outputYaml).toContain('weekday');
+    expect(outputYaml).toContain('sat');
+  });
+});
+
 function loadYamlFixture(name: string): string {
   return readFileSync(join(FIXTURES_DIR, name), 'utf8');
 }

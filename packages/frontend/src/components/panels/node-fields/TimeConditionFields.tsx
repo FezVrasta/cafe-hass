@@ -1,7 +1,7 @@
 import type { FlowNode } from '@cafe/shared';
 import { FormField } from '@/components/forms/FormField';
 import { Input } from '@/components/ui/input';
-import { getNodeDataString } from '@/utils/nodeData';
+import { getNodeDataArray, getNodeDataString } from '@/utils/nodeData';
 
 interface TimeConditionFieldsProps {
   node: FlowNode;
@@ -15,7 +15,19 @@ interface TimeConditionFieldsProps {
 export function TimeConditionFields({ node, onChange }: TimeConditionFieldsProps) {
   const after = getNodeDataString(node, 'after');
   const before = getNodeDataString(node, 'before');
-  const weekday = getNodeDataString(node, 'weekday');
+  const weekdayArray = getNodeDataArray<string>(node, 'weekday');
+
+  // Convert array to comma-separated string for display
+  const weekdayString = weekdayArray.join(',');
+
+  const handleWeekdayChange = (value: string) => {
+    // Convert comma-separated string to array, filtering empty values
+    const days = value
+      .split(',')
+      .map((d) => d.trim().toLowerCase())
+      .filter((d) => d.length > 0);
+    onChange('weekday', days.length > 0 ? days : undefined);
+  };
 
   return (
     <>
@@ -30,8 +42,8 @@ export function TimeConditionFields({ node, onChange }: TimeConditionFieldsProps
       <FormField label="Weekday (optional)" description="Comma-separated list of days">
         <Input
           type="text"
-          value={weekday}
-          onChange={(e) => onChange('weekday', e.target.value)}
+          value={weekdayString}
+          onChange={(e) => handleWeekdayChange(e.target.value)}
           placeholder="mon,tue,wed,thu,fri,sat,sun"
         />
       </FormField>
