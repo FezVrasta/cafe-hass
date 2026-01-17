@@ -46,7 +46,7 @@ export const TriggerNode = memo(function TriggerNode({ id, data, selected }: Tri
         return {
           title: data.alias || 'State Change',
           subtitle: Array.isArray(data.entity_id)
-            ? data.entity_id.join(', ')
+            ? `${data.entity_id.length} entities:\n${data.entity_id.join(', ')}`
             : data.entity_id || 'State',
           detail: data.to ? `to: ${data.to}` : null,
         };
@@ -122,7 +122,7 @@ export const TriggerNode = memo(function TriggerNode({ id, data, selected }: Tri
   return (
     <div
       className={cn(
-        'min-w-[180px] rounded-lg border-2 border-amber-400 bg-amber-50 px-4 py-3',
+        'min-w-[180px] max-w-[300px] rounded-lg border-2 border-amber-400 bg-amber-50 px-4 py-3',
         'transition-all duration-200',
         selected && 'ring-2 ring-amber-500 ring-offset-2',
         isActive && 'node-active ring-4 ring-green-500'
@@ -141,7 +141,9 @@ export const TriggerNode = memo(function TriggerNode({ id, data, selected }: Tri
       </div>
 
       <div className="space-y-0.5 text-amber-700 text-xs">
-        <div className="font-medium">{displayInfo.subtitle}</div>
+        <div className="line-clamp-2 truncate whitespace-pre-line font-medium">
+          {displayInfo.subtitle}
+        </div>
         {displayInfo.detail && (
           <div className="truncate opacity-75">{String(displayInfo.detail)}</div>
         )}
