@@ -281,6 +281,10 @@ export class StateMachineStrategy extends BaseStrategy {
       service: node.data.service,
     };
 
+    if (node.data.id) {
+      actionCall.id = node.data.id;
+    }
+
     if (node.data.target) {
       actionCall.target = node.data.target;
     }
@@ -362,6 +366,15 @@ export class StateMachineStrategy extends BaseStrategy {
     const nextNode = nextNodeId === 'END' ? 'END' : nextNodeId;
     const currentNodeId = node.id;
 
+    const delayAction: Record<string, unknown> = {
+      alias: node.data.alias,
+      delay: node.data.delay,
+    };
+
+    if (node.data.id) {
+      delayAction.id = node.data.id;
+    }
+
     return {
       conditions: [
         {
@@ -370,10 +383,7 @@ export class StateMachineStrategy extends BaseStrategy {
         },
       ],
       sequence: [
-        {
-          alias: node.data.alias,
-          delay: node.data.delay,
-        },
+        delayAction,
         {
           variables: {
             current_node: nextNode,
@@ -394,6 +404,10 @@ export class StateMachineStrategy extends BaseStrategy {
     const waitAction: Record<string, unknown> = {
       alias: node.data.alias,
     };
+
+    if (node.data.id) {
+      waitAction.id = node.data.id;
+    }
 
     if (node.data.wait_template) {
       waitAction.wait_template = node.data.wait_template;
@@ -451,6 +465,10 @@ export class StateMachineStrategy extends BaseStrategy {
 
     if (node.data.alias) {
       setVarsAction.alias = node.data.alias;
+    }
+
+    if (node.data.id) {
+      setVarsAction.id = node.data.id;
     }
 
     return {

@@ -7,6 +7,7 @@
 export const HANDLED_PROPERTIES = {
   // Common properties handled by all nodes
   common: [
+    'id', // User-defined ID for referencing in templates
     'alias', // Always handled by common alias field
     '_conditionId', // Internal property
   ],
@@ -63,7 +64,6 @@ export const HANDLED_PROPERTIES = {
     'condition',
     'for', // Duration field
     'conditions', // Nested conditions for and/or/not and multi-condition blocks
-    'id', // Trigger condition ID field
   ],
 
   // Action properties handled by ActionFields component
