@@ -8,6 +8,7 @@ import { getHandledProperties } from '@/config/handledProperties';
 import { useHass } from '@/contexts/HassContext';
 import { useFlowStore } from '@/store/flow-store';
 import type { HassEntity } from '@/types/hass';
+import { Separator } from '../ui/separator';
 import { NodeFields } from './NodeFields';
 import { PropertyEditor } from './PropertyEditor';
 
@@ -104,7 +105,6 @@ export function PropertyPanel() {
         </Button>
       </div>
 
-      {/* Alias field (common to all nodes) */}
       <FormField label="Alias (Display Name)">
         <Input
           type="text"
@@ -113,6 +113,19 @@ export function PropertyPanel() {
           placeholder="Optional display name"
         />
       </FormField>
+
+      {/* Common fields for all nodes */}
+      <FormField label="ID">
+        <Input
+          type="text"
+          value={typeof selectedNode.data.id === 'string' ? selectedNode.data.id : ''}
+          onChange={(e) => handleChange('id', e.target.value || undefined)}
+          placeholder="Optional unique ID"
+          className="font-mono"
+        />
+      </FormField>
+
+      <Separator />
 
       {/* Node-specific fields */}
       <NodeFields

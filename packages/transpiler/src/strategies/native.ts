@@ -212,12 +212,18 @@ export class NativeStrategy extends BaseStrategy {
     // Build the full condition including any nested conditions
     const condition = this.buildCondition(node);
 
-    return {
+    const choose: Record<string, unknown> = {
       alias: node.data.alias,
       if: [condition],
       then: [], // Will be filled by the caller
       else: [], // Will be filled by the caller
     };
+
+    if (node.data.id) {
+      choose.id = node.data.id;
+    }
+
+    return choose;
   }
 
   /**
@@ -279,6 +285,10 @@ export class NativeStrategy extends BaseStrategy {
       service: node.data.service,
     };
 
+    if (node.data.id) {
+      action.id = node.data.id;
+    }
+
     if (node.data.target) {
       action.target = node.data.target;
     }
@@ -310,10 +320,16 @@ export class NativeStrategy extends BaseStrategy {
    * Build delay action
    */
   private buildDelay(node: DelayNode): Record<string, unknown> {
-    return {
+    const delay: Record<string, unknown> = {
       alias: node.data.alias,
       delay: node.data.delay,
     };
+
+    if (node.data.id) {
+      delay.id = node.data.id;
+    }
+
+    return delay;
   }
 
   /**
@@ -323,6 +339,10 @@ export class NativeStrategy extends BaseStrategy {
     const wait: Record<string, unknown> = {
       alias: node.data.alias,
     };
+
+    if (node.data.id) {
+      wait.id = node.data.id;
+    }
 
     if (node.data.wait_template) {
       wait.wait_template = node.data.wait_template;
@@ -358,6 +378,10 @@ export class NativeStrategy extends BaseStrategy {
 
     if (node.data.alias) {
       setVars.alias = node.data.alias;
+    }
+
+    if (node.data.id) {
+      setVars.id = node.data.id;
     }
 
     return setVars;

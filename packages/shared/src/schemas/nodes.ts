@@ -16,63 +16,62 @@ import {
  * Data schema for trigger nodes
  * Contains HA-specific trigger configuration
  */
-export const TriggerDataSchema = z
-  .object({
-    alias: z.string().optional(),
-    platform: TriggerPlatformSchema,
-    // State trigger
-    entity_id: z.union([z.string(), z.array(z.string())]).optional(),
-    // Home Assistant supports both string and array for from/to fields
-    from: z.union([z.string(), z.array(z.string())]).optional(),
-    to: z.union([z.string(), z.array(z.string())]).optional(),
-    for: z
-      .union([
-        z.string(),
-        z.object({
-          hours: z.number().optional(),
-          minutes: z.number().optional(),
-          seconds: z.number().optional(),
-        }),
-      ])
-      .optional(),
-    // Time trigger
-    at: z.string().optional(),
-    // Time pattern trigger
-    hours: z.string().optional(),
-    minutes: z.string().optional(),
-    seconds: z.string().optional(),
-    // Event trigger
-    event_type: z.string().optional(),
-    event_data: z.record(z.string(), z.unknown()).optional(),
-    // Event field used by multiple trigger types:
-    // - homeassistant trigger: start, shutdown
-    // - sun trigger: sunrise, sunset
-    // - zone trigger: enter, leave
-    event: z.enum(['start', 'shutdown', 'sunrise', 'sunset', 'enter', 'leave']).optional(),
-    offset: z.union([z.number(), z.string()]).optional(),
-    // Numeric state trigger
-    above: z.union([z.number(), z.string()]).optional(),
-    below: z.union([z.number(), z.string()]).optional(),
-    value_template: z.string().optional(),
-    // Template trigger
-    template: z.string().optional(),
-    // Webhook trigger
-    webhook_id: z.string().optional(),
-    // Zone trigger
-    zone: z.string().optional(),
-    // MQTT trigger
-    topic: z.string().optional(),
-    payload: z.string().optional(),
-    // Device trigger fields
-    device_id: z.string().optional(),
-    domain: z.string().optional(),
-    type: z.string().optional(), // Not to be confused with node type
-    subtype: z.string().optional(),
-  })
-  .passthrough(); // Allow additional properties to be preserved
+export const TriggerDataSchema = z.looseObject({
+  id: z.string().optional(), // User-defined ID for referencing in templates
+  alias: z.string().optional(),
+  platform: TriggerPlatformSchema,
+  // State trigger
+  entity_id: z.union([z.string(), z.array(z.string())]).optional(),
+  // Home Assistant supports both string and array for from/to fields
+  from: z.union([z.string(), z.array(z.string())]).optional(),
+  to: z.union([z.string(), z.array(z.string())]).optional(),
+  for: z
+    .union([
+      z.string(),
+      z.looseObject({
+        hours: z.number().optional(),
+        minutes: z.number().optional(),
+        seconds: z.number().optional(),
+      }),
+    ])
+    .optional(),
+  // Time trigger
+  at: z.string().optional(),
+  // Time pattern trigger
+  hours: z.string().optional(),
+  minutes: z.string().optional(),
+  seconds: z.string().optional(),
+  // Event trigger
+  event_type: z.string().optional(),
+  event_data: z.record(z.string(), z.unknown()).optional(),
+  // Event field used by multiple trigger types:
+  // - homeassistant trigger: start, shutdown
+  // - sun trigger: sunrise, sunset
+  // - zone trigger: enter, leave
+  event: z.enum(['start', 'shutdown', 'sunrise', 'sunset', 'enter', 'leave']).optional(),
+  offset: z.union([z.number(), z.string()]).optional(),
+  // Numeric state trigger
+  above: z.union([z.number(), z.string()]).optional(),
+  below: z.union([z.number(), z.string()]).optional(),
+  value_template: z.string().optional(),
+  // Template trigger
+  template: z.string().optional(),
+  // Webhook trigger
+  webhook_id: z.string().optional(),
+  // Zone trigger
+  zone: z.string().optional(),
+  // MQTT trigger
+  topic: z.string().optional(),
+  payload: z.string().optional(),
+  // Device trigger fields
+  device_id: z.string().optional(),
+  domain: z.string().optional(),
+  type: z.string().optional(), // Not to be confused with node type
+  subtype: z.string().optional(),
+});
 export type TriggerData = z.infer<typeof TriggerDataSchema>;
 
-export const TriggerNodeSchema = z.object({
+export const TriggerNodeSchema = z.looseObject({
   id: z.string().min(1),
   type: z.literal('trigger'),
   position: PositionSchema,
@@ -87,7 +86,7 @@ export type TriggerNode = z.infer<typeof TriggerNodeSchema>;
 /**
  * Base condition data schema (non-recursive fields)
  */
-const BaseConditionDataSchema = z.object({
+const BaseConditionDataSchema = z.looseObject({
   alias: z.string().optional(),
   condition_type: ConditionTypeSchema,
   // Common fields
@@ -95,7 +94,7 @@ const BaseConditionDataSchema = z.object({
   for: z
     .union([
       z.string(),
-      z.object({
+      z.looseObject({
         hours: z.number().optional(),
         minutes: z.number().optional(),
         seconds: z.number().optional(),
@@ -151,7 +150,7 @@ export const ConditionDataSchema = BaseConditionDataSchema.extend({
 });
 export type ConditionData = z.infer<typeof ConditionDataSchema>;
 
-export const ConditionNodeSchema = z.object({
+export const ConditionNodeSchema = z.looseObject({
   id: z.string().min(1),
   type: z.literal('condition'),
   position: PositionSchema,
@@ -172,7 +171,7 @@ export type Variables = z.infer<typeof VariablesSchema>;
 /**
  * Choose block schema for Home Assistant actions
  */
-export const ChooseBlockSchema = z.object({
+export const ChooseBlockSchema = z.looseObject({
   conditions: z.array(BaseConditionDataSchema),
   sequence: z.array(z.any()), // Accepts array of actions (will be validated as nodes)
   alias: z.string().optional(),
@@ -182,7 +181,7 @@ export type ChooseBlock = z.infer<typeof ChooseBlockSchema>;
 /**
  * Repeat block schema for Home Assistant actions
  */
-export const RepeatBlockSchema = z.object({
+export const RepeatBlockSchema = z.looseObject({
   sequence: z.array(z.any()), // Accepts array of actions (will be validated as nodes)
   until: z.string().optional(), // Template string for until condition
   count: z.number().optional(),
@@ -194,7 +193,8 @@ export type RepeatBlock = z.infer<typeof RepeatBlockSchema>;
  * Data schema for action nodes
  * Contains HA service call configuration and extended blocks
  */
-export const ActionDataSchema = z.object({
+export const ActionDataSchema = z.looseObject({
+  id: z.string().optional(), // User-defined ID for referencing in templates
   alias: z.string().optional(),
   service: z.string().min(1).optional(), // e.g., "light.turn_on"
   target: OptionalTargetSchema.optional(),
@@ -217,7 +217,7 @@ export const ActionDataSchema = z.object({
 });
 export type ActionData = z.infer<typeof ActionDataSchema>;
 
-export const ActionNodeSchema = z.object({
+export const ActionNodeSchema = z.looseObject({
   id: z.string().min(1),
   type: z.literal('action'),
   position: PositionSchema,
@@ -232,11 +232,12 @@ export type ActionNode = z.infer<typeof ActionNodeSchema>;
 /**
  * Data schema for delay nodes
  */
-export const DelayDataSchema = z.object({
+export const DelayDataSchema = z.looseObject({
+  id: z.string().optional(), // User-defined ID for referencing in templates
   alias: z.string().optional(),
   delay: z.union([
     z.string(), // Template or HH:MM:SS format
-    z.object({
+    z.looseObject({
       hours: z.number().optional(),
       minutes: z.number().optional(),
       seconds: z.number().optional(),
@@ -246,7 +247,7 @@ export const DelayDataSchema = z.object({
 });
 export type DelayData = z.infer<typeof DelayDataSchema>;
 
-export const DelayNodeSchema = z.object({
+export const DelayNodeSchema = z.looseObject({
   id: z.string().min(1),
   type: z.literal('delay'),
   position: PositionSchema,
@@ -262,7 +263,8 @@ export type DelayNode = z.infer<typeof DelayNodeSchema>;
  * Data schema for wait nodes (wait_template or wait_for_trigger)
  */
 export const WaitDataSchema = z
-  .object({
+  .looseObject({
+    id: z.string().optional(), // User-defined ID for referencing in templates
     alias: z.string().optional(),
     wait_template: z.string().optional(),
     wait_for_trigger: z.array(TriggerDataSchema).optional(),
@@ -270,7 +272,7 @@ export const WaitDataSchema = z
     timeout: z
       .union([
         z.string(),
-        z.object({
+        z.looseObject({
           hours: z.number().optional(),
           minutes: z.number().optional(),
           seconds: z.number().optional(),
@@ -280,7 +282,6 @@ export const WaitDataSchema = z
       .optional(),
     continue_on_timeout: z.boolean().optional(),
   })
-  .passthrough()
   .refine(
     (data) => {
       return data.wait_template === undefined || data.wait_for_trigger === undefined;
@@ -292,7 +293,7 @@ export const WaitDataSchema = z
   );
 export type WaitData = z.infer<typeof WaitDataSchema>;
 
-export const WaitNodeSchema = z.object({
+export const WaitNodeSchema = z.looseObject({
   id: z.string().min(1),
   type: z.literal('wait'),
   position: PositionSchema,
@@ -308,13 +309,14 @@ export type WaitNode = z.infer<typeof WaitNodeSchema>;
  * Data schema for set variables nodes
  * Allows setting one or more variables in the automation
  */
-export const SetVariablesDataSchema = z.object({
+export const SetVariablesDataSchema = z.looseObject({
+  id: z.string().optional(), // User-defined ID for referencing in templates
   alias: z.string().optional(),
   variables: z.record(z.string(), z.unknown()),
 });
 export type SetVariablesData = z.infer<typeof SetVariablesDataSchema>;
 
-export const SetVariablesNodeSchema = z.object({
+export const SetVariablesNodeSchema = z.looseObject({
   id: z.string().min(1),
   type: z.literal('set_variables'),
   position: PositionSchema,
