@@ -164,8 +164,185 @@ export class NativeStrategy extends BaseStrategy {
       sequence.push(...nextActions);
     } else if (outgoing.length > 1) {
       // Multiple outgoing edges (parallel paths)
+      // First, find if branches converge to a common node
+      const convergencePoint = this.findConvergencePoint(flow, outgoing.map((e) => e.target));
+
+      if (convergencePoint) {
+        // Build each branch up to (but not including) the convergence point
+        const parallelActions = outgoing.map((edge) =>
+          this.buildSequenceUntilNode(flow, edge.target, convergencePoint, new Set(visited))
+        );
+        if (parallelActions.some((a) => a.length > 0)) {
+          sequence.push({
+            parallel: parallelActions.filter((a) => a.length > 0),
+          });
+        }
+        // Continue from the convergence point
+        const afterParallel = this.buildSequenceFromNode(flow, convergencePoint, new Set(visited));
+        sequence.push(...afterParallel);
+      } else {
+        // No convergence - just build all branches
+        const parallelActions = outgoing.map((edge) =>
+          this.buildSequenceFromNode(flow, edge.target, new Set(visited))
+        );
+        if (parallelActions.some((a) => a.length > 0)) {
+          sequence.push({
+            parallel: parallelActions.filter((a) => a.length > 0),
+          });
+        }
+      }
+    }
+
+    return sequence;
+  }
+
+  /**
+   * Find the convergence point where multiple branches meet
+   * Returns the node ID if all branches converge, null otherwise
+   */
+  private findConvergencePoint(flow: FlowGraph, branchStarts: string[]): string | null {
+    if (branchStarts.length < 2) return null;
+
+    // For each branch, find all reachable nodes
+    const reachableSets = branchStarts.map((startId) => {
+      const reachable = new Set<string>();
+      const queue = [startId];
+      while (queue.length > 0) {
+        const nodeId = queue.shift()!;
+        if (reachable.has(nodeId)) continue;
+        reachable.add(nodeId);
+        const outgoing = this.getOutgoingEdges(flow, nodeId);
+        for (const edge of outgoing) {
+          queue.push(edge.target);
+        }
+      }
+      return reachable;
+    });
+
+    // Find nodes that are reachable from ALL branches
+    const firstSet = reachableSets[0];
+    const commonNodes = [...firstSet].filter((nodeId) =>
+      reachableSets.every((set) => set.has(nodeId))
+    );
+
+    if (commonNodes.length === 0) return null;
+
+    // Find the earliest common node (closest to the branch starts)
+    // by checking which node has the minimum maximum distance from any branch start
+    let bestNode: string | null = null;
+    let bestMaxDistance = Number.POSITIVE_INFINITY;
+
+    for (const nodeId of commonNodes) {
+      const distances = branchStarts.map((startId) =>
+        this.getShortestDistance(flow, startId, nodeId)
+      );
+      const maxDist = Math.max(...distances);
+      if (maxDist < bestMaxDistance) {
+        bestMaxDistance = maxDist;
+        bestNode = nodeId;
+      }
+    }
+
+    return bestNode;
+  }
+
+  /**
+   * Get shortest distance from start to target node using BFS
+   */
+  private getShortestDistance(flow: FlowGraph, startId: string, targetId: string): number {
+    if (startId === targetId) return 0;
+
+    const visited = new Set<string>();
+    const queue: Array<{ nodeId: string; distance: number }> = [{ nodeId: startId, distance: 0 }];
+
+    while (queue.length > 0) {
+      const { nodeId, distance } = queue.shift()!;
+      if (visited.has(nodeId)) continue;
+      visited.add(nodeId);
+
+      const outgoing = this.getOutgoingEdges(flow, nodeId);
+      for (const edge of outgoing) {
+        if (edge.target === targetId) {
+          return distance + 1;
+        }
+        if (!visited.has(edge.target)) {
+          queue.push({ nodeId: edge.target, distance: distance + 1 });
+        }
+      }
+    }
+
+    return Number.POSITIVE_INFINITY;
+  }
+
+  /**
+   * Build sequence from a node until reaching the stop node (exclusive)
+   */
+  private buildSequenceUntilNode(
+    flow: FlowGraph,
+    nodeId: string,
+    stopNodeId: string,
+    visited: Set<string>
+  ): unknown[] {
+    if (nodeId === stopNodeId) {
+      return []; // Don't include the stop node
+    }
+
+    if (visited.has(nodeId)) {
+      return []; // Avoid infinite loops
+    }
+    visited.add(nodeId);
+
+    const node = this.getNode(flow, nodeId);
+    if (!node) {
+      return [];
+    }
+
+    const sequence: unknown[] = [];
+
+    // Build the current node's action
+    const action = this.buildNodeAction(node);
+    if (action) {
+      sequence.push(action);
+    }
+
+    // Get outgoing edges
+    const outgoing = this.getOutgoingEdges(flow, nodeId);
+
+    if (node.type === 'condition') {
+      // Condition nodes are handled specially
+      const chooseAction = action as Record<string, unknown>;
+      const truePath = outgoing.filter((edge) => edge.sourceHandle === 'true');
+      const falsePath = outgoing.filter((edge) => edge.sourceHandle === 'false');
+
+      if (truePath.length > 0) {
+        const thenActions = truePath.flatMap((edge) =>
+          this.buildSequenceUntilNode(flow, edge.target, stopNodeId, new Set(visited))
+        );
+        chooseAction.then = thenActions;
+      }
+
+      if (falsePath.length > 0) {
+        const elseActions = falsePath.flatMap((edge) =>
+          this.buildSequenceUntilNode(flow, edge.target, stopNodeId, new Set(visited))
+        );
+        chooseAction.else = elseActions;
+      }
+    } else if (outgoing.length === 1) {
+      // Single outgoing edge - continue if not at stop node
+      if (outgoing[0].target !== stopNodeId) {
+        const nextActions = this.buildSequenceUntilNode(
+          flow,
+          outgoing[0].target,
+          stopNodeId,
+          new Set(visited)
+        );
+        sequence.push(...nextActions);
+      }
+    } else if (outgoing.length > 1) {
+      // Multiple outgoing edges - this is a nested parallel inside a parallel
+      // For now, just build all branches until stop node
       const parallelActions = outgoing.map((edge) =>
-        this.buildSequenceFromNode(flow, edge.target, new Set(visited))
+        this.buildSequenceUntilNode(flow, edge.target, stopNodeId, new Set(visited))
       );
       if (parallelActions.some((a) => a.length > 0)) {
         sequence.push({

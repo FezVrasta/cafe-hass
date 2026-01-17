@@ -126,6 +126,9 @@ export function analyzeTopology(flow: FlowGraph): TopologyAnalysis {
 /**
  * Detect cross-links: edges that skip levels in the graph hierarchy
  * or create backward references (but not full cycles)
+ *
+ * Exception: parallel branches of different lengths that converge to a common
+ * target are NOT cross-links - they're valid parallel patterns.
  */
 function detectCrossLinks(
   g: GraphInstance,
@@ -164,6 +167,43 @@ function detectCrossLinks(
     }
   }
 
+  // Build map of nodes with multiple outgoing edges (potential parallel sources)
+  const parallelSources = new Set<string>();
+  const outgoingEdgeCount = new Map<string, number>();
+  for (const edge of flow.edges) {
+    const count = (outgoingEdgeCount.get(edge.source) || 0) + 1;
+    outgoingEdgeCount.set(edge.source, count);
+  }
+  for (const [nodeId, count] of outgoingEdgeCount) {
+    if (count > 1) {
+      const node = flow.nodes.find((n) => n.id === nodeId);
+      // Only non-condition nodes with multiple edges are parallel sources
+      // (condition nodes have true/false branching)
+      if (node?.type !== 'condition') {
+        const nodeEdges = flow.edges.filter((e) => e.source === nodeId);
+        const hasConditionLabels = nodeEdges.some(
+          (e) => e.sourceHandle === 'true' || e.sourceHandle === 'false'
+        );
+        if (!hasConditionLabels) {
+          parallelSources.add(nodeId);
+        }
+      }
+    }
+  }
+
+  // Build map of nodes with multiple incoming edges (potential convergence points)
+  const convergencePoints = new Set<string>();
+  const incomingEdgeCount = new Map<string, number>();
+  for (const edge of flow.edges) {
+    const count = (incomingEdgeCount.get(edge.target) || 0) + 1;
+    incomingEdgeCount.set(edge.target, count);
+  }
+  for (const [nodeId, count] of incomingEdgeCount) {
+    if (count > 1) {
+      convergencePoints.add(nodeId);
+    }
+  }
+
   // Check for edges that skip more than one level
   for (const edge of flow.edges) {
     const sourceLevel = levelMap.get(edge.source);
@@ -176,7 +216,58 @@ function detectCrossLinks(
       }
       // Backward edge (not a full cycle, but goes to earlier level)
       if (targetLevel < sourceLevel) {
+        // Check if this is a parallel branch convergence pattern:
+        // The target is a convergence point AND there's a parallel source
+        // somewhere upstream that created these parallel branches
+        if (convergencePoints.has(edge.target) && parallelSources.size > 0) {
+          // This might be a valid parallel pattern - check if the source
+          // can trace back to a parallel source
+          const canReachParallelSource = traceToParallelSourceBFS(
+            flow,
+            edge.source,
+            parallelSources
+          );
+          if (canReachParallelSource) {
+            // This is a parallel branch of different length converging - OK
+            continue;
+          }
+        }
         return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Trace backwards from a node to see if it can reach any parallel source
+ */
+function traceToParallelSourceBFS(
+  flow: FlowGraph,
+  startNodeId: string,
+  parallelSources: Set<string>
+): boolean {
+  const visited = new Set<string>();
+  const queue = [startNodeId];
+
+  while (queue.length > 0) {
+    const nodeId = queue.shift()!;
+    if (visited.has(nodeId)) continue;
+    visited.add(nodeId);
+
+    if (parallelSources.has(nodeId)) {
+      return true;
+    }
+
+    // Find predecessors
+    const predecessors = flow.edges
+      .filter((e) => e.target === nodeId)
+      .map((e) => e.source);
+
+    for (const pred of predecessors) {
+      if (!visited.has(pred)) {
+        queue.push(pred);
       }
     }
   }
@@ -227,6 +318,9 @@ function detectDivergentTriggerPaths(g: GraphInstance, flow: FlowGraph): boolean
 /**
  * Detect converging paths: multiple edges pointing to the same node
  * This creates a DAG pattern that can't be represented as a simple tree
+ *
+ * Exception: parallel block convergence (multiple branches from a common source
+ * that all converge to the same target) can be represented natively
  */
 function detectConvergingPaths(flow: FlowGraph): boolean {
   const incomingCount = new Map<string, number>();
@@ -234,6 +328,14 @@ function detectConvergingPaths(flow: FlowGraph): boolean {
   for (const edge of flow.edges) {
     const count = incomingCount.get(edge.target) || 0;
     incomingCount.set(edge.target, count + 1);
+  }
+
+  // Build a map of outgoing edges for each node
+  const outgoingEdges = new Map<string, string[]>();
+  for (const edge of flow.edges) {
+    const existing = outgoingEdges.get(edge.source) || [];
+    existing.push(edge.target);
+    outgoingEdges.set(edge.source, existing);
   }
 
   for (const [nodeId, count] of incomingCount) {
@@ -248,7 +350,21 @@ function detectConvergingPaths(flow: FlowGraph): boolean {
         );
         const allSourcesAreTriggers = sourceNodes.every((n) => n?.type === 'trigger');
 
-        if (!allSourcesAreTriggers) {
+        if (allSourcesAreTriggers) {
+          continue; // Multiple triggers converging - OK for native
+        }
+
+        // Check if this is a parallel block convergence pattern:
+        // All converging sources must share a common predecessor that has
+        // multiple outgoing edges (parallel branches)
+        const isParallelConvergence = checkParallelConvergence(
+          flow,
+          [...uniqueSources],
+          outgoingEdges,
+          nodeId
+        );
+
+        if (!isParallelConvergence) {
           return true; // It's a true convergence that requires state-machine
         }
       }
@@ -256,6 +372,116 @@ function detectConvergingPaths(flow: FlowGraph): boolean {
   }
 
   return false;
+}
+
+/**
+ * Check if the converging sources form a parallel block pattern
+ * A parallel block pattern is when:
+ * 1. All converging branches originate from the same source node
+ * 2. That source node is NOT a condition node (which would be branching, not parallel)
+ * 3. The outgoing edges from that source are NOT labeled with sourceHandle (true/false)
+ * 4. The incoming edges to the convergence point are NOT all from condition true paths
+ *
+ * This handles parallel blocks like: source → [A, B, C] → target
+ * But NOT condition branching: condition → (true)A / (false)B → target
+ */
+function checkParallelConvergence(
+  flow: FlowGraph,
+  convergingSources: string[],
+  _outgoingEdges: Map<string, string[]>,
+  convergenceTargetId: string
+): boolean {
+  // First check: if all converging sources are conditions and all incoming edges
+  // to the convergence point have sourceHandle='true', this is condition branching,
+  // not parallel execution.
+  const incomingEdgesToTarget = flow.edges.filter((e) => e.target === convergenceTargetId);
+  const allSourcesAreConditions = convergingSources.every((sourceId) => {
+    const node = flow.nodes.find((n) => n.id === sourceId);
+    return node?.type === 'condition';
+  });
+  const allIncomingFromTruePath = incomingEdgesToTarget.every(
+    (e) => e.sourceHandle === 'true'
+  );
+
+  if (allSourcesAreConditions && allIncomingFromTruePath) {
+    // This is condition branching (multiple conditions' true paths converging)
+    // NOT parallel execution - requires state machine
+    return false;
+  }
+
+  // Find predecessors of each converging source
+  const predecessorsOf = (nodeId: string): string[] => {
+    return flow.edges.filter((e) => e.target === nodeId).map((e) => e.source);
+  };
+
+  // Check if edges from a node are parallel (not condition branching)
+  const isParallelSource = (nodeId: string): boolean => {
+    const node = flow.nodes.find((n) => n.id === nodeId);
+    // Condition nodes use true/false branching, not parallel
+    if (node?.type === 'condition') {
+      return false;
+    }
+
+    // Check if any outgoing edges have sourceHandle (condition labels)
+    const nodeOutgoingEdges = flow.edges.filter((e) => e.source === nodeId);
+    const hasConditionLabels = nodeOutgoingEdges.some(
+      (e) => e.sourceHandle === 'true' || e.sourceHandle === 'false'
+    );
+    if (hasConditionLabels) {
+      return false;
+    }
+
+    // Must have multiple outgoing edges for parallel
+    return nodeOutgoingEdges.length > 1;
+  };
+
+  // Trace back each converging source to find the "parallel source" - the node
+  // where parallel branches diverge
+  const traceToParallelSource = (nodeId: string, visited: Set<string>): string | null => {
+    if (visited.has(nodeId)) return null;
+    visited.add(nodeId);
+
+    const preds = predecessorsOf(nodeId);
+    if (preds.length === 0) return null;
+    if (preds.length > 1) return null; // Node has multiple predecessors, not a simple chain
+
+    const pred = preds[0];
+
+    // If predecessor is a parallel source (not condition branching), found it
+    if (isParallelSource(pred)) {
+      return pred;
+    }
+
+    // Otherwise, trace further back
+    return traceToParallelSource(pred, visited);
+  };
+
+  // Find parallel source for each converging branch
+  const parallelSources = new Set<string>();
+
+  for (const sourceId of convergingSources) {
+    // First check if this source's immediate predecessor is a parallel source
+    const preds = predecessorsOf(sourceId);
+    if (preds.length === 1) {
+      const pred = preds[0];
+      if (isParallelSource(pred)) {
+        parallelSources.add(pred);
+        continue;
+      }
+    }
+
+    // Trace back to find parallel source
+    const parallelSource = traceToParallelSource(sourceId, new Set());
+    if (parallelSource) {
+      parallelSources.add(parallelSource);
+    } else {
+      // No parallel source found for this branch - it's not a parallel pattern
+      return false;
+    }
+  }
+
+  // All converging branches must share the same parallel source
+  return parallelSources.size === 1;
 }
 
 /**

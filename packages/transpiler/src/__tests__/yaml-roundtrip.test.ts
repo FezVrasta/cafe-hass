@@ -1,10 +1,20 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { glob } from 'glob';
-import yaml from 'js-yaml';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { FlowTranspiler } from '../FlowTranspiler';
 import { YamlParser } from '../parser/YamlParser';
+
+// Mock the generateIds functions for deterministic IDs
+let mockNodeCounter = 0;
+vi.mock('../utils/generateIds', () => ({
+  generateNodeId: (type: string, index: number) => `${type}_test_${index}_${mockNodeCounter++}`,
+  generateEdgeId: (source: string, target: string) => `e-${source}-${target}`,
+  generateGraphId: () => `a18b0fbb-d966-432c-aba7-4f7361da8d29`,
+  resetNodeCounter: () => {
+    mockNodeCounter = 0;
+  },
+}));
 
 const FIXTURES_DIR = join(__dirname, '../../../../__tests__/yaml-automation-fixtures');
 

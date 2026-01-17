@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { generateEdgeId, generateGraphId, generateNodeId } from '../utils/generateIds';
 import { applyHeuristicLayout } from './layout';
 
 // Zod schema for Home Assistant condition objects
@@ -378,7 +379,6 @@ import type {
 } from '@cafe/shared';
 import { FlowGraphSchema, validateGraphStructure } from '@cafe/shared';
 import { load as yamlLoad } from 'js-yaml';
-import { v4 as uuidv4 } from 'uuid';
 import { type CafeMetadata, CafeMetadataSchema } from './ha-zod-schemas';
 
 /**
@@ -508,6 +508,9 @@ export class YamlParser {
       const metadata = this.extractMetadata(parsed);
       const hadMetadata = metadata !== null;
 
+      // Step 2b: Extract user-defined variables (excluding _cafe_metadata)
+      const userVariables = this.extractUserVariables(parsed);
+
       // Step 3: Only support automation format (no script import)
       const content = parsed;
       // Defensive: ensure content is Record<string, unknown>
@@ -557,13 +560,15 @@ export class YamlParser {
         : FlowGraphMetadataSchema.parse({});
 
       const graph: FlowGraph = {
-        id: metadata?.graph_id || uuidv4(),
+        id: metadata?.graph_id || generateGraphId(),
         name: typeof content.alias === 'string' ? content.alias : 'Imported Automation',
         description: typeof content.description === 'string' ? content.description : '',
         nodes: nodesWithPositions,
         edges,
         metadata: metadataBlock,
         version: 1 as const,
+        // Preserve user-defined variables for round-trip
+        userVariables: Object.keys(userVariables).length > 0 ? userVariables : undefined,
       };
 
       // Step 7: Validate with Zod schema
@@ -662,6 +667,26 @@ export class YamlParser {
   }
 
   /**
+   * Extract user-defined variables from the root variables section.
+   * Excludes _cafe_metadata which is handled separately.
+   */
+  private extractUserVariables(parsed: Record<string, unknown>): Record<string, unknown> {
+    const userVariables: Record<string, unknown> = {};
+
+    if (typeof parsed.variables === 'object' && parsed.variables !== null) {
+      const variables = parsed.variables as Record<string, unknown>;
+      for (const [key, value] of Object.entries(variables)) {
+        // Skip _cafe_metadata - it's handled separately
+        if (key !== '_cafe_metadata') {
+          userVariables[key] = value;
+        }
+      }
+    }
+
+    return userVariables;
+  }
+
+  /**
    * Detect if automation is in state-machine format
    * State-machine format has:
    * - A variables action with current_node and flow_context
@@ -728,7 +753,7 @@ export class YamlParser {
       if (nodeIdIndex < metadataNodeIds.length) {
         return metadataNodeIds[nodeIdIndex++];
       }
-      return `${type}_${Date.now()}_${nodeIdIndex++}`;
+      return generateNodeId(type, nodeIdIndex++);
     };
 
     // Parse triggers
@@ -1081,7 +1106,7 @@ export class YamlParser {
       if (nodeIdIndex < metadataNodeIds.length) {
         return metadataNodeIds[nodeIdIndex++];
       }
-      return `${type}_${Date.now()}_${nodeIdIndex++}`;
+      return generateNodeId(type, nodeIdIndex++);
     };
 
     // Parse triggers (support both 'trigger' and 'triggers')
@@ -1114,14 +1139,32 @@ export class YamlParser {
         conditionNodeIds.add(condNode.id);
       }
 
-      // Connect triggers to conditions
-      for (const trigger of triggerNodes) {
-        for (const condNode of conditionResults.nodes) {
-          edges.push(this.createEdge(trigger.id, condNode.id));
-        }
-      }
+      // Root-level conditions in Home Assistant are implicitly AND-ed together.
+      // They should be chained sequentially: trigger → cond1 → cond2 → cond3 → actions
+      // Each condition's TRUE path leads to the next condition (or to actions if last)
+      const conditionNodes = conditionResults.nodes;
 
-      firstActionNodeIds = conditionResults.outputNodeIds;
+      if (conditionNodes.length === 1) {
+        // Single condition - connect triggers to it
+        for (const trigger of triggerNodes) {
+          edges.push(this.createEdge(trigger.id, conditionNodes[0].id));
+        }
+        firstActionNodeIds = [conditionNodes[0].id];
+      } else {
+        // Multiple conditions - chain them sequentially
+        // Connect triggers to first condition
+        for (const trigger of triggerNodes) {
+          edges.push(this.createEdge(trigger.id, conditionNodes[0].id));
+        }
+
+        // Chain conditions: each condition's TRUE path leads to next condition
+        for (let i = 0; i < conditionNodes.length - 1; i++) {
+          edges.push(this.createEdge(conditionNodes[i].id, conditionNodes[i + 1].id, 'true'));
+        }
+
+        // The last condition's TRUE path leads to actions
+        firstActionNodeIds = [conditionNodes[conditionNodes.length - 1].id];
+      }
     } else {
       firstActionNodeIds = triggerNodes.map((t) => t.id);
     }
@@ -1469,7 +1512,15 @@ export class YamlParser {
         const act = action as Record<string, unknown>;
 
         // Extract known metadata fields vs additional parameters
-        const knownFields = ['type', 'device_id', 'domain', 'entity_id', 'subtype', 'alias', 'enabled'];
+        const knownFields = [
+          'type',
+          'device_id',
+          'domain',
+          'entity_id',
+          'subtype',
+          'alias',
+          'enabled',
+        ];
         const additionalParams: Record<string, unknown> = {};
         for (const [key, value] of Object.entries(act)) {
           if (!knownFields.includes(key) && value !== undefined) {
@@ -1647,6 +1698,13 @@ export class YamlParser {
 
   /**
    * Parse choose block (condition branching in actions)
+   *
+   * Home Assistant `choose` semantics:
+   * - Evaluate conditions in order
+   * - Execute ONLY the first matching branch's sequence
+   * - If no conditions match, execute the default (if present)
+   *
+   * This creates a chain: condition1 → (true: seq1) → (false: condition2) → (true: seq2) → ... → default
    */
   private parseChooseBlock(
     chooseAction: Record<string, unknown>,
@@ -1664,81 +1722,101 @@ export class YamlParser {
       ? chooseAction.choose
       : [chooseAction.choose];
 
-    choices.forEach((choice) => {
-      if (typeof choice !== 'object' || choice === null) return;
-      if (choice.conditions) {
-        const conditionId = getNextNodeId('condition');
-        // choice.conditions can be an array of conditions or a single condition object
-        const conditionsArray = Array.isArray(choice.conditions)
-          ? choice.conditions
-          : [choice.conditions];
-        // Use the first condition to determine the type and extract properties
-        const firstCondition = conditionsArray[0] || {};
-        const conditionNode: ConditionNode = {
-          id: conditionId,
-          type: 'condition',
-          position: { x: 0, y: 0 },
-          data: {
-            alias: choice.alias,
-            condition_type: firstCondition.condition || 'template',
-            entity_id: firstCondition.entity_id,
-            state: firstCondition.state,
-            // Support both 'template' and 'value_template' (Home Assistant uses value_template)
-            template: firstCondition.template || firstCondition.value_template,
-            value_template: firstCondition.value_template,
-            above: firstCondition.above,
-            below: firstCondition.below,
-            attribute: firstCondition.attribute,
-            zone: firstCondition.zone,
-            // Store all conditions if there are multiple
-            conditions:
-              conditionsArray.length > 1
-                ? transformConditions(conditionsArray)
-                : Array.isArray(firstCondition.conditions)
-                  ? transformConditions(firstCondition.conditions)
-                  : undefined,
-          },
-        };
+    // Filter to only valid choices with conditions
+    const validChoices = choices.filter(
+      (choice) => typeof choice === 'object' && choice !== null && choice.conditions
+    );
 
-        nodes.push(conditionNode);
-        localConditionIds.add(conditionId);
+    // Track what nodes should connect to the next condition (false path of current)
+    let currentPreviousIds = [...previousNodeIds];
 
-        // Connect from previous nodes (use localConditionIds which includes newly tracked conditions)
-        for (const prevId of previousNodeIds) {
-          const sourceHandle = localConditionIds.has(prevId) ? 'true' : undefined;
-          edges.push(this.createEdge(prevId, conditionId, sourceHandle));
-        }
+    validChoices.forEach((choice, index) => {
+      const conditionId = getNextNodeId('condition');
+      // choice.conditions can be an array of conditions or a single condition object
+      const conditionsArray = Array.isArray(choice.conditions)
+        ? choice.conditions
+        : [choice.conditions];
+      // Use the first condition to determine the type and extract properties
+      const firstCondition = conditionsArray[0] || {};
+      const conditionNode: ConditionNode = {
+        id: conditionId,
+        type: 'condition',
+        position: { x: 0, y: 0 },
+        data: {
+          alias: choice.alias,
+          condition_type: firstCondition.condition || 'template',
+          entity_id: firstCondition.entity_id,
+          state: firstCondition.state,
+          // Support both 'template' and 'value_template' (Home Assistant uses value_template)
+          template: firstCondition.template || firstCondition.value_template,
+          value_template: firstCondition.value_template,
+          above: firstCondition.above,
+          below: firstCondition.below,
+          attribute: firstCondition.attribute,
+          zone: firstCondition.zone,
+          // Store all conditions if there are multiple
+          conditions:
+            conditionsArray.length > 1
+              ? transformConditions(conditionsArray)
+              : Array.isArray(firstCondition.conditions)
+                ? transformConditions(firstCondition.conditions)
+                : undefined,
+        },
+      };
 
-        // Parse sequence for this choice
-        if (choice.sequence) {
-          const sequence = Array.isArray(choice.sequence) ? choice.sequence : [choice.sequence];
-          const sequenceResult = this.parseActions(
-            sequence,
-            warnings,
-            [conditionId],
-            getNextNodeId,
-            localConditionIds
+      nodes.push(conditionNode);
+      localConditionIds.add(conditionId);
+
+      // Connect from current previous nodes
+      // For first condition, connect from original previousNodeIds
+      // For subsequent conditions, connect from previous condition's FALSE path
+      for (const prevId of currentPreviousIds) {
+        // If previous is a condition (from this choose block), use 'false' handle
+        const isFromChooseCondition =
+          index > 0 && localConditionIds.has(prevId) && !conditionNodeIds.has(prevId);
+        const sourceHandle = isFromChooseCondition ? 'false' : undefined;
+        edges.push(this.createEdge(prevId, conditionId, sourceHandle));
+      }
+
+      // Parse sequence for this choice (TRUE path)
+      if (choice.sequence) {
+        const sequence = Array.isArray(choice.sequence) ? choice.sequence : [choice.sequence];
+        const sequenceResult = this.parseActions(
+          sequence,
+          warnings,
+          [conditionId],
+          getNextNodeId,
+          localConditionIds
+        );
+        nodes.push(...sequenceResult.nodes);
+        edges.push(...sequenceResult.edges);
+
+        // Connect condition node to first action in sequence via 'true' handle
+        if (sequenceResult.nodes.length > 0) {
+          const firstActionId = sequenceResult.nodes[0].id;
+          const trueEdge = edges.find(
+            (e) => e.source === conditionId && e.target === firstActionId
           );
-          nodes.push(...sequenceResult.nodes);
-          edges.push(...sequenceResult.edges);
-
-          // Connect condition node to first action in sequence via 'true' handle
-          if (sequenceResult.nodes.length > 0) {
-            const firstActionId = sequenceResult.nodes[0].id;
-            const trueEdge = edges.find(
-              (e) => e.source === conditionId && e.target === firstActionId
-            );
-            if (trueEdge) {
-              trueEdge.sourceHandle = 'true';
-            }
+          if (trueEdge) {
+            trueEdge.sourceHandle = 'true';
           }
+          // The last node in the sequence is the output
+          const lastNodeId = sequenceResult.nodes[sequenceResult.nodes.length - 1].id;
+          outputNodeIds.push(lastNodeId);
+        } else {
+          // Empty sequence - condition itself is output
+          outputNodeIds.push(conditionId);
         }
-
+      } else {
+        // No sequence - the condition's true path is an output
         outputNodeIds.push(conditionId);
       }
+
+      // Next condition connects from this condition's FALSE path
+      currentPreviousIds = [conditionId];
     });
 
-    // Handle default sequence
+    // Handle default sequence (connects from last condition's FALSE path)
     if (chooseAction.default) {
       const defaultSequence = Array.isArray(chooseAction.default)
         ? chooseAction.default
@@ -1746,12 +1824,31 @@ export class YamlParser {
       const defaultResult = this.parseActions(
         defaultSequence,
         warnings,
-        previousNodeIds,
+        currentPreviousIds,
         getNextNodeId,
-        conditionNodeIds
+        localConditionIds
       );
       nodes.push(...defaultResult.nodes);
       edges.push(...defaultResult.edges);
+
+      // Connect from last condition's FALSE path to default
+      if (currentPreviousIds.length > 0 && defaultResult.nodes.length > 0) {
+        const lastConditionId = currentPreviousIds[0];
+        const firstDefaultId = defaultResult.nodes[0].id;
+        const falseEdge = edges.find(
+          (e) => e.source === lastConditionId && e.target === firstDefaultId
+        );
+        if (falseEdge && localConditionIds.has(lastConditionId)) {
+          falseEdge.sourceHandle = 'false';
+        }
+        // The last node in the default sequence is the output
+        const lastNodeId = defaultResult.nodes[defaultResult.nodes.length - 1].id;
+        outputNodeIds.push(lastNodeId);
+      }
+    } else if (validChoices.length > 0) {
+      // No default - the last condition's false path is an implicit output
+      // (the automation continues after the choose if no condition matches)
+      outputNodeIds.push(currentPreviousIds[0]);
     }
 
     return { nodes, edges, outputNodeIds };
@@ -1970,7 +2067,7 @@ export class YamlParser {
    */
   private createEdge(source: string, target: string, sourceHandle?: string): FlowEdge {
     return {
-      id: `e-${source}-${target}-${Date.now()}`,
+      id: generateEdgeId(source, target),
       source,
       target,
       sourceHandle: sourceHandle || undefined,

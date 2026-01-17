@@ -140,7 +140,11 @@ export class FlowTranspiler {
       const contentWithMetadata = {
         ...yamlContent,
         variables: {
+          // First, include user-defined variables from the flow graph
+          ...(flow.userVariables || {}),
+          // Then include any variables from the generated YAML (e.g., state machine vars)
           ...(yamlContent.variables || {}),
+          // Finally, add _cafe_metadata
           _cafe_metadata: metadata,
         },
       };

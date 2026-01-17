@@ -272,11 +272,12 @@ export class StateMachineStrategy extends BaseStrategy {
    * Executes the service call then moves to the next node
    */
   private generateActionBlock(node: ActionNode, edges: FlowEdge[]): Record<string, unknown> {
+    const currentNodeId = node.id;
+    const actionCall = this.buildActionCall(node);
+
+    // Single outgoing edge - standard behavior
     const nextNodeId = edges[0]?.target ?? 'END';
     const nextNode = nextNodeId === 'END' ? 'END' : nextNodeId;
-    const currentNodeId = node.id;
-
-    const actionCall = this.buildActionCall(node);
 
     return {
       conditions: [

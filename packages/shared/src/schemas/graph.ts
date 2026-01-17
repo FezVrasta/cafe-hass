@@ -71,6 +71,12 @@ export const FlowGraphSchema = z.object({
    * Version for schema migrations
    */
   version: z.literal(1).default(1),
+  /**
+   * User-defined variables at the root level (preserved during round-trip)
+   * These are variables defined in the automation's variables: section,
+   * excluding _cafe_metadata which is handled separately.
+   */
+  userVariables: z.record(z.string(), z.unknown()).optional(),
 });
 export type FlowGraph = z.infer<typeof FlowGraphSchema>;
 
