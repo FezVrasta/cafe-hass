@@ -243,7 +243,9 @@ export class NativeStrategy extends BaseStrategy {
     if (Array.isArray(conditions) && conditions.length > 0) {
       out.conditions = (conditions as Record<string, unknown>[])
         .map((c) => this.mapSingleCondition(c))
-        .filter((c) => c && (!Array.isArray(c.conditions) || (c.conditions as unknown[]).length > 0));
+        .filter(
+          (c) => c && (!Array.isArray(c.conditions) || (c.conditions as unknown[]).length > 0)
+        );
     }
     return Object.fromEntries(Object.entries(out).filter(([, v]) => v !== undefined && v !== ''));
   }

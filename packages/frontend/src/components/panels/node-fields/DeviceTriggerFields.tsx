@@ -40,7 +40,6 @@ export function DeviceTriggerFields({ node, onChange, entities }: DeviceTriggerF
   const domain = getNodeDataString(node, 'domain');
   const entityId = getNodeDataString(node, 'entity_id');
 
-
   // Fetch triggers when device is selected
   useEffect(() => {
     if (!deviceId) {
@@ -120,9 +119,7 @@ export function DeviceTriggerFields({ node, onChange, entities }: DeviceTriggerF
             <SelectContent>
               {/* Deduplicate triggers by domain+type since multiple entities can have the same trigger type */}
               {Array.from(
-                new Map(
-                  availableDeviceTriggers.map((t) => [`${t.domain}-${t.type}`, t])
-                ).values()
+                new Map(availableDeviceTriggers.map((t) => [`${t.domain}-${t.type}`, t])).values()
               ).map((trigger) => (
                 <SelectItem key={`${trigger.domain}-${trigger.type}`} value={trigger.type}>
                   {trigger.type} ({trigger.domain})

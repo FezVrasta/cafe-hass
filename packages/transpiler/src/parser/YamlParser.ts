@@ -455,7 +455,10 @@ function transformToNestedCondition(condition: Record<string, unknown>): NestedC
     after_offset: condition.after_offset as string | undefined,
     before_offset: condition.before_offset as string | undefined,
     weekday: toWeekdayArray(condition.weekday),
-    for: condition.for as string | { hours?: number; minutes?: number; seconds?: number } | undefined,
+    for: condition.for as
+      | string
+      | { hours?: number; minutes?: number; seconds?: number }
+      | undefined,
     id: condition.id as string | string[] | undefined,
     conditions: nestedConditions,
   };
@@ -894,7 +897,8 @@ export class YamlParser {
 
     // Match {% if trigger.idx == "N" %}nodeId or {% elif trigger.idx == "N" %}nodeId
     // trigger.idx is a string in HA, so index is quoted; node IDs are NOT quoted
-    const ifPattern = /{%\s*(?:if|elif)\s+trigger\.idx\s*==\s*["'](\d+)["']\s*%}\s*([^{%]+?)(?={%|$)/g;
+    const ifPattern =
+      /{%\s*(?:if|elif)\s+trigger\.idx\s*==\s*["'](\d+)["']\s*%}\s*([^{%]+?)(?={%|$)/g;
     const matches = entryNodeId.matchAll(ifPattern);
 
     for (const match of matches) {
@@ -1817,7 +1821,8 @@ export class YamlParser {
           alias: ifAction.alias,
           condition_type: conditionType,
           entity_id:
-            typeof firstCondition?.entity_id === 'string' || Array.isArray(firstCondition?.entity_id)
+            typeof firstCondition?.entity_id === 'string' ||
+            Array.isArray(firstCondition?.entity_id)
               ? firstCondition?.entity_id
               : undefined,
           state: firstCondition?.state as string | string[] | undefined,

@@ -66,8 +66,12 @@ mode: single
     console.log(transpileResult.yaml);
 
     // Both conditions should appear in the output (but not duplicated)
-    const switch3Matches = (transpileResult.yaml!.match(/switch\.dingtian_relay9277_switch3/g) || []).length;
-    const switch7Matches = (transpileResult.yaml!.match(/switch\.dingtian_relay9277_switch7/g) || []).length;
+    const switch3Matches = (
+      transpileResult.yaml!.match(/switch\.dingtian_relay9277_switch3/g) || []
+    ).length;
+    const switch7Matches = (
+      transpileResult.yaml!.match(/switch\.dingtian_relay9277_switch7/g) || []
+    ).length;
 
     console.log('switch3 matches:', switch3Matches);
     console.log('switch7 matches:', switch7Matches);

@@ -231,17 +231,17 @@ export function EntitySelector({
         disabled={options.length === 0}
         renderOption={(option) =>
           isOptionWithDomain(option) ? (
-            <div className="flex flex-col gap-2 min-w-0">
+            <div className="flex min-w-0 flex-col gap-2">
               <span>{option.label}</span>
 
-              <div className="flex items-center gap-2 min-w-0">
+              <div className="flex min-w-0 items-center gap-2">
                 <span
                   className={cn('rounded px-1.5 py-0.5 font-medium text-xs', option.domainColor)}
                 >
                   {option.domainLabel}
                 </span>
                 {option.deviceLabel && (
-                  <span className="truncate text-xs text-muted-foreground">
+                  <span className="truncate text-muted-foreground text-xs">
                     {option.deviceLabel}
                   </span>
                 )}
