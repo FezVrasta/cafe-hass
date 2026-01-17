@@ -291,7 +291,12 @@ export const useFlowStore = create<FlowState>((set, get) => ({
     const currentSnapshot = JSON.stringify({
       flowName: state.flowName,
       flowDescription: state.flowDescription,
-      nodes: state.nodes.map((n) => ({ id: n.id, type: n.type, position: n.position, data: n.data })),
+      nodes: state.nodes.map((n) => ({
+        id: n.id,
+        type: n.type,
+        position: n.position,
+        data: n.data,
+      })),
       edges: state.edges.map((e) => ({
         id: e.id,
         source: e.source,
