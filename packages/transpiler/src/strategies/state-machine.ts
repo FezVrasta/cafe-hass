@@ -200,14 +200,16 @@ export class StateMachineStrategy extends BaseStrategy {
     const entries = [...triggerRouting.entries()].sort((a, b) => a[0] - b[0]);
 
     // Build a Jinja2 if/elif chain
+    // Note: trigger.idx is a string in HA, so compare with quoted string values
+    // Node IDs should NOT be quoted - they're compared with quoted strings in conditions
     const parts: string[] = [];
     entries.forEach(([idx, nodeId], i) => {
       if (i === 0) {
-        parts.push(`{% if trigger.idx == ${idx} %}"${nodeId}"`);
+        parts.push(`{% if trigger.idx == "${idx}" %}${nodeId}`);
       } else if (i === entries.length - 1) {
-        parts.push(`{% else %}"${nodeId}"{% endif %}`);
+        parts.push(`{% else %}${nodeId}{% endif %}`);
       } else {
-        parts.push(`{% elif trigger.idx == ${idx} %}"${nodeId}"`);
+        parts.push(`{% elif trigger.idx == "${idx}" %}${nodeId}`);
       }
     });
 

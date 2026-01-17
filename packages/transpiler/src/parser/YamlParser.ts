@@ -880,7 +880,8 @@ export class YamlParser {
   /**
    * Parse Jinja2 entry node template to extract trigger-to-node routing
    *
-   * Template format: {% if trigger.idx == 0 %}"action_0"{% elif trigger.idx == 1 %}"action_1"{% else %}"action_2"{% endif %}
+   * Template format: {% if trigger.idx == "0" %}action_0{% elif trigger.idx == "1" %}action_1{% else %}action_2{% endif %}
+   * Note: trigger.idx is a string in HA, so comparisons use quoted values
    * Returns a Map where key = trigger index, value = target node ID
    */
   private parseEntryNodeTemplate(entryNodeId: string): Map<number, string> | null {
@@ -891,23 +892,24 @@ export class YamlParser {
 
     const routing = new Map<number, string>();
 
-    // Match {% if trigger.idx == N %}"nodeId" or {% elif trigger.idx == N %}"nodeId"
-    const ifPattern = /{%\s*(?:if|elif)\s+trigger\.idx\s*==\s*(\d+)\s*%}\s*["']([^"']+)["']/g;
+    // Match {% if trigger.idx == "N" %}nodeId or {% elif trigger.idx == "N" %}nodeId
+    // trigger.idx is a string in HA, so index is quoted; node IDs are NOT quoted
+    const ifPattern = /{%\s*(?:if|elif)\s+trigger\.idx\s*==\s*["'](\d+)["']\s*%}\s*([^{%]+?)(?={%|$)/g;
     const matches = entryNodeId.matchAll(ifPattern);
 
     for (const match of matches) {
       const triggerIdx = parseInt(match[1], 10);
-      const nodeId = match[2];
+      const nodeId = match[2].trim();
       routing.set(triggerIdx, nodeId);
     }
 
-    // Match {% else %}"nodeId" for the default case (last trigger if not explicitly matched)
-    const elseMatch = entryNodeId.match(/{%\s*else\s*%}\s*["']([^"']+)["']/);
+    // Match {% else %}nodeId for the default case (last trigger if not explicitly matched)
+    const elseMatch = entryNodeId.match(/{%\s*else\s*%}\s*([^{%]+?)(?={%|$)/);
     if (elseMatch && routing.size > 0) {
       // The else branch is for the last trigger index not explicitly matched
       // Find the highest trigger index and add 1
       const maxIdx = Math.max(...routing.keys());
-      routing.set(maxIdx + 1, elseMatch[1]);
+      routing.set(maxIdx + 1, elseMatch[1].trim());
     }
 
     return routing.size > 0 ? routing : null;
