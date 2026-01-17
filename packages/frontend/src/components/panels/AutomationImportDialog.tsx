@@ -1,8 +1,8 @@
 import { transpiler } from '@cafe/transpiler';
 import { useReactFlow } from '@xyflow/react';
 import { dump as yamlDump } from 'js-yaml';
-import { Clock, DiamondPlus, Download, Search, ToggleLeft } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { ArrowDown, ArrowUp, ArrowUpDown, DiamondPlus, Download, Search } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -14,7 +14,19 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import { useHass } from '@/contexts/HassContext';
+
+interface AreaRegistryEntry {
+  area_id: string;
+  name: string;
+}
+
+interface EntityRegistryEntry {
+  entity_id: string;
+  area_id?: string;
+}
+
 import { getHomeAssistantAPI } from '@/lib/ha-api';
 import { useFlowStore } from '@/store/flow-store';
 import type { HassEntity } from '@/types/hass';
@@ -34,26 +46,54 @@ interface HaAutomation {
     mode?: string;
     current?: number;
     max?: number;
+    tags?: string[] | string;
   };
   state: 'on' | 'off';
 }
 
+type SortColumn = 'name' | 'lastTriggered' | 'enabled';
+type SortDirection = 'asc' | 'desc';
+
 export function AutomationImportDialog({ isOpen, onClose }: AutomationImportDialogProps) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [sortColumn, setSortColumn] = useState<SortColumn | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  const [areas, setAreas] = useState<AreaRegistryEntry[]>([]);
+  const [entityRegistry, setEntityRegistry] = useState<EntityRegistryEntry[]>([]);
   const { hass, config: hassConfig } = useHass();
   const { setFlowName, setAutomationId, reset, fromFlowGraph } = useFlowStore();
   const { fitView } = useReactFlow();
+
+  // Fetch areas and entity registry on open
+  useEffect(() => {
+    if (!isOpen || !hass) return;
+    const api = getHomeAssistantAPI(hass, hassConfig);
+    let cancelled = false;
+    (async () => {
+      try {
+        const [areasRes, entitiesRes] = await Promise.all([api.getAreas(), api.getEntities()]);
+        if (!cancelled) {
+          setAreas(Array.isArray(areasRes) ? areasRes : []);
+          setEntityRegistry(Array.isArray(entitiesRes) ? entitiesRes : []);
+        }
+      } catch {
+        setAreas([]);
+        setEntityRegistry([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, hass, hassConfig]);
 
   // Get all automations from HA
   const automations = useMemo(() => {
     if (!hass?.states) {
       return [];
     }
-
     const automationEntities = Object.values(hass.states).filter((entity: HassEntity) =>
       entity.entity_id.startsWith('automation.')
     );
-
     return automationEntities.map((entity: HassEntity) => ({
       entity_id: entity.entity_id,
       attributes: entity.attributes || {},
@@ -61,18 +101,95 @@ export function AutomationImportDialog({ isOpen, onClose }: AutomationImportDial
     })) as HaAutomation[];
   }, [hass]);
 
-  // Filter automations based on search term
-  const filteredAutomations = useMemo(() => {
-    if (!searchTerm) return automations;
+  // Map entity_id to area_id using entityRegistry
+  const entityIdToAreaId = useMemo(() => {
+    const map: Record<string, string | undefined> = {};
+    for (const entry of entityRegistry) {
+      if (entry.entity_id && entry.area_id) {
+        map[entry.entity_id] = entry.area_id;
+      }
+    }
+    return map;
+  }, [entityRegistry]);
 
-    const search = searchTerm.toLowerCase();
-    return automations.filter(
-      (automation) =>
-        automation.entity_id.toLowerCase().includes(search) ||
-        automation.attributes.friendly_name?.toLowerCase().includes(search) ||
-        automation.attributes.description?.toLowerCase().includes(search)
+  // Map area_id to area name
+  const areaIdToName = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const area of areas) {
+      if (area.area_id && area.name) {
+        map[area.area_id] = area.name;
+      }
+    }
+    return map;
+  }, [areas]);
+
+  // Sort automations
+  const sortedAutomations = useMemo(() => {
+    if (!sortColumn) return automations;
+
+    return [...automations].sort((a, b) => {
+      let comparison = 0;
+
+      switch (sortColumn) {
+        case 'name': {
+          const nameA = (a.attributes.friendly_name || a.entity_id).toLowerCase();
+          const nameB = (b.attributes.friendly_name || b.entity_id).toLowerCase();
+          comparison = nameA.localeCompare(nameB);
+          break;
+        }
+        case 'lastTriggered': {
+          const dateA = a.attributes.last_triggered
+            ? new Date(a.attributes.last_triggered).getTime()
+            : 0;
+          const dateB = b.attributes.last_triggered
+            ? new Date(b.attributes.last_triggered).getTime()
+            : 0;
+          comparison = dateA - dateB;
+          break;
+        }
+        case 'enabled': {
+          const enabledA = a.state === 'on' ? 1 : 0;
+          const enabledB = b.state === 'on' ? 1 : 0;
+          comparison = enabledA - enabledB;
+          break;
+        }
+      }
+
+      return sortDirection === 'asc' ? comparison : -comparison;
+    });
+  }, [automations, sortColumn, sortDirection]);
+
+  // Group automations by area
+  const automationsByArea = useMemo(() => {
+    const groups: Record<string, HaAutomation[]> = {};
+    for (const automation of sortedAutomations) {
+      const areaId = entityIdToAreaId[automation.entity_id];
+      const areaName = areaId ? areaIdToName[areaId] || 'Other Area' : 'No Area';
+      if (!groups[areaName]) groups[areaName] = [];
+      groups[areaName].push(automation);
+    }
+    return groups;
+  }, [sortedAutomations, entityIdToAreaId, areaIdToName]);
+
+  const handleSort = (column: SortColumn) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
+  };
+
+  const getSortIcon = (column: SortColumn) => {
+    if (sortColumn !== column) {
+      return <ArrowUpDown className="ml-1 inline h-3 w-3 opacity-50" />;
+    }
+    return sortDirection === 'asc' ? (
+      <ArrowUp className="ml-1 inline h-3 w-3" />
+    ) : (
+      <ArrowDown className="ml-1 inline h-3 w-3" />
     );
-  }, [automations, searchTerm]);
+  };
 
   const handleImportAutomation = async (automation: HaAutomation) => {
     try {
@@ -195,8 +312,8 @@ export function AutomationImportDialog({ isOpen, onClose }: AutomationImportDial
         </DialogHeader>
 
         {/* Search */}
-        <div className="space-y-4 border-b p-6">
-          <div className="relative">
+        <div className="border-b px-6 pb-6">
+          <div className="relative mb-4">
             <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform text-muted-foreground" />
             <Input
               type="text"
@@ -206,80 +323,181 @@ export function AutomationImportDialog({ isOpen, onClose }: AutomationImportDial
               className="pl-10"
             />
           </div>
-          <p className="text-muted-foreground text-sm">
-            Found {filteredAutomations.length} automation
-            {filteredAutomations.length !== 1 ? 's' : ''}
-          </p>
-        </div>
-
-        {/* Automation List */}
-        <div className="flex-1 overflow-y-auto">
-          {filteredAutomations.length === 0 ? (
-            <div className="p-8 text-center text-muted-foreground">
-              {automations.length === 0 ? (
-                <div className="space-y-2">
-                  <p>No Home Assistant connection</p>
-                  <p className="text-xs">
-                    Configure your Home Assistant connection in Settings to view automations
-                  </p>
-                </div>
-              ) : (
-                'No automations match your search'
-              )}
-            </div>
-          ) : (
-            <div className="divide-y">
-              {filteredAutomations.map((automation) => (
-                <div key={automation.entity_id} className="p-6 transition-colors hover:bg-muted/50">
-                  <div className="flex items-start justify-between">
-                    <div className="min-w-0 flex-1">
-                      <div className="mb-2 flex items-center gap-3">
-                        <div
-                          className={`h-2 w-2 rounded-full ${
-                            automation.state === 'on' ? 'bg-green-500' : 'bg-gray-400'
-                          }`}
-                        />
-                        <h3 className="truncate font-medium text-foreground">
-                          {automation.attributes.friendly_name ||
-                            automation.entity_id.replace('automation.', '')}
-                        </h3>
-                        <Badge
-                          variant={automation.state === 'on' ? 'default' : 'secondary'}
-                          className="text-xs"
-                        >
-                          <ToggleLeft className="mr-1 h-3 w-3" />
-                          {automation.state === 'on' ? 'Enabled' : 'Disabled'}
-                        </Badge>
-                      </div>
-
-                      {automation.attributes.description && (
-                        <p className="mb-2 text-muted-foreground text-sm">
-                          {automation.attributes.description}
-                        </p>
-                      )}
-
-                      <div className="flex items-center gap-4 text-muted-foreground text-xs">
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          Last triggered:{' '}
-                          {formatLastTriggered(automation.attributes.last_triggered)}
-                        </span>
-                        <span>ID: {automation.entity_id}</span>
-                        {automation.attributes.mode && (
-                          <span>Mode: {automation.attributes.mode}</span>
-                        )}
-                      </div>
-                    </div>
-
-                    <Button onClick={() => handleImportAutomation(automation)} className="ml-4">
-                      <Download className="mr-2 h-4 w-4" />
-                      Open
-                    </Button>
+          <div className="max-h-[70vh] overflow-auto">
+            <div className="min-w-full">
+              <div className="sticky top-0 z-20 bg-background before:absolute before:-top-px before:right-0 before:left-0 before:h-px before:bg-background">
+                <div className="flex">
+                  <button
+                    type="button"
+                    onClick={() => handleSort('name')}
+                    className="flex-1 cursor-pointer whitespace-nowrap border-b bg-muted px-3 py-2 text-left font-semibold text-muted-foreground text-xs hover:bg-muted/80"
+                  >
+                    Name{getSortIcon('name')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSort('lastTriggered')}
+                    className="w-[120px] cursor-pointer whitespace-nowrap border-b bg-muted px-3 py-2 text-left font-semibold text-muted-foreground text-xs hover:bg-muted/80"
+                  >
+                    Last Triggered{getSortIcon('lastTriggered')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSort('enabled')}
+                    className="w-[80px] cursor-pointer whitespace-nowrap border-b bg-muted px-3 py-2 text-center font-semibold text-muted-foreground text-xs hover:bg-muted/80"
+                  >
+                    Enabled{getSortIcon('enabled')}
+                  </button>
+                  <div className="w-[60px] border-b bg-muted px-3 py-2 text-center font-semibold text-muted-foreground text-xs">
+                    Action
                   </div>
                 </div>
-              ))}
+              </div>
+              <div>
+                {Object.entries(automationsByArea).flatMap(([areaName, automations]) => {
+                  const filteredAutomations = searchTerm
+                    ? automations.filter(
+                        (automation) =>
+                          automation.entity_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          automation.attributes.friendly_name
+                            ?.toLowerCase()
+                            .includes(searchTerm.toLowerCase()) ||
+                          automation.attributes.description
+                            ?.toLowerCase()
+                            .includes(searchTerm.toLowerCase())
+                      )
+                    : automations;
+
+                  if (filteredAutomations.length === 0) {
+                    return [];
+                  }
+
+                  const areaRows = [
+                    <div
+                      key={areaName}
+                      className="sticky top-[32px] z-10 -mt-1 flex border-b bg-accent"
+                    >
+                      <div className="flex-1 px-3 py-2 font-bold text-accent-foreground text-xs">
+                        {areaName}
+                      </div>
+                    </div>,
+                  ];
+
+                  const automationRows = filteredAutomations.map((automation) => (
+                    <div key={automation.entity_id} className="flex border-b last:border-0">
+                      <div className="flex-1 px-3 py-2 align-top">
+                        {/* Name (with tags below) */}
+                        <div className="max-w-[180px] font-medium">
+                          {automation.attributes.friendly_name || automation.entity_id}
+                        </div>
+                        {automation.attributes.description && (
+                          <div className="mt-1 max-w-[180px] truncate text-muted-foreground text-xs">
+                            {automation.attributes.description}
+                          </div>
+                        )}
+                        {/* Tags under name/description */}
+                        {Array.isArray(automation.attributes.tags) &&
+                          automation.attributes.tags.length > 0 && (
+                            <div className="mt-1 flex flex-wrap gap-1">
+                              {automation.attributes.tags.map((tag: string) => (
+                                <Badge key={tag} variant="secondary" className="text-xs">
+                                  {tag}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+                        {automation.attributes.tags &&
+                          typeof automation.attributes.tags === 'string' && (
+                            <div className="mt-1 flex flex-wrap gap-1">
+                              <Badge variant="secondary" className="text-xs">
+                                {automation.attributes.tags}
+                              </Badge>
+                            </div>
+                          )}
+                        <div className="mt-1 truncate text-muted-foreground text-xs">
+                          ID: {automation.entity_id}
+                        </div>
+                        {automation.attributes.mode && (
+                          <div className="text-muted-foreground text-xs">
+                            Mode: {automation.attributes.mode}
+                          </div>
+                        )}
+                      </div>
+                      <div className="w-[120px] max-w-[120px] px-3 py-2 align-top">
+                        {automation.attributes.last_triggered ? (
+                          <span className="whitespace-nowrap text-xs">
+                            {formatLastTriggered(automation.attributes.last_triggered)}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">Never</span>
+                        )}
+                      </div>
+                      <div className="w-[80px] px-3 py-2 text-center align-top">
+                        <Switch
+                          checked={automation.state === 'on'}
+                          onCheckedChange={async (checked) => {
+                            try {
+                              const api = getHomeAssistantAPI(hass, hassConfig);
+                              await api.setAutomationState(automation.entity_id, checked);
+                              toast.success(
+                                `Automation ${checked ? 'enabled' : 'disabled'} successfully.`
+                              );
+                            } catch {
+                              toast.error('Failed to update automation state');
+                            }
+                          }}
+                          aria-label={automation.state === 'on' ? 'Enabled' : 'Disabled'}
+                        />
+                      </div>
+                      <div className="w-[60px] px-3 py-2 text-center align-top">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => handleImportAutomation(automation)}
+                          title="Import automation"
+                        >
+                          <Download className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ));
+                  return (
+                    <React.Fragment key={areaName}>
+                      {areaRows.concat(automationRows)}
+                    </React.Fragment>
+                  );
+                })}
+                {automations.length > 0 &&
+                  !Object.values(automationsByArea).some((automations) =>
+                    searchTerm
+                      ? automations.some(
+                          (automation) =>
+                            automation.entity_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            automation.attributes.friendly_name
+                              ?.toLowerCase()
+                              .includes(searchTerm.toLowerCase()) ||
+                            automation.attributes.description
+                              ?.toLowerCase()
+                              .includes(searchTerm.toLowerCase())
+                        )
+                      : automations.length > 0
+                  ) && (
+                    <div className="flex">
+                      <div className="flex-1 py-8 text-center text-muted-foreground">
+                        No automations found.
+                      </div>
+                    </div>
+                  )}
+                {automations.length === 0 && (
+                  <div className="flex">
+                    <div className="flex-1 py-8 text-center text-muted-foreground">
+                      No automations found.
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
-          )}
+          </div>
         </div>
 
         {/* Footer */}
