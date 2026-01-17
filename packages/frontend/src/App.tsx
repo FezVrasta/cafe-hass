@@ -6,6 +6,7 @@ import {
   FileCode,
   FileDown,
   FileUp,
+  FolderOpenDotIcon,
   Loader2,
   Save,
   Settings,
@@ -241,7 +242,7 @@ function App() {
                   }}
                   className="rounded-r-none"
                 >
-                  <DiamondPlus className="mr-2 h-4 w-4" />
+                  <FolderOpenDotIcon className="mr-2 h-4 w-4" />
                   Open Automation
                 </Button>
 
