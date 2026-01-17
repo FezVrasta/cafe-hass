@@ -54,6 +54,7 @@ export function YamlEditor({ yaml, errors, warnings, onYamlChange }: YamlEditorP
           height: '100%',
           resize: 'none',
           whiteSpace: 'pre-wrap',
+          overflow: 'auto',
         }}
       />
 
