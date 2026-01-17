@@ -98,38 +98,76 @@ trigger:
     to: playing
     for: "00:00:05"
 action:
-  - if:
-      - condition: numeric_state
-        entity_id: sensor.brightness_sensor
-        above: 120
-    then:
-      - if:
-          - condition: template
-            value_template: "{% set app = (state_attr('media_player.tv', 'app_name') or '') | string %} {% set ok_apps = ['TV','Apple TV','Prime Video','Netflix'] %} {{ app in ok_apps }}"
-        then:
-          - if:
-              - condition: template
-                value_template: "{{ (state_attr('media_player.tv','media_content_type') or '') | lower == 'movie' }}"
-            then:
-              - if:
-                  - condition: template
-                    value_template: "{{ states('cover.velux_blind') != 'closed' }}"
-                then:
-                  - service: cover.close_cover
-                    target:
-                      entity_id: cover.velux_blind
-                  - if:
-                      - condition: template
-                        value_template: "{{ states('cover.main_blind') != 'closed' }}"
-                    then:
-                      - service: cover.close_cover
-                        target:
-                          entity_id: cover.main_blind
-                    else: []
-                else: []
-            else: []
-        else: []
-    else: []
+  - variables:
+      current_node: condition_test_1_123
+      flow_context: {}
+  - alias: State Machine Loop
+    repeat:
+      until: "{{ current_node == \\"END\\" }}"
+      sequence:
+        - choose:
+            - conditions:
+                - condition: template
+                  value_template: "{{ current_node == \\"condition_test_1_123\\" }}"
+              sequence:
+                - variables:
+                    current_node: "{% if states('sensor.brightness_sensor') | float > 120 %}\\"condition_test_2_124\\"{% else %}\\"END\\"{% endif %}"
+            - conditions:
+                - condition: template
+                  value_template: "{{ current_node == \\"condition_test_2_124\\" }}"
+              sequence:
+                - if:
+                    - condition: template
+                      value_template: "{% set app = (state_attr('media_player.tv', 'app_name') or '') | string %} {% set ok_apps = ['TV','Apple TV','Prime Video','Netflix'] %} {{ app in ok_apps }}"
+                  then:
+                    - variables:
+                        current_node: condition_test_3_125
+                  else:
+                    - variables:
+                        current_node: END
+            - conditions:
+                - condition: template
+                  value_template: "{{ current_node == \\"condition_test_3_125\\" }}"
+              sequence:
+                - variables:
+                    current_node: "{% if (state_attr('media_player.tv','media_content_type') or '') | lower == 'movie' %}\\"condition_test_4_126\\"{% else %}\\"END\\"{% endif %}"
+            - conditions:
+                - condition: template
+                  value_template: "{{ current_node == \\"condition_test_4_126\\" }}"
+              sequence:
+                - variables:
+                    current_node: "{% if states('cover.velux_blind') != 'closed' %}\\"action_test_5_127\\"{% else %}\\"condition_test_6_128\\"{% endif %}"
+            - conditions:
+                - condition: template
+                  value_template: "{{ current_node == \\"action_test_5_127\\" }}"
+              sequence:
+                - service: cover.close_cover
+                  target:
+                    entity_id: cover.velux_blind
+                - variables:
+                    current_node: condition_test_6_128
+            - conditions:
+                - condition: template
+                  value_template: "{{ current_node == \\"condition_test_6_128\\" }}"
+              sequence:
+                - variables:
+                    current_node: "{% if states('cover.main_blind') != 'closed' %}\\"action_test_7_129\\"{% else %}\\"END\\"{% endif %}"
+            - conditions:
+                - condition: template
+                  value_template: "{{ current_node == \\"action_test_7_129\\" }}"
+              sequence:
+                - service: cover.close_cover
+                  target:
+                    entity_id: cover.main_blind
+                - variables:
+                    current_node: END
+          default:
+            - service: system_log.write
+              data:
+                message: "C.A.F.E.: Unknown state \\"{{ current_node }}\\", ending flow"
+                level: warning
+            - variables:
+                current_node: END
 mode: single
 variables:
   _cafe_metadata:
@@ -137,31 +175,31 @@ variables:
     nodes:
       trigger_test_0_122:
         x: 12
-        "y": 102
+        "y": 32.5
       condition_test_1_123:
         x: 312
-        "y": 92
+        "y": 22.5
       condition_test_2_124:
         x: 632
-        "y": 92
+        "y": 22.5
       condition_test_3_125:
         x: 952
-        "y": 92
+        "y": 22.5
       condition_test_4_126:
         x: 1272
-        "y": 92
+        "y": 22.5
       action_test_5_127:
         x: 1592
-        "y": 12
+        "y": 53
       condition_test_6_128:
-        x: 1592
-        "y": 172
+        x: 1892
+        "y": 22.5
       action_test_7_129:
-        x: 1912
-        "y": 102
+        x: 2212
+        "y": 32.5
     graph_id: a18b0fbb-d966-432c-aba7-4f7361da8d29
     graph_version: 1
-    strategy: native
+    strategy: state-machine
 "
 `;
 
@@ -173,43 +211,42 @@ trigger:
     entity_id: binary_sensor.occupancy
     for: "00:05:00"
 action:
-  - parallel:
-      - - if:
-            - condition: and
-              conditions:
-                - condition: state
-                  entity_id: binary_sensor.occupancy
-                  state: "on"
-                - condition: time
-                  after: "08:00:00"
-                  before: "22:00:00"
-          then:
-            - service: climate.set_temperature
-              target:
-                entity_id: climate.main
-              data:
-                temperature: 22
-          else: []
-      - - if:
-            - condition: and
-              conditions:
-                - condition: state
-                  entity_id: binary_sensor.occupancy
-                  state: "on"
-                - condition: time
-                  after: "22:00:00"
-          then:
-            - service: climate.set_temperature
-              target:
-                entity_id: climate.main
-              data:
-                temperature: 20
-          else: []
-      - - service: climate.set_temperature
-          target:
-            entity_id: climate.main
-          data:
-            temperature: 18
+  - if:
+      - condition: and
+        conditions:
+          - condition: state
+            entity_id: binary_sensor.occupancy
+            state: "on"
+          - condition: time
+            after: "08:00:00"
+            before: "22:00:00"
+    then:
+      - service: climate.set_temperature
+        target:
+          entity_id: climate.main
+        data:
+          temperature: 22
+    else:
+      - if:
+          - condition: and
+            conditions:
+              - condition: state
+                entity_id: binary_sensor.occupancy
+                state: "on"
+              - condition: time
+                after: "22:00:00"
+        then:
+          - service: climate.set_temperature
+            target:
+              entity_id: climate.main
+            data:
+              temperature: 20
+        else:
+          - service: climate.set_temperature
+            target:
+              entity_id: climate.main
+            data:
+              temperature: 18
 mode: restart
 variables:
   _cafe_metadata:
@@ -217,22 +254,22 @@ variables:
     nodes:
       trigger_test_0_116:
         x: 12
-        "y": 192
+        "y": 102
       condition_test_1_117:
         x: 312
-        "y": 172
+        "y": 92
       action_test_2_118:
         x: 632
-        "y": 112
+        "y": 192
       condition_test_3_119:
-        x: 312
-        "y": 352
-      action_test_4_120:
         x: 632
-        "y": 272
-      action_test_5_121:
-        x: 312
         "y": 12
+      action_test_4_120:
+        x: 952
+        "y": 22
+      action_test_5_121:
+        x: 952
+        "y": 182
     graph_id: a18b0fbb-d966-432c-aba7-4f7361da8d29
     graph_version: 1
     strategy: native
@@ -371,78 +408,164 @@ trigger:
       - 0/0/248
       - 0/0/1
 action:
-  - if:
-      - condition: template
-        value_template: "{{ trigger.payload == 1 }}"
-    then:
-      - if:
-          - condition: template
-            value_template: "{{ target_light is not none }}"
-        then:
-          - wait_template: "{{ is_state(target_light, 'on') }}"
-            timeout: "00:00:03"
-          - if:
-              - condition: template
-                value_template: "{{ is_state(target_light, 'on') }}"
-            then:
-              - service: light.turn_on
-                target:
-                  entity_id: "{{ target_light }}"
-                data:
-                  brightness_pct: 100
-                  transition: 0
-              - delay:
-                  milliseconds: 500
-              - variables:
-                  color_before: "{% set a = state_attr(target_light, 'hs_color') %} {% set b = state_attr(target_light, 'xy_color') %} {% set c = state_attr(target_light, 'color_temp_kelvin') %} {% set d = state_attr(target_light, 'color_temp') %} {{ [a, b, c, d] }}"
-              - service: adaptive_lighting.apply
-                data:
-                  entity_id: switch.adaptive_lighting_adapt_color_dali
-                  lights:
-                    - "{{ target_light }}"
-                  turn_on_lights: false
-                  adapt_brightness: false
-                  adapt_color: true
-                  transition: 0
-              - delay:
-                  milliseconds: 350
-              - variables:
-                  color_after_1: "{% set a = state_attr(target_light, 'hs_color') %} {% set b = state_attr(target_light, 'xy_color') %} {% set c = state_attr(target_light, 'color_temp_kelvin') %} {% set d = state_attr(target_light, 'color_temp') %} {{ [a, b, c, d] }}"
-              - if:
-                  - condition: template
-                    value_template: "{{ is_state(target_light, 'on') and (color_after_1 == color_before) }}"
-                then:
-                  - service: adaptive_lighting.apply
-                    data:
-                      entity_id: switch.adaptive_lighting_adapt_color_dali
-                      lights:
-                        - "{{ target_light }}"
-                      turn_on_lights: false
-                      adapt_brightness: false
-                      adapt_color: true
-                      transition: 0
-                  - delay:
-                      milliseconds: 350
-                  - variables:
-                      color_after_2: "{% set a = state_attr(target_light, 'hs_color') %} {% set b = state_attr(target_light, 'xy_color') %} {% set c = state_attr(target_light, 'color_temp_kelvin') %} {% set d = state_attr(target_light, 'color_temp') %} {{ [a, b, c, d] }}"
-                  - if:
-                      - condition: template
-                        value_template: "{{ is_state(target_light, 'on') and (color_after_2 == color_before) }}"
-                    then:
-                      - service: adaptive_lighting.apply
-                        data:
-                          entity_id: switch.adaptive_lighting_adapt_color_dali
-                          lights:
-                            - "{{ target_light }}"
-                          turn_on_lights: false
-                          adapt_brightness: false
-                          adapt_color: true
-                          transition: 0
-                    else: []
-                else: []
-            else: []
-        else: []
-    else: []
+  - variables:
+      current_node: condition_test_1_87
+      flow_context: {}
+  - alias: State Machine Loop
+    repeat:
+      until: "{{ current_node == \\"END\\" }}"
+      sequence:
+        - choose:
+            - conditions:
+                - condition: template
+                  value_template: "{{ current_node == \\"condition_test_1_87\\" }}"
+              sequence:
+                - variables:
+                    current_node: "{% if trigger.payload == 1 %}\\"condition_test_2_88\\"{% else %}\\"END\\"{% endif %}"
+            - conditions:
+                - condition: template
+                  value_template: "{{ current_node == \\"condition_test_2_88\\" }}"
+              sequence:
+                - variables:
+                    current_node: "{% if target_light is not none %}\\"wait_test_3_89\\"{% else %}\\"END\\"{% endif %}"
+            - conditions:
+                - condition: template
+                  value_template: "{{ current_node == \\"wait_test_3_89\\" }}"
+              sequence:
+                - wait_template: "{{ is_state(target_light, 'on') }}"
+                  timeout: "00:00:03"
+                - variables:
+                    current_node: condition_test_4_90
+            - conditions:
+                - condition: template
+                  value_template: "{{ current_node == \\"condition_test_4_90\\" }}"
+              sequence:
+                - variables:
+                    current_node: "{% if is_state(target_light, 'on') %}\\"action_test_5_91\\"{% else %}\\"END\\"{% endif %}"
+            - conditions:
+                - condition: template
+                  value_template: "{{ current_node == \\"action_test_5_91\\" }}"
+              sequence:
+                - service: light.turn_on
+                  target:
+                    entity_id: "{{ target_light }}"
+                  data:
+                    brightness_pct: 100
+                    transition: 0
+                - variables:
+                    current_node: delay_test_6_92
+            - conditions:
+                - condition: template
+                  value_template: "{{ current_node == \\"delay_test_6_92\\" }}"
+              sequence:
+                - delay:
+                    milliseconds: 500
+                - variables:
+                    current_node: set_variables_test_7_93
+            - conditions:
+                - condition: template
+                  value_template: "{{ current_node == \\"set_variables_test_7_93\\" }}"
+              sequence:
+                - variables:
+                    color_before: "{% set a = state_attr(target_light, 'hs_color') %} {% set b = state_attr(target_light, 'xy_color') %} {% set c = state_attr(target_light, 'color_temp_kelvin') %} {% set d = state_attr(target_light, 'color_temp') %} {{ [a, b, c, d] }}"
+                - variables:
+                    current_node: action_test_8_94
+            - conditions:
+                - condition: template
+                  value_template: "{{ current_node == \\"action_test_8_94\\" }}"
+              sequence:
+                - service: adaptive_lighting.apply
+                  data:
+                    entity_id: switch.adaptive_lighting_adapt_color_dali
+                    lights:
+                      - "{{ target_light }}"
+                    turn_on_lights: false
+                    adapt_brightness: false
+                    adapt_color: true
+                    transition: 0
+                - variables:
+                    current_node: delay_test_9_95
+            - conditions:
+                - condition: template
+                  value_template: "{{ current_node == \\"delay_test_9_95\\" }}"
+              sequence:
+                - delay:
+                    milliseconds: 350
+                - variables:
+                    current_node: set_variables_test_10_96
+            - conditions:
+                - condition: template
+                  value_template: "{{ current_node == \\"set_variables_test_10_96\\" }}"
+              sequence:
+                - variables:
+                    color_after_1: "{% set a = state_attr(target_light, 'hs_color') %} {% set b = state_attr(target_light, 'xy_color') %} {% set c = state_attr(target_light, 'color_temp_kelvin') %} {% set d = state_attr(target_light, 'color_temp') %} {{ [a, b, c, d] }}"
+                - variables:
+                    current_node: condition_test_11_97
+            - conditions:
+                - condition: template
+                  value_template: "{{ current_node == \\"condition_test_11_97\\" }}"
+              sequence:
+                - variables:
+                    current_node: "{% if is_state(target_light, 'on') and (color_after_1 == color_before) %}\\"action_test_12_98\\"{% else %}\\"set_variables_test_14_100\\"{% endif %}"
+            - conditions:
+                - condition: template
+                  value_template: "{{ current_node == \\"action_test_12_98\\" }}"
+              sequence:
+                - service: adaptive_lighting.apply
+                  data:
+                    entity_id: switch.adaptive_lighting_adapt_color_dali
+                    lights:
+                      - "{{ target_light }}"
+                    turn_on_lights: false
+                    adapt_brightness: false
+                    adapt_color: true
+                    transition: 0
+                - variables:
+                    current_node: delay_test_13_99
+            - conditions:
+                - condition: template
+                  value_template: "{{ current_node == \\"delay_test_13_99\\" }}"
+              sequence:
+                - delay:
+                    milliseconds: 350
+                - variables:
+                    current_node: set_variables_test_14_100
+            - conditions:
+                - condition: template
+                  value_template: "{{ current_node == \\"set_variables_test_14_100\\" }}"
+              sequence:
+                - variables:
+                    color_after_2: "{% set a = state_attr(target_light, 'hs_color') %} {% set b = state_attr(target_light, 'xy_color') %} {% set c = state_attr(target_light, 'color_temp_kelvin') %} {% set d = state_attr(target_light, 'color_temp') %} {{ [a, b, c, d] }}"
+                - variables:
+                    current_node: condition_test_15_101
+            - conditions:
+                - condition: template
+                  value_template: "{{ current_node == \\"condition_test_15_101\\" }}"
+              sequence:
+                - variables:
+                    current_node: "{% if is_state(target_light, 'on') and (color_after_2 == color_before) %}\\"action_test_16_102\\"{% else %}\\"END\\"{% endif %}"
+            - conditions:
+                - condition: template
+                  value_template: "{{ current_node == \\"action_test_16_102\\" }}"
+              sequence:
+                - service: adaptive_lighting.apply
+                  data:
+                    entity_id: switch.adaptive_lighting_adapt_color_dali
+                    lights:
+                      - "{{ target_light }}"
+                    turn_on_lights: false
+                    adapt_brightness: false
+                    adapt_color: true
+                    transition: 0
+                - variables:
+                    current_node: END
+          default:
+            - service: system_log.write
+              data:
+                message: "C.A.F.E.: Unknown state \\"{{ current_node }}\\", ending flow"
+                level: warning
+            - variables:
+                current_node: END
 mode: single
 variables:
   ga_to_light:
@@ -462,58 +585,58 @@ variables:
     nodes:
       trigger_test_0_86:
         x: 12
-        "y": 97
+        "y": 32.5
       condition_test_1_87:
         x: 312
-        "y": 87
+        "y": 22.5
       condition_test_2_88:
         x: 632
-        "y": 87
+        "y": 22.5
       wait_test_3_89:
         x: 952
-        "y": 102
+        "y": 37.5
       condition_test_4_90:
         x: 1232
-        "y": 87
+        "y": 22.5
       action_test_5_91:
         x: 1552
-        "y": 97
+        "y": 32.5
       delay_test_6_92:
         x: 1852
-        "y": 102
+        "y": 37.5
       set_variables_test_7_93:
         x: 2132
-        "y": 97
+        "y": 32.5
       action_test_8_94:
         x: 2432
-        "y": 97
+        "y": 32.5
       delay_test_9_95:
         x: 2732
-        "y": 102
+        "y": 37.5
       set_variables_test_10_96:
         x: 3012
-        "y": 97
+        "y": 32.5
       condition_test_11_97:
         x: 3312
-        "y": 87
+        "y": 22.5
       action_test_12_98:
         x: 3632
-        "y": 17
+        "y": 53
       delay_test_13_99:
         x: 3932
-        "y": 12
+        "y": 58
       set_variables_test_14_100:
-        x: 3632
-        "y": 177
+        x: 4212
+        "y": 32.5
       condition_test_15_101:
-        x: 3932
-        "y": 162
+        x: 4512
+        "y": 22.5
       action_test_16_102:
-        x: 4252
-        "y": 97
+        x: 4832
+        "y": 32.5
     graph_id: a18b0fbb-d966-432c-aba7-4f7361da8d29
     graph_version: 1
-    strategy: native
+    strategy: state-machine
 "
 `;
 
@@ -567,58 +690,58 @@ trigger:
     above: 33
     attribute: current_temperature
 action:
-  - parallel:
-      - - if:
-            - condition: trigger
-              conditions:
-                - condition: trigger
-                  id: arriving
-                - condition: template
-                  value_template: |
-                    {{ (as_timestamp(now()) - as_timestamp(trigger.from_state.last_changed)) > 3600 }}
-          then:
-            - if:
-                - condition: numeric_state
-                  attribute: current_temperature
-                  entity_id: water_heater.altherma
-                  above: 39
-              then:
-                - service: notify.mobile_app_iphone_maria
-                  data:
-                    title: 🚿 Hot Water Ready
-                    message: Welcome back! There is plenty of hot water waiting for you.
-              else:
-                - service: water_heater.turn_on
-                  target:
-                    entity_id: water_heater.altherma
-                - service: notify.mobile_app_iphone_maria
-                  data:
-                    title: 🚿 Heating Water
-                    message: Welcome back! Turning on the water heater now.
-          else: []
-      - - if:
-            - condition: or
-              conditions:
-                - condition: or
-                  conditions:
-                    - condition: trigger
-                      id: leaving
-                    - condition: trigger
-                      id: temp_limit_reached
-                - condition: numeric_state
-                  attribute: current_temperature
-                  entity_id: water_heater.altherma
-                  above: 33
-                - condition: not
-                  conditions:
-                    - condition: zone
-                      entity_id: person.maria
-                      zone: zone.city_limits
-          then:
-            - service: water_heater.turn_off
-              target:
+  - if:
+      - condition: trigger
+        id: arriving
+        conditions:
+          - condition: trigger
+            id: arriving
+          - condition: template
+            value_template: |
+              {{ (as_timestamp(now()) - as_timestamp(trigger.from_state.last_changed)) > 3600 }}
+    then:
+      - if:
+          - condition: numeric_state
+            attribute: current_temperature
+            entity_id: water_heater.altherma
+            above: 39
+        then:
+          - service: notify.mobile_app_iphone_maria
+            data:
+              title: 🚿 Hot Water Ready
+              message: Welcome back! There is plenty of hot water waiting for you.
+        else:
+          - service: water_heater.turn_on
+            target:
+              entity_id: water_heater.altherma
+          - service: notify.mobile_app_iphone_maria
+            data:
+              title: 🚿 Heating Water
+              message: Welcome back! Turning on the water heater now.
+    else:
+      - if:
+          - condition: or
+            conditions:
+              - condition: or
+                conditions:
+                  - condition: trigger
+                    id: leaving
+                  - condition: trigger
+                    id: temp_limit_reached
+              - condition: numeric_state
+                attribute: current_temperature
                 entity_id: water_heater.altherma
-          else: []
+                above: 33
+              - condition: not
+                conditions:
+                  - condition: zone
+                    entity_id: person.maria
+                    zone: zone.city_limits
+        then:
+          - service: water_heater.turn_off
+            target:
+              entity_id: water_heater.altherma
+        else: []
 mode: single
 variables:
   _cafe_metadata:
@@ -635,25 +758,25 @@ variables:
         "y": 12
       condition_test_3_79:
         x: 312
-        "y": 72
+        "y": 162
       condition_test_4_80:
         x: 632
-        "y": 82
+        "y": 252
       action_test_5_81:
         x: 952
-        "y": 92
+        "y": 172
       action_test_6_82:
         x: 952
-        "y": 252
+        "y": 332
       action_test_7_83:
         x: 1252
         "y": 172
       condition_test_8_84:
-        x: 312
-        "y": 252
-      action_test_9_85:
         x: 632
-        "y": 262
+        "y": 72
+      action_test_9_85:
+        x: 952
+        "y": 12
     graph_id: a18b0fbb-d966-432c-aba7-4f7361da8d29
     graph_version: 1
     strategy: native
@@ -688,6 +811,7 @@ action:
     then:
       - if:
           - condition: trigger
+            id: playing
         then:
           - service: light.turn_off
             target:
@@ -696,17 +820,18 @@ action:
                 - light.751314eaa8749ab751d478948a65b33e
             data:
               transition: 2
-        else: []
-      - if:
-          - condition: trigger
-        then:
-          - service: light.turn_on
-            target:
-              entity_id: light.751314eaa8749ab751d478948a65b33e
-            data:
-              brightness_pct: 5
-              transition: 3
-        else: []
+        else:
+          - if:
+              - condition: trigger
+                id: paused
+            then:
+              - service: light.turn_on
+                target:
+                  entity_id: light.751314eaa8749ab751d478948a65b33e
+                data:
+                  brightness_pct: 5
+                  transition: 3
+            else: []
     else: []
 mode: restart
 variables:
@@ -715,25 +840,25 @@ variables:
     nodes:
       trigger_test_0_69:
         x: 12
-        "y": 192
+        "y": 182
       trigger_test_1_70:
         x: 12
-        "y": 32
+        "y": 22
       condition_test_2_71:
         x: 312
-        "y": 102
+        "y": 92
       condition_test_3_72:
         x: 632
-        "y": 12
+        "y": 92
       action_test_4_73:
         x: 952
-        "y": 32
+        "y": 12
       condition_test_5_74:
-        x: 632
-        "y": 192
-      action_test_6_75:
         x: 952
-        "y": 192
+        "y": 172
+      action_test_6_75:
+        x: 1272
+        "y": 102
     graph_id: a18b0fbb-d966-432c-aba7-4f7361da8d29
     graph_version: 1
     strategy: native
@@ -890,100 +1015,109 @@ trigger:
     to:
       - "off"
 action:
-  - parallel:
-      - - alias: Off at night
-          if:
-            - condition: trigger
-          then:
-            - if:
-                - condition: state
-                  entity_id: switch.ensuite
-                  state:
-                    - "on"
-              then:
-                - wait_for_trigger:
-                    - platform: state
-                      entity_id:
-                        - switch.ensuite
-                      to:
-                        - "off"
-                  timeout:
-                    hours: 0
-                    minutes: 20
-                    seconds: 0
-                    milliseconds: 0
-                - service: switch.turn_off
-                  target:
-                    entity_id:
-                      - switch.ensuite_fan
-                      - switch.ensuite_fan_boost
-                  data: {}
-              else:
-                - service: switch.turn_off
-                  target:
-                    entity_id:
-                      - switch.ensuite_fan
-                      - switch.ensuite_fan_boost
-                  data: {}
-          else: []
-      - - if:
-            - condition: trigger
-          then:
-            - if:
-                - condition: and
-                  conditions:
-                    - condition: time
-                      after: "05:45:00"
-                      before: "21:00:00"
-                    - condition: state
-                      entity_id: light.ensuite
-                      state:
-                        - "on"
-                    - condition: state
+  - alias: Off at night
+    if:
+      - condition: trigger
+        id:
+          - NightOff
+    then:
+      - if:
+          - condition: state
+            entity_id: switch.ensuite
+            state:
+              - "on"
+        then:
+          - wait_for_trigger:
+              - platform: state
+                entity_id:
+                  - switch.ensuite
+                to:
+                  - "off"
+            timeout:
+              hours: 0
+              minutes: 20
+              seconds: 0
+              milliseconds: 0
+          - service: switch.turn_off
+            target:
+              entity_id:
+                - switch.ensuite_fan
+                - switch.ensuite_fan_boost
+            data: {}
+        else:
+          - service: switch.turn_off
+            target:
+              entity_id:
+                - switch.ensuite_fan
+                - switch.ensuite_fan_boost
+            data: {}
+    else:
+      - if:
+          - condition: trigger
+            id:
+              - light-toggled-on
+              - fan-switch-toggled-on
+        then:
+          - if:
+              - condition: and
+                conditions:
+                  - condition: time
+                    after: "05:45:00"
+                    before: "21:00:00"
+                  - condition: state
+                    entity_id: light.ensuite
+                    state:
+                      - "on"
+                  - condition: state
+                    entity_id: switch.ensuite_fan
+                    state:
+                      - "off"
+            then:
+              - service: switch.turn_on
+                target:
+                  entity_id: switch.ensuite_fan
+                data: {}
+            else: []
+        else:
+          - if:
+              - condition: trigger
+                id:
+                  - light-toggled-off
+                  - fan-switch-toggled-off
+                conditions:
+                  - condition: trigger
+                    id:
+                      - light-toggled-off
+                      - fan-switch-toggled-off
+                  - condition: time
+                    after: "05:45:00"
+                    before: "21:00:00"
+            then:
+              - if:
+                  - condition: trigger
+                    id:
+                      - light-toggled-off
+                then:
+                  - delay:
+                      hours: 0
+                      minutes: 30
+                      seconds: 0
+                      milliseconds: 0
+                  - service: switch.turn_off
+                    target:
                       entity_id: switch.ensuite_fan
-                      state:
-                        - "off"
-              then:
-                - service: switch.turn_on
-                  target:
-                    entity_id: switch.ensuite_fan
-                  data: {}
-              else: []
-          else: []
-      - - if:
-            - condition: trigger
-              conditions:
-                - condition: trigger
-                  id:
-                    - light-toggled-off
-                    - fan-switch-toggled-off
-                - condition: time
-                  after: "05:45:00"
-                  before: "21:00:00"
-          then:
-            - if:
-                - condition: trigger
-              then:
-                - delay:
-                    hours: 0
-                    minutes: 30
-                    seconds: 0
-                    milliseconds: 0
-                - service: switch.turn_off
-                  target:
-                    entity_id: switch.ensuite_fan
-                  data: {}
-              else:
-                - delay:
-                    hours: 1
-                    minutes: 0
-                    seconds: 0
-                    milliseconds: 0
-                - service: switch.turn_off
-                  target:
-                    entity_id: switch.ensuite_fan
-                  data: {}
-          else: []
+                    data: {}
+                else:
+                  - delay:
+                      hours: 1
+                      minutes: 0
+                      seconds: 0
+                      milliseconds: 0
+                  - service: switch.turn_off
+                    target:
+                      entity_id: switch.ensuite_fan
+                    data: {}
+            else: []
 mode: restart
 variables:
   _cafe_metadata:
@@ -991,58 +1125,58 @@ variables:
     nodes:
       trigger_test_0_45:
         x: 12
-        "y": 237
+        "y": 187
       trigger_test_1_46:
         x: 12
-        "y": 397
+        "y": 347
       trigger_test_2_47:
         x: 12
-        "y": 557
+        "y": 507
       trigger_test_3_48:
         x: 12
-        "y": 77
+        "y": 27
       condition_test_4_49:
         x: 312
-        "y": 307
+        "y": 257
       condition_test_5_50:
         x: 632
-        "y": 307
+        "y": 167
       wait_test_6_51:
-        x: 962
-        "y": 172
+        x: 972
+        "y": 12
       action_test_7_52:
-        x: 1252
-        "y": 157
+        x: 1272
+        "y": 97
       action_test_8_53:
         x: 952
-        "y": 322
+        "y": 162
       condition_test_9_54:
-        x: 312
-        "y": 127
+        x: 632
+        "y": 347
       condition_test_10_55:
-        x: 632
-        "y": 127
-      action_test_11_56:
         x: 952
-        "y": 12
+        "y": 322
+      action_test_11_56:
+        x: 1272
+        "y": 257
       condition_test_12_57:
-        x: 312
-        "y": 487
+        x: 952
+        "y": 502
       condition_test_13_58:
-        x: 632
-        "y": 487
+        x: 1272
+        "y": 417
       delay_test_14_59:
-        x: 962
-        "y": 482
+        x: 1592
+        "y": 197
       action_test_15_60:
-        x: 1252
-        "y": 317
+        x: 1872
+        "y": 187
       delay_test_16_61:
-        x: 962
-        "y": 632
+        x: 1592
+        "y": 347
       action_test_17_62:
-        x: 1252
-        "y": 477
+        x: 1872
+        "y": 347
     graph_id: a18b0fbb-d966-432c-aba7-4f7361da8d29
     graph_version: 1
     strategy: native
@@ -1072,55 +1206,56 @@ trigger:
       seconds: 0
     below: 2
 action:
-  - parallel:
-      - - if:
-            - condition: trigger
-              conditions:
-                - condition: trigger
-                  id: machine_on
-                - condition: state
-                  entity_id: input_boolean.wasmachine_status
-                  state: "off"
-          then:
-            - service: input_boolean.turn_on
-              target:
+  - if:
+      - condition: trigger
+        id: machine_on
+        conditions:
+          - condition: trigger
+            id: machine_on
+          - condition: state
+            entity_id: input_boolean.wasmachine_status
+            state: "off"
+    then:
+      - service: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.wasmachine_status
+        data: {}
+      - service: input_number.set_value
+        target:
+          entity_id: input_number.wasmachine_energie_start_cyclus
+        data:
+          value: "{{ states('sensor.noord_wasplaats_energie_wasmachine') }}"
+    else:
+      - if:
+          - condition: trigger
+            id: machine_off
+            conditions:
+              - condition: trigger
+                id: machine_off
+              - condition: state
                 entity_id: input_boolean.wasmachine_status
-              data: {}
-            - service: input_number.set_value
-              target:
-                entity_id: input_number.wasmachine_energie_start_cyclus
-              data:
-                value: "{{ states('sensor.noord_wasplaats_energie_wasmachine') }}"
-          else: []
-      - - if:
-            - condition: trigger
-              conditions:
-                - condition: trigger
-                  id: machine_off
-                - condition: state
-                  entity_id: input_boolean.wasmachine_status
-                  state: "on"
-          then:
-            - service: input_boolean.turn_off
-              target:
-                entity_id: input_boolean.wasmachine_status
-              data: {}
-            - variables:
-                verbruik_cyclus: "{{ (((states('sensor.noord_wasplaats_energie_wasmachine') | float) - (states('input_number.wasmachine_energie_start_cyclus') | float)) * 1000) | int }}"
-            - service: script.notify_by_label
-              data:
-                labels:
-                  - gsm_bart
-                  - gsm_cindy
-                title: Wasmachine gereed
-                message: Cyclus heeft ({{ verbruik_cyclus | int }} Wh verbruikt
-            - service: tts.cloud_say
-              data:
-                entity_id:
-                  - media_player.kitchen_speaker
-                  - media_player.zithoek_speaker
-                message: Het wasmachine is gereed en moet leeg gemaakt worden
-          else: []
+                state: "on"
+        then:
+          - service: input_boolean.turn_off
+            target:
+              entity_id: input_boolean.wasmachine_status
+            data: {}
+          - variables:
+              verbruik_cyclus: "{{ (((states('sensor.noord_wasplaats_energie_wasmachine') | float) - (states('input_number.wasmachine_energie_start_cyclus') | float)) * 1000) | int }}"
+          - service: script.notify_by_label
+            data:
+              labels:
+                - gsm_bart
+                - gsm_cindy
+              title: Wasmachine gereed
+              message: Cyclus heeft ({{ verbruik_cyclus | int }} Wh verbruikt
+          - service: tts.cloud_say
+            data:
+              entity_id:
+                - media_player.kitchen_speaker
+                - media_player.zithoek_speaker
+              message: Het wasmachine is gereed en moet leeg gemaakt worden
+        else: []
 mode: single
 variables:
   _cafe_metadata:
@@ -1128,34 +1263,34 @@ variables:
     nodes:
       trigger_test_0_35:
         x: 12
-        "y": 192
+        "y": 182
       trigger_test_1_36:
         x: 12
-        "y": 32
+        "y": 22
       condition_test_2_37:
         x: 312
-        "y": 12
+        "y": 92
       action_test_3_38:
-        x: 632
-        "y": 32
+        x: 642
+        "y": 192
       action_test_4_39:
-        x: 932
-        "y": 32
+        x: 952
+        "y": 182
       condition_test_5_40:
-        x: 312
-        "y": 192
-      action_test_6_41:
         x: 632
-        "y": 192
+        "y": 12
+      action_test_6_41:
+        x: 952
+        "y": 22
       set_variables_test_7_42:
-        x: 932
-        "y": 192
+        x: 1252
+        "y": 102
       action_test_8_43:
-        x: 1232
-        "y": 112
+        x: 1552
+        "y": 102
       action_test_9_44:
-        x: 1532
-        "y": 112
+        x: 1852
+        "y": 102
     graph_id: a18b0fbb-d966-432c-aba7-4f7361da8d29
     graph_version: 1
     strategy: native

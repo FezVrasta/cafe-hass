@@ -165,7 +165,10 @@ export class NativeStrategy extends BaseStrategy {
     } else if (outgoing.length > 1) {
       // Multiple outgoing edges (parallel paths)
       // First, find if branches converge to a common node
-      const convergencePoint = this.findConvergencePoint(flow, outgoing.map((e) => e.target));
+      const convergencePoint = this.findConvergencePoint(
+        flow,
+        outgoing.map((e) => e.target)
+      );
 
       if (convergencePoint) {
         // Build each branch up to (but not including) the convergence point
@@ -396,9 +399,8 @@ export class NativeStrategy extends BaseStrategy {
       else: [], // Will be filled by the caller
     };
 
-    if (node.data.id) {
-      choose.id = node.data.id;
-    }
+    // Note: 'id' for trigger conditions belongs inside the condition object, not at the if/then/else level
+    // The id is already included via buildCondition's ...rest spread
 
     return choose;
   }
