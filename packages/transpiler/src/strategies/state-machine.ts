@@ -276,6 +276,69 @@ export class StateMachineStrategy extends BaseStrategy {
     const nextNode = nextNodeId === 'END' ? 'END' : nextNodeId;
     const currentNodeId = node.id;
 
+    const actionCall = this.buildActionCall(node);
+
+    return {
+      conditions: [
+        {
+          condition: 'template',
+          value_template: `{{ current_node == "${currentNodeId}" }}`,
+        },
+      ],
+      sequence: [
+        actionCall,
+        {
+          variables: {
+            current_node: nextNode,
+          },
+        },
+      ],
+    };
+  }
+
+  /**
+   * Build service call action or device action
+   */
+  private buildActionCall(node: ActionNode): Record<string, unknown> {
+    // Check if this is a device action (needs special format)
+    if (node.data.isDeviceAction && node.data.data) {
+      const deviceData = node.data.data as Record<string, unknown>;
+      const action: Record<string, unknown> = {
+        device_id: deviceData.device_id,
+        domain: deviceData.domain,
+        type: deviceData.type,
+      };
+
+      if (node.data.alias) {
+        action.alias = node.data.alias;
+      }
+
+      // Add entity_id if present
+      if (deviceData.entity_id) {
+        action.entity_id = deviceData.entity_id;
+      }
+
+      // Add subtype if present
+      if (deviceData.subtype) {
+        action.subtype = deviceData.subtype;
+      }
+
+      // Add any additional parameters (like 'option' for select)
+      const knownFields = ['type', 'device_id', 'domain', 'entity_id', 'subtype'];
+      for (const [key, value] of Object.entries(deviceData)) {
+        if (!knownFields.includes(key) && value !== undefined) {
+          action[key] = value;
+        }
+      }
+
+      if (node.data.enabled === false) {
+        action.enabled = false;
+      }
+
+      return action;
+    }
+
+    // Standard service call format
     const actionCall: Record<string, unknown> = {
       alias: node.data.alias,
       service: node.data.service,
@@ -305,22 +368,11 @@ export class StateMachineStrategy extends BaseStrategy {
       actionCall.continue_on_error = node.data.continue_on_error;
     }
 
-    return {
-      conditions: [
-        {
-          condition: 'template',
-          value_template: `{{ current_node == "${currentNodeId}" }}`,
-        },
-      ],
-      sequence: [
-        actionCall,
-        {
-          variables: {
-            current_node: nextNode,
-          },
-        },
-      ],
-    };
+    if (node.data.enabled === false) {
+      actionCall.enabled = false;
+    }
+
+    return actionCall;
   }
 
   /**

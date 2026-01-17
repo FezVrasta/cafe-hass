@@ -89,6 +89,8 @@ export type TriggerNode = z.infer<typeof TriggerNodeSchema>;
 const BaseConditionDataSchema = z.looseObject({
   alias: z.string().optional(),
   condition_type: ConditionTypeSchema,
+  // Enabled flag (disabled conditions still exist but are skipped)
+  enabled: z.boolean().optional(),
   // Common fields
   attribute: z.string().optional(),
   for: z
@@ -206,6 +208,8 @@ export const ActionDataSchema = z.looseObject({
   continue_on_error: z.boolean().optional(),
   // Enabled flag
   enabled: z.boolean().optional(),
+  // Flag to indicate this is a device action (for proper round-trip)
+  isDeviceAction: z.boolean().optional(),
   // Conditional actions (if/then/else)
   if: z.array(BaseConditionDataSchema).optional(),
   then: z.array(z.any()).optional(),

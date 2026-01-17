@@ -6,6 +6,7 @@ export const HAConditionSchema = z
   .looseObject({
     alias: z.string().optional(),
     condition: z.string().optional(),
+    enabled: z.boolean().optional(),
     entity_id: z.union([z.string(), z.array(z.string())]).optional(),
     state: z.union([z.string(), z.array(z.string())]).optional(),
     template: z.string().optional(),
@@ -32,6 +33,7 @@ export const HAConditionSchema = z
     return {
       alias: input.alias,
       condition_type,
+      enabled: input.enabled,
       entity_id: input.entity_id,
       state: input.state,
       template: input.template ?? input.value_template,
@@ -439,6 +441,8 @@ function transformToNestedCondition(condition: Record<string, unknown>): NestedC
 
   return {
     condition_type: validatedType,
+    enabled: typeof condition.enabled === 'boolean' ? condition.enabled : undefined,
+    alias: typeof condition.alias === 'string' ? condition.alias : undefined,
     entity_id:
       typeof condition.entity_id === 'string' || Array.isArray(condition.entity_id)
         ? condition.entity_id
@@ -1463,6 +1467,16 @@ export class YamlParser {
         // Device action (type + device_id + domain)
         const nodeId = getNextNodeId('action');
         const act = action as Record<string, unknown>;
+
+        // Extract known metadata fields vs additional parameters
+        const knownFields = ['type', 'device_id', 'domain', 'entity_id', 'subtype', 'alias', 'enabled'];
+        const additionalParams: Record<string, unknown> = {};
+        for (const [key, value] of Object.entries(act)) {
+          if (!knownFields.includes(key) && value !== undefined) {
+            additionalParams[key] = value;
+          }
+        }
+
         // Convert device action to service-like format for the action node
         const actionNode: ActionNode = {
           id: nodeId,
@@ -1470,18 +1484,21 @@ export class YamlParser {
           position: { x: 0, y: 0 },
           data: {
             alias: typeof act.alias === 'string' ? act.alias : undefined,
+            // Mark this as a device action for proper round-trip
+            isDeviceAction: true,
             // Store the device action fields directly
             service: `${act.domain}.${act.type}`,
             target: {
               device_id: act.device_id as string,
             },
-            // Preserve original device action data
+            // Preserve original device action metadata and additional params (like 'option')
             data: {
               type: act.type,
               device_id: act.device_id,
               domain: act.domain,
               entity_id: act.entity_id,
               subtype: act.subtype,
+              ...additionalParams,
             } as Record<string, unknown>,
             enabled: typeof act.enabled === 'boolean' ? act.enabled : undefined,
           },
