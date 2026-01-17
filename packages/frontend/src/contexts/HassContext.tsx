@@ -365,9 +365,21 @@ export const HassProvider: FC<
     return undefined;
   }, [externalHass, shouldUseRemote, wsConnection, config.url, config.token]);
 
-  const entities = useMemo(() => Object.values(hass?.states ?? {}), [hass?.states]);
+  // For remote mode, use remoteEntities directly since hass.states is a getter
+  // that doesn't trigger useMemo recalculation when remoteEntities changes
+  const entities = useMemo(() => {
+    if (shouldUseRemote) {
+      return remoteEntities;
+    }
+    return Object.values(hass?.states ?? {});
+  }, [shouldUseRemote, remoteEntities, hass?.states]);
 
-  const services = useMemo(() => hass?.services ?? {}, [hass?.services]);
+  const services = useMemo(() => {
+    if (shouldUseRemote) {
+      return remoteServices;
+    }
+    return hass?.services ?? {};
+  }, [shouldUseRemote, remoteServices, hass?.services]);
 
   const getEntitiesByDomain = useCallback(
     (domain: string) => entities.filter((e) => e.entity_id.startsWith(`${domain}.`)),

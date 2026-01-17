@@ -129,6 +129,7 @@ interface FlowState {
   isSaving: boolean;
   lastSaved: Date | null;
   hasUnsavedChanges: boolean;
+  originalSnapshot: string | null; // JSON snapshot of original state for comparison
 
   // Simulation state
   isSimulating: boolean;
@@ -167,6 +168,7 @@ interface FlowState {
   setUnsavedChanges: (hasChanges: boolean) => void;
   saveAutomation: (hassApi: HomeAssistant) => Promise<string>;
   updateAutomation: (hassApi: HomeAssistant) => Promise<void>;
+  hasRealChanges: () => boolean; // Compare current state to original snapshot
 
   // Simulation
   startSimulation: () => void;
@@ -204,6 +206,7 @@ const initialState = {
   isSaving: false,
   lastSaved: null,
   hasUnsavedChanges: false,
+  originalSnapshot: null,
   isSimulating: false,
   activeNodeId: null,
   executionPath: [],
@@ -278,6 +281,27 @@ export const useFlowStore = create<FlowState>((set, get) => ({
   setSaving: (saving) => set({ isSaving: saving }),
   setSaved: () => set({ lastSaved: new Date(), hasUnsavedChanges: false }),
   setUnsavedChanges: (hasChanges) => set({ hasUnsavedChanges: hasChanges }),
+  hasRealChanges: () => {
+    const state = get();
+    if (!state.originalSnapshot) {
+      // No original snapshot means it's a new flow - check if there are any nodes
+      return state.nodes.length > 0;
+    }
+    // Create current snapshot and compare
+    const currentSnapshot = JSON.stringify({
+      flowName: state.flowName,
+      flowDescription: state.flowDescription,
+      nodes: state.nodes.map((n) => ({ id: n.id, type: n.type, position: n.position, data: n.data })),
+      edges: state.edges.map((e) => ({
+        id: e.id,
+        source: e.source,
+        target: e.target,
+        sourceHandle: e.sourceHandle,
+        targetHandle: e.targetHandle,
+      })),
+    });
+    return currentSnapshot !== state.originalSnapshot;
+  },
 
   saveAutomation: async (hassApi: HomeAssistant) => {
     const state = get();
@@ -625,31 +649,48 @@ export const useFlowStore = create<FlowState>((set, get) => ({
     };
   },
 
-  fromFlowGraph: (graph) =>
-    set({
-      flowId: graph.id,
+  fromFlowGraph: (graph) => {
+    const nodes = graph.nodes.map((n) => ({
+      id: n.id,
+      type: n.type,
+      position: n.position,
+      data: n.data as FlowNodeData,
+    }));
+    const edges = graph.edges.map((e) => ({
+      id: e.id,
+      source: e.source,
+      target: e.target,
+      sourceHandle: e.sourceHandle,
+      targetHandle: e.targetHandle,
+      label: e.label,
+    }));
+    // Create snapshot for comparison
+    const originalSnapshot = JSON.stringify({
       flowName: graph.name,
       flowDescription: graph.description || '',
-      nodes: graph.nodes.map((n) => ({
-        id: n.id,
-        type: n.type,
-        position: n.position,
-        data: n.data as FlowNodeData,
-      })),
-      edges: graph.edges.map((e) => ({
+      nodes: nodes.map((n) => ({ id: n.id, type: n.type, position: n.position, data: n.data })),
+      edges: edges.map((e) => ({
         id: e.id,
         source: e.source,
         target: e.target,
         sourceHandle: e.sourceHandle,
         targetHandle: e.targetHandle,
-        label: e.label,
       })),
+    });
+    set({
+      flowId: graph.id,
+      flowName: graph.name,
+      flowDescription: graph.description || '',
+      nodes,
+      edges,
       selectedNodeId: null,
       // Reset save state when importing
       automationId: null,
       hasUnsavedChanges: false,
       lastSaved: null,
-    }),
+      originalSnapshot,
+    });
+  },
 
-  reset: () => set({ ...initialState, flowId: generateUUID() }),
+  reset: () => set({ ...initialState, flowId: generateUUID(), originalSnapshot: null }),
 }));

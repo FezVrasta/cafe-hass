@@ -29,7 +29,6 @@ interface EntityRegistryEntry {
 
 import { getHomeAssistantAPI } from '@/lib/ha-api';
 import { useFlowStore } from '@/store/flow-store';
-import type { HassEntity } from '@/types/hass';
 
 interface AutomationImportDialogProps {
   isOpen: boolean;
@@ -60,9 +59,33 @@ export function AutomationImportDialog({ isOpen, onClose }: AutomationImportDial
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [areas, setAreas] = useState<AreaRegistryEntry[]>([]);
   const [entityRegistry, setEntityRegistry] = useState<EntityRegistryEntry[]>([]);
-  const { hass, config: hassConfig } = useHass();
-  const { setFlowName, setAutomationId, reset, fromFlowGraph } = useFlowStore();
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
+  const { hass, config: hassConfig, entities } = useHass();
+  const { setFlowName, setAutomationId, reset, fromFlowGraph, hasRealChanges } = useFlowStore();
   const { fitView } = useReactFlow();
+
+  const confirmAction = (action: () => void) => {
+    if (hasRealChanges()) {
+      setPendingAction(() => action);
+      setShowConfirmDialog(true);
+    } else {
+      action();
+    }
+  };
+
+  const handleConfirm = () => {
+    if (pendingAction) {
+      pendingAction();
+    }
+    setShowConfirmDialog(false);
+    setPendingAction(null);
+  };
+
+  const handleCancelConfirm = () => {
+    setShowConfirmDialog(false);
+    setPendingAction(null);
+  };
 
   // Fetch areas and entity registry on open
   useEffect(() => {
@@ -88,18 +111,15 @@ export function AutomationImportDialog({ isOpen, onClose }: AutomationImportDial
 
   // Get all automations from HA
   const automations = useMemo(() => {
-    if (!hass?.states) {
-      return [];
-    }
-    const automationEntities = Object.values(hass.states).filter((entity: HassEntity) =>
+    const automationEntities = entities.filter((entity) =>
       entity.entity_id.startsWith('automation.')
     );
-    return automationEntities.map((entity: HassEntity) => ({
+    return automationEntities.map((entity) => ({
       entity_id: entity.entity_id,
       attributes: entity.attributes || {},
       state: entity.state,
     })) as HaAutomation[];
-  }, [hass]);
+  }, [entities]);
 
   // Map entity_id to area_id using entityRegistry
   const entityIdToAreaId = useMemo(() => {
@@ -298,10 +318,11 @@ export function AutomationImportDialog({ isOpen, onClose }: AutomationImportDial
             </div>
             <Button
               onClick={() => {
-                // Create new automation
-                reset();
-                setFlowName('New Automation');
-                onClose();
+                confirmAction(() => {
+                  reset();
+                  setFlowName('New Automation');
+                  onClose();
+                });
               }}
               className="bg-green-600 hover:bg-green-700"
             >
@@ -312,7 +333,7 @@ export function AutomationImportDialog({ isOpen, onClose }: AutomationImportDial
         </DialogHeader>
 
         {/* Search */}
-        <div className="border-b px-6 pb-6">
+        <div className="flex min-h-0 flex-col">
           <div className="relative mb-4">
             <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform text-muted-foreground" />
             <Input
@@ -323,7 +344,7 @@ export function AutomationImportDialog({ isOpen, onClose }: AutomationImportDial
               className="pl-10"
             />
           </div>
-          <div className="max-h-[70vh] overflow-auto">
+          <div className="max-h-[70vh] overflow-auto rounded-t-md">
             <div className="min-w-full">
               <div className="sticky top-0 z-20 bg-background before:absolute before:-top-px before:right-0 before:left-0 before:h-px before:bg-background">
                 <div className="flex">
@@ -453,7 +474,7 @@ export function AutomationImportDialog({ isOpen, onClose }: AutomationImportDial
                         <Button
                           size="icon"
                           variant="ghost"
-                          onClick={() => handleImportAutomation(automation)}
+                          onClick={() => confirmAction(() => handleImportAutomation(automation))}
                           title="Import automation"
                         >
                           <Download className="h-4 w-4" />
@@ -512,6 +533,27 @@ export function AutomationImportDialog({ isOpen, onClose }: AutomationImportDial
           </div>
         </div>
       </DialogContent>
+
+      {/* Confirmation Dialog */}
+      <Dialog open={showConfirmDialog} onOpenChange={handleCancelConfirm}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Discard current flow?</DialogTitle>
+            <DialogDescription>
+              Your current automation has unsaved changes. Creating or opening a new automation will
+              discard these changes.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2 pt-4">
+            <Button variant="outline" onClick={handleCancelConfirm}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleConfirm}>
+              Discard & Continue
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }
