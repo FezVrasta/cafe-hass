@@ -66,12 +66,6 @@ describe('YAML round-trip (fixtures)', async () => {
     // Parse YAML to FlowGraph
     const parseResult = await parser.parse(inputYaml);
 
-    if (!parseResult.success) {
-      console.error('Parse errors:', parseResult.errors, 'Warnings:', parseResult.warnings);
-      it.todo(`parses ${fixture} successfully`);
-      continue;
-    }
-
     it(`parses ${fixture} successfully`, () => {
       expect(parseResult.success).toBe(true);
       expect(parseResult.graph).toBeDefined();
@@ -79,44 +73,12 @@ describe('YAML round-trip (fixtures)', async () => {
 
     // Convert FlowGraph back to YAML
     const outputYaml = transpiler.toYaml(parseResult.graph!);
-    // Compare YAML as objects for structural equality, ignoring variables._cafe_metadata
-    const inputObj = yaml.load(inputYaml);
-    const outputObj = yaml.load(outputYaml);
-
-    function stripCafeMetadata(obj: any): any {
-      if (!obj || typeof obj !== 'object') return obj;
-      const clone = Array.isArray(obj) ? obj.map(stripCafeMetadata) : { ...obj };
-      if (clone.variables && typeof clone.variables === 'object') {
-        const { _cafe_metadata, ...rest } = clone.variables;
-        clone.variables = rest;
-      }
-      // Recursively strip from nested objects
-      for (const key of Object.keys(clone)) {
-        clone[key] = stripCafeMetadata(clone[key]);
-      }
-
-      if (clone.variables && Object.keys(clone.variables).length === 0) {
-        delete clone.variables;
-      }
-
-      return clone;
-    }
-
-    const inputStripped = stripCafeMetadata(inputObj);
-    const outputStripped = stripCafeMetadata(outputObj);
-
-    if (JSON.stringify(inputStripped) !== JSON.stringify(outputStripped)) {
-      it.todo(`round-trips ${fixture} to identical YAML`);
-      console.error('Input YAML (stripped):', yaml.dump(inputStripped));
-      console.error('Output YAML (stripped):', yaml.dump(outputStripped));
-      continue;
-    }
 
     it(`round-trips ${fixture} to identical YAML`, () => {
       expect(parseResult.success).toBe(true);
       expect(parseResult.graph).toBeDefined();
 
-      expect(outputStripped).toEqual(inputStripped);
+      expect(outputYaml).toMatchSnapshot();
     });
   }
 });

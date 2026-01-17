@@ -64,6 +64,7 @@ export interface HaCondition {
   condition?: string;
   id?: string;
   alias?: string;
+  enabled?: boolean;
   entity_id?: string | string[];
   state?: string | string[];
   template?: string;
@@ -88,6 +89,7 @@ export const HaConditionSchema: z.ZodType<HaCondition> = z.lazy(() =>
       condition: z.string().optional(),
       id: z.string().optional(),
       alias: z.string().optional(),
+      enabled: z.boolean().optional(),
       entity_id: entityIdSchema.optional(),
       state: z.union([z.string(), z.array(z.string())]).optional(),
       template: z.string().optional(),

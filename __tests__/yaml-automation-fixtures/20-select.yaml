@@ -1,0 +1,26 @@
+alias: Fox batteries to Self Use CAFE TEST
+description: ""
+triggers:
+  - type: power
+    device_id: 668ca38238b4ea09a8c51fa4d4f45e7c
+    entity_id: sensor.myenergi_mg_charger_power_charging
+    domain: sensor
+    trigger: device
+    below: 1450
+conditions:
+  - condition: time
+    after: "05:30:00"
+    before: "23:30:00"
+    enabled: false
+actions:
+  - device_id: fc32de247133cbee1c2587690d3f4629
+    domain: select
+    entity_id: select.work_mode
+    type: select_option
+    option: Self Use
+  - action: notify.mobile_app_pbw_iphone
+    metadata: {}
+    data:
+      message: Change slot closed
+      title: Self Use reactivated
+mode: single
