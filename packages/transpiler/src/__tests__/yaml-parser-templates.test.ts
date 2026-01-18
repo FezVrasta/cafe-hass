@@ -104,7 +104,7 @@ actions:
 
     const templateCondition = conditionNodes?.[0];
     expect(templateCondition?.data.condition_type).toBe('template');
-    expect(templateCondition?.data.template).toBe("{{ states('sensor.test') == 'on' }}");
+    expect(templateCondition?.data.template).toBeUndefined();
     expect(templateCondition?.data.value_template).toBe("{{ states('sensor.test') == 'on' }}");
   });
 
@@ -148,7 +148,7 @@ actions:
       (c) => c.condition_type === 'template'
     );
     expect(nestedTemplateCondition).toBeDefined();
-    expect(nestedTemplateCondition?.template).toBe("{{ is_state('binary_sensor.motion', 'on') }}");
+    expect(nestedTemplateCondition?.value_template).toBe("{{ is_state('binary_sensor.motion', 'on') }}");
   });
 
   it('parses if/then/else with template condition', async () => {
@@ -181,7 +181,7 @@ actions:
 
     const ifCondition = conditionNodes?.[0];
     expect(ifCondition?.data.condition_type).toBe('template');
-    expect(ifCondition?.data.template).toBe('{{ now().hour >= 18 }}');
+    expect(ifCondition?.data.template).toBeUndefined();
     expect(ifCondition?.data.value_template).toBe('{{ now().hour >= 18 }}');
   });
 
@@ -210,7 +210,7 @@ actions:
 
     const templateCondition = conditionNodes?.[0];
     expect(templateCondition?.data.condition_type).toBe('template');
-    expect(templateCondition?.data.template).toBe("{{ states('input_boolean.enabled') == 'on' }}");
+    expect(templateCondition?.data.template).toBeUndefined();
     expect(templateCondition?.data.value_template).toBe(
       "{{ states('input_boolean.enabled') == 'on' }}"
     );
