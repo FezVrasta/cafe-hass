@@ -1,0 +1,16 @@
+alias: HVAC - climate set
+description: ""
+triggers:
+  - entity_id:
+      - climate.CLIMATE_ENTITY
+    from: "off"
+    to: null
+    trigger: state
+conditions: []
+actions:
+  - delay:
+      hours: 0
+      minutes: 0
+      seconds: 2
+      milliseconds: 0
+mode: single

@@ -457,18 +457,22 @@ export class StateMachineStrategy extends BaseStrategy {
 
     // Template conditions with {% %} statements need native check
     if (data.condition_type === 'template') {
-      const template = data.template || data.value_template || '';
+      const template = data.value_template || '';
       if (template.includes('{%')) {
         return true;
       }
     }
 
     // Nested conditions (and/or/not) with complex templates
-    if ((data.condition_type === 'and' || data.condition_type === 'or' || data.condition_type === 'not') &&
-        data.conditions) {
+    if (
+      (data.condition_type === 'and' ||
+        data.condition_type === 'or' ||
+        data.condition_type === 'not') &&
+      data.conditions
+    ) {
       return data.conditions.some((c) => {
         if (c.condition_type === 'template') {
-          const template = c.template || c.value_template || '';
+          const template = c.value_template || '';
           return template.includes('{%');
         }
         return false;
@@ -716,7 +720,7 @@ export class StateMachineStrategy extends BaseStrategy {
         // Strip outer {{ }} if present - check both template and value_template
         // Note: Complex templates with {% %} are handled via needsNativeConditionCheck
         // and won't use this method
-        let template = data.template || data.value_template || 'true';
+        let template = data.value_template || 'true';
         if (template.startsWith('{{') && template.endsWith('}}')) {
           template = template.slice(2, -2).trim();
         }
