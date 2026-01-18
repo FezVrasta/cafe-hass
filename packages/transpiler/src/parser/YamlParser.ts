@@ -10,7 +10,6 @@ export const HAConditionSchema = z
     enabled: z.boolean().optional(),
     entity_id: z.union([z.string(), z.array(z.string())]).optional(),
     state: z.union([z.string(), z.array(z.string())]).optional(),
-    template: z.string().optional(),
     value_template: z.string().optional(),
     after: z.string().optional(),
     before: z.string().optional(),
@@ -37,7 +36,7 @@ export const HAConditionSchema = z
       enabled: input.enabled,
       entity_id: input.entity_id,
       state: input.state,
-      template: input.template && !input.value_template ? input.template : undefined,
+
       value_template: input.value_template,
       after: input.after,
       before: input.before,
@@ -80,9 +79,9 @@ export const HATriggerSchema = z
     platform: HAPlatformEnum.optional(),
     trigger: HAPlatformEnum.optional(),
     entity_id: z.union([z.string(), z.array(z.string())]).optional(),
-    // Home Assistant supports both string and array for from/to fields
-    from: z.union([z.string(), z.array(z.string())]).optional(),
-    to: z.union([z.string(), z.array(z.string())]).optional(),
+    // Home Assistant supports both string, array, and null for from/to fields
+    from: z.union([z.string(), z.array(z.string()), z.null()]).optional(),
+    to: z.union([z.string(), z.array(z.string()), z.null()]).optional(),
     for: z
       .union([
         z.string(),
@@ -281,8 +280,8 @@ export interface HATrigger {
   platform?: string;
   trigger?: string;
   entity_id?: string | string[];
-  from?: string;
-  to?: string;
+  from?: string | string[] | null;
+  to?: string | string[] | null;
   for?: string | { hours?: number; minutes?: number; seconds?: number };
   at?: string;
   event_type?: string;
@@ -451,7 +450,7 @@ function transformToNestedCondition(condition: Record<string, unknown>): NestedC
     above: condition.above as number | string | undefined,
     below: condition.below as number | string | undefined,
     attribute: condition.attribute as string | undefined,
-    template: (condition.template as string) && !(condition.value_template as string) ? (condition.template as string) : undefined,
+
     value_template: condition.value_template as string | undefined,
     zone: condition.zone as string | undefined,
     after: condition.after as string | undefined,
@@ -1730,7 +1729,12 @@ export class YamlParser {
     getNextNodeId: (type: string) => string,
     conditionNodeIds: Set<string> = new Set(),
     falsePathConditionIds: Set<string> = new Set()
-  ): { nodes: FlowNode[]; edges: FlowEdge[]; outputNodeIds: string[]; falsePathOutputIds: string[] } {
+  ): {
+    nodes: FlowNode[];
+    edges: FlowEdge[];
+    outputNodeIds: string[];
+    falsePathOutputIds: string[];
+  } {
     const nodes: FlowNode[] = [];
     const edges: FlowEdge[] = [];
     const outputNodeIds: string[] = [];
@@ -1767,7 +1771,7 @@ export class YamlParser {
           entity_id: firstCondition.entity_id,
           state: firstCondition.state,
           // Support both 'template' and 'value_template' (Home Assistant uses value_template)
-          template: firstCondition.template || firstCondition.value_template,
+
           value_template: firstCondition.value_template,
           above: firstCondition.above,
           below: firstCondition.below,
@@ -1955,10 +1959,6 @@ export class YamlParser {
         ? (rawConditionType as ValidConditionType)
         : 'template';
 
-      const templateValue =
-        (firstCondition?.template as string | undefined) ||
-        (firstCondition?.value_template as string | undefined);
-
       conditionNode = {
         id: conditionId,
         type: 'condition',
@@ -1975,7 +1975,6 @@ export class YamlParser {
           above: firstCondition?.above as number | string | undefined,
           below: firstCondition?.below as number | string | undefined,
           attribute: firstCondition?.attribute as string | undefined,
-          template: templateValue,
           value_template: firstCondition?.value_template as string | undefined,
           zone: firstCondition?.zone as string | undefined,
           // Preserve id for trigger conditions (e.g., condition: trigger, id: "playing")

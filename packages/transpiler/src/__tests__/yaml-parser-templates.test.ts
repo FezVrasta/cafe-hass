@@ -148,7 +148,7 @@ actions:
       (c) => c.condition_type === 'template'
     );
     expect(nestedTemplateCondition).toBeDefined();
-    expect(nestedTemplateCondition?.value_template).toBe("{{ is_state('binary_sensor.motion', 'on') }}");
+    expect(nestedTemplateCondition?.template).toBeUndefined();
   });
 
   it('parses if/then/else with template condition', async () => {

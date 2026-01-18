@@ -23,8 +23,8 @@ export const TriggerDataSchema = z.looseObject({
   // State trigger
   entity_id: z.union([z.string(), z.array(z.string())]).optional(),
   // Home Assistant supports both string and array for from/to fields
-  from: z.union([z.string(), z.array(z.string())]).optional(),
-  to: z.union([z.string(), z.array(z.string())]).optional(),
+  from: z.union([z.string(), z.array(z.string()), z.null()]).optional(),
+  to: z.union([z.string(), z.array(z.string()), z.null()]).optional(),
   for: z
     .union([
       z.string(),
@@ -110,8 +110,7 @@ const BaseConditionDataSchema = z.looseObject({
   above: z.union([z.number(), z.string()]).optional(),
   below: z.union([z.number(), z.string()]).optional(),
   value_template: z.string().optional(),
-  // Template condition
-  template: z.string().optional(),
+
   // Time condition
   after: z.string().optional(),
   before: z.string().optional(),
