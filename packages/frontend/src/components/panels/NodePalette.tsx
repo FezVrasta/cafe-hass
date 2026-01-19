@@ -29,7 +29,7 @@ export const nodeTypes: NodeTypeConfig[] = [
     icon: GitBranch,
     color: 'bg-blue-100 border-blue-400 text-blue-700 hover:bg-blue-200',
     defaultData: {
-      condition_type: 'state',
+      condition: 'state',
       entity_id: '',
     },
   },

@@ -409,13 +409,13 @@ export class NativeStrategy extends BaseStrategy {
    * Map a single condition object (used for individual conditions in an array)
    */
   private mapSingleCondition(data: Record<string, unknown>): Record<string, unknown> {
-    const { condition_type, conditions, alias, template, ...rest } = data;
+    const { condition, conditions, alias, template, ...rest } = data;
     const out: Record<string, unknown> = {
-      condition: condition_type,
+      condition: condition,
       ...rest,
     };
     // For template conditions, ensure value_template is set from template if needed
-    if (condition_type === 'template' && !rest.value_template && template) {
+    if (condition === 'template' && !rest.value_template && template) {
       out.value_template = template;
     }
     // Recursively map nested group conditions
@@ -433,17 +433,17 @@ export class NativeStrategy extends BaseStrategy {
    * Build condition configuration
    */
   private buildCondition(node: ConditionNode): Record<string, unknown> {
-    // Helper to recursively map condition_type to condition
+    // Helper to recursively map condition to condition
     function mapCondition(data: Record<string, unknown>): Record<string, unknown> {
       if (!data || typeof data !== 'object') return data;
       // Destructure and exclude 'template' - HA uses 'value_template' for template conditions
-      const { condition_type, conditions, alias, template, ...rest } = data;
+      const { condition, conditions, alias, template, ...rest } = data;
       const out: Record<string, unknown> = {
-        condition: condition_type,
+        condition: condition,
         ...rest,
       };
       // For template conditions, ensure value_template is set from template if needed
-      if (condition_type === 'template' && !rest.value_template && template) {
+      if (condition === 'template' && !rest.value_template && template) {
         out.value_template = template;
       }
       // Recursively map nested group conditions
@@ -500,36 +500,51 @@ export class NativeStrategy extends BaseStrategy {
     }
 
     // Standard service call format
+    // Use spread pattern to preserve unknown properties from custom integrations
+    const {
+      alias,
+      service,
+      id,
+      target,
+      data,
+      data_template,
+      response_variable,
+      continue_on_error,
+      enabled,
+      isDeviceAction: _isDeviceAction,
+      ...extraProps
+    } = node.data;
     const action: Record<string, unknown> = {
-      alias: node.data.alias,
-      service: node.data.service,
+      ...extraProps, // Preserve extra properties
+      alias,
+      service,
     };
 
-    if (node.data.id) {
-      action.id = node.data.id;
+    if (id) {
+      action.id = id;
     }
 
-    if (node.data.target) {
-      action.target = node.data.target;
+    if (target) {
+      action.target = target;
     }
 
-    if (node.data.data) {
-      action.data = node.data.data;
+    if (data) {
+      action.data = data;
     }
 
-    if (node.data.data_template) {
-      action.data_template = node.data.data_template;
+    if (data_template) {
+      action.data_template = data_template;
     }
 
-    if (node.data.response_variable) {
-      action.response_variable = node.data.response_variable;
+    if (response_variable) {
+      action.response_variable = response_variable;
     }
 
-    if (node.data.continue_on_error) {
-      action.continue_on_error = node.data.continue_on_error;
+    if (continue_on_error) {
+      action.continue_on_error = continue_on_error;
     }
 
-    if (node.data.enabled === false) {
+    if (enabled === false) {
       action.enabled = false;
     }
 
@@ -540,13 +555,16 @@ export class NativeStrategy extends BaseStrategy {
    * Build delay action
    */
   private buildDelay(node: DelayNode): Record<string, unknown> {
+    // Use spread pattern to preserve unknown properties from custom integrations
+    const { alias, delay: delayValue, id, ...extraProps } = node.data;
     const delay: Record<string, unknown> = {
-      alias: node.data.alias,
-      delay: node.data.delay,
+      ...extraProps, // Preserve extra properties
+      alias,
+      delay: delayValue,
     };
 
-    if (node.data.id) {
-      delay.id = node.data.id;
+    if (id) {
+      delay.id = id;
     }
 
     return delay;
@@ -556,18 +574,29 @@ export class NativeStrategy extends BaseStrategy {
    * Build wait action
    */
   private buildWait(node: WaitNode): Record<string, unknown> {
+    // Use spread pattern to preserve unknown properties from custom integrations
+    const {
+      alias,
+      id,
+      wait_template,
+      wait_for_trigger,
+      timeout,
+      continue_on_timeout,
+      ...extraProps
+    } = node.data;
     const wait: Record<string, unknown> = {
-      alias: node.data.alias,
+      ...extraProps, // Preserve extra properties
+      alias,
     };
 
-    if (node.data.id) {
-      wait.id = node.data.id;
+    if (id) {
+      wait.id = id;
     }
 
-    if (node.data.wait_template) {
-      wait.wait_template = node.data.wait_template;
-    } else if (node.data.wait_for_trigger) {
-      wait.wait_for_trigger = node.data.wait_for_trigger.map((triggerData) => {
+    if (wait_template) {
+      wait.wait_template = wait_template;
+    } else if (wait_for_trigger) {
+      wait.wait_for_trigger = wait_for_trigger.map((triggerData) => {
         const trigger = { ...triggerData };
         // Don't include alias in the trigger definition itself
         // delete trigger.alias;
@@ -577,12 +606,12 @@ export class NativeStrategy extends BaseStrategy {
       });
     }
 
-    if (node.data.timeout) {
-      wait.timeout = node.data.timeout;
+    if (timeout) {
+      wait.timeout = timeout;
     }
 
-    if (node.data.continue_on_timeout !== undefined) {
-      wait.continue_on_timeout = node.data.continue_on_timeout;
+    if (continue_on_timeout !== undefined) {
+      wait.continue_on_timeout = continue_on_timeout;
     }
 
     return wait;
@@ -592,16 +621,19 @@ export class NativeStrategy extends BaseStrategy {
    * Build set variables action
    */
   private buildSetVariables(node: SetVariablesNode): Record<string, unknown> {
+    // Use spread pattern to preserve unknown properties from custom integrations
+    const { alias, id, variables, ...extraProps } = node.data;
     const setVars: Record<string, unknown> = {
-      variables: node.data.variables,
+      ...extraProps, // Preserve extra properties
+      variables,
     };
 
-    if (node.data.alias) {
-      setVars.alias = node.data.alias;
+    if (alias) {
+      setVars.alias = alias;
     }
 
-    if (node.data.id) {
-      setVars.id = node.data.id;
+    if (id) {
+      setVars.id = id;
     }
 
     return setVars;

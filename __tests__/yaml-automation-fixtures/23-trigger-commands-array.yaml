@@ -1,0 +1,21 @@
+alias: Voice Command/Vacuum Robot
+description: ""
+triggers:
+  - trigger: conversation
+    command:
+      - vacuum the house
+      - clean up please
+      - vacuum the main floor
+conditions: []
+actions:
+  - action: mqtt.publish
+    metadata: {}
+    data:
+      evaluate_payload: false
+      qos: 0
+      retain: false
+      payload: |-
+        {}
+      topic: redacted
+  - set_conversation_response: The cleaners are coming.
+mode: single

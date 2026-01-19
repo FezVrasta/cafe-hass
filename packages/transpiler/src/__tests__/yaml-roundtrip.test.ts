@@ -42,7 +42,7 @@ describe('Condition property preservation', () => {
     const conditionData = conditionNode!.data as Record<string, unknown>;
 
     // The condition should be an 'and' type with nested conditions
-    expect(conditionData.condition_type).toBe('and');
+    expect(conditionData.condition).toBe('and');
     expect(conditionData.conditions).toBeDefined();
     expect(Array.isArray(conditionData.conditions)).toBe(true);
 
@@ -50,7 +50,7 @@ describe('Condition property preservation', () => {
     const nestedConditions = conditionData.conditions as Record<string, unknown>[];
     expect(nestedConditions.length).toBeGreaterThan(0);
 
-    const timeCondition = nestedConditions.find((c) => c.condition_type === 'time');
+    const timeCondition = nestedConditions.find((c) => c.condition === 'time');
     expect(timeCondition).toBeDefined();
     expect(timeCondition!.weekday).toBeDefined();
     expect(timeCondition!.weekday).toEqual(['sat']);

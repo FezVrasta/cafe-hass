@@ -1,132 +1,5 @@
-import { z } from 'zod';
 import { generateEdgeId, generateGraphId, generateNodeId } from '../utils/generateIds';
 import { applyHeuristicLayout } from './layout';
-
-// Zod schema for Home Assistant condition objects
-export const HAConditionSchema = z
-  .looseObject({
-    alias: z.string().optional(),
-    condition: z.string().optional(),
-    enabled: z.boolean().optional(),
-    entity_id: z.union([z.string(), z.array(z.string())]).optional(),
-    state: z.union([z.string(), z.array(z.string())]).optional(),
-    value_template: z.string().optional(),
-    after: z.string().optional(),
-    before: z.string().optional(),
-    weekday: z.array(z.string()).optional(),
-    after_offset: z.string().optional(),
-    before_offset: z.string().optional(),
-    zone: z.string().optional(),
-    conditions: z.array(z.unknown()).optional(),
-    above: z.union([z.string(), z.number()]).optional(),
-    below: z.union([z.string(), z.number()]).optional(),
-    attribute: z.string().optional(),
-    id: z.string().optional(),
-  })
-  .transform((input) => {
-    // Normalize condition_type and template fields
-    const condition_type = VALID_CONDITION_TYPES.includes(
-      (input.condition as ValidConditionType) ?? 'state'
-    )
-      ? (input.condition as ValidConditionType)
-      : 'template';
-    return {
-      alias: input.alias,
-      condition_type,
-      enabled: input.enabled,
-      entity_id: input.entity_id,
-      state: input.state,
-
-      value_template: input.value_template,
-      after: input.after,
-      before: input.before,
-      weekday: toWeekdayArray(input.weekday),
-      after_offset: input.after_offset,
-      before_offset: input.before_offset,
-      zone: input.zone,
-      conditions: Array.isArray(input.conditions)
-        ? transformConditions(input.conditions)
-        : undefined,
-      above: input.above,
-      below: input.below,
-      attribute: input.attribute,
-      ...(input.id ? { id: input.id } : {}),
-    };
-  });
-
-const HAPlatformEnum = z.enum([
-  'event',
-  'template',
-  'zone',
-  'state',
-  'time',
-  'time_pattern',
-  'mqtt',
-  'webhook',
-  'sun',
-  'numeric_state',
-  'homeassistant',
-  'device',
-]);
-
-/**
- * Zod schema for Home Assistant trigger objects
- */
-
-export const HATriggerSchema = z
-  .object({
-    alias: z.string().optional(),
-    platform: HAPlatformEnum.optional(),
-    trigger: HAPlatformEnum.optional(),
-    entity_id: z.union([z.string(), z.array(z.string())]).optional(),
-    // Home Assistant supports both string, array, and null for from/to fields
-    from: z.union([z.string(), z.array(z.string()), z.null()]).optional(),
-    to: z.union([z.string(), z.array(z.string()), z.null()]).optional(),
-    for: z
-      .union([
-        z.string(),
-        z.object({
-          hours: z.number().optional(),
-          minutes: z.number().optional(),
-          seconds: z.number().optional(),
-        }),
-      ])
-      .optional(),
-    at: z.string().optional(),
-    event_type: z.string().optional(),
-    event_data: z.record(z.string(), z.unknown()).optional(),
-    above: z.union([z.string(), z.number()]).optional(),
-    below: z.union([z.string(), z.number()]).optional(),
-    value_template: z.string().optional(),
-    template: z.string().optional(),
-    webhook_id: z.string().optional(),
-    zone: z.string().optional(),
-    topic: z.string().optional(),
-    payload: z.string().optional(),
-  })
-  .passthrough() // Allow unknown keys to pass through
-  .transform((input) => {
-    // Always output a defined platform property
-    const platform = input.platform ?? input.trigger ?? 'state';
-    // Remove the 'trigger' key to avoid outputting both 'platform' and 'trigger'
-    const { trigger: _trigger, ...rest } = input;
-    return {
-      ...rest,
-      platform: platform,
-    };
-  });
-
-/**
- * Zod schema for FlowGraph metadata block (not C.A.F.E. metadata)
- */
-export const FlowGraphMetadataSchema = z.object({
-  mode: z.enum(['single', 'restart', 'queued', 'parallel']).default('single'),
-  max: z.number().optional(),
-  max_exceeded: z.enum(['silent', 'warning', 'critical']).optional(),
-  initial_state: z.boolean().default(false),
-  hide_entity: z.boolean().optional(),
-  trace: z.object({ stored_traces: z.number().optional() }).optional(),
-});
 // Type guards for Home Assistant objects
 
 /** Returns true if the action is a delay node */
@@ -226,159 +99,40 @@ function isVariablesAction(action: unknown): action is Record<string, unknown> {
   );
 }
 
-/**
- * Type guard for Home Assistant trigger objects.
- * Returns true if the object matches the HATrigger shape.
- */
-function isHATrigger(obj: unknown): obj is HATrigger {
+/** Returns true if the action is a set_conversation_response action */
+function isSetConversationResponseAction(action: unknown): action is Record<string, unknown> {
   return (
-    typeof obj === 'object' &&
-    obj !== null &&
-    ('platform' in obj || 'trigger' in obj || 'entity_id' in obj)
+    typeof action === 'object' &&
+    action !== null &&
+    'set_conversation_response' in action
   );
-}
-
-/**
- * Type guard for Home Assistant condition objects.
- * Returns true if the object matches the HACondition shape.
- */
-function isHACondition(obj: unknown): obj is HACondition {
-  return (
-    typeof obj === 'object' &&
-    obj !== null &&
-    ('condition' in obj || 'entity_id' in obj || 'state' in obj)
-  );
-}
-
-// Weekday type guard and conversion
-/**
- * List of valid Home Assistant weekday strings.
- * Used for time-based conditions and triggers.
- */
-const VALID_WEEKDAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
-
-/**
- * Type representing a valid Home Assistant weekday.
- */
-type Weekday = (typeof VALID_WEEKDAYS)[number];
-
-/**
- * Converts an unknown array to a Weekday[] if all elements are valid weekdays.
- * Returns undefined if input is not an array or contains invalid values.
- */
-function toWeekdayArray(arr: unknown): Weekday[] | undefined {
-  if (!Array.isArray(arr)) return undefined;
-  return arr.filter(
-    (d): d is Weekday => typeof d === 'string' && VALID_WEEKDAYS.includes(d as Weekday)
-  );
-}
-/**
- * Home Assistant Trigger object (partial, for parsing)
- */
-export interface HATrigger {
-  alias?: string;
-  platform?: string;
-  trigger?: string;
-  entity_id?: string | string[];
-  from?: string | string[] | null;
-  to?: string | string[] | null;
-  for?: string | { hours?: number; minutes?: number; seconds?: number };
-  at?: string;
-  event_type?: string;
-  event_data?: Record<string, unknown>;
-  above?: string | number;
-  below?: string | number;
-  value_template?: string;
-  template?: string;
-  webhook_id?: string;
-  zone?: string;
-  topic?: string;
-  payload?: string;
-}
-
-/**
- * Home Assistant Condition object (partial, for parsing)
-  alias?: string;
-  delay?: string | { hours?: number; minutes?: number; seconds?: number; milliseconds?: number };
-  wait_template?: string;
-  timeout?: string;
-  continue_on_timeout?: boolean;
-  service?: string;
-  action?: string;
-  target?: { entity_id?: string | string[]; area_id?: string | string[]; device_id?: string | string[] };
-  data?: Record<string, unknown>;
-  data_template?: Record<string, string>;
-  response_variable?: string;
-  continue_on_error?: boolean;
-  enabled?: boolean;
-  choose?: Record<string, unknown>[] | Record<string, unknown>;
-  if?: unknown[];
-  then?: unknown[];
-  else?: unknown[];
-  variables?: Record<string, unknown>;
-  repeat?: unknown;
-  [key: string]: unknown;
- */
-export interface HACondition {
-  alias?: string;
-  condition?: string;
-  entity_id?: string | string[];
-  state?: string | string[];
-  template?: string;
-  value_template?: string;
-  after?: string;
-  before?: string;
-  weekday?: string[];
-  after_offset?: string;
-  before_offset?: string;
-  zone?: string;
-  conditions?: HACondition[];
-  above?: number | string;
-  below?: number | string;
-  attribute?: string;
-  id?: string;
-}
-
-/**
- * Home Assistant Action object (partial, for parsing)
- */
-export interface HAAction {
-  alias?: string;
-  delay?: string | number | { hours?: number; minutes?: number; seconds?: number };
-  wait_template?: string;
-  timeout?: string | number;
-  continue_on_timeout?: boolean;
-  service?: string;
-  action?: string;
-  target?: unknown;
-  data?: unknown;
-  data_template?: unknown;
-  response_variable?: string;
-  continue_on_error?: boolean;
-  enabled?: boolean;
-  choose?: Record<string, unknown>[] | Record<string, unknown>;
-  if?: unknown[];
-  then?: unknown[];
-  else?: unknown[];
-  variables?: Record<string, unknown>;
-  repeat?: unknown;
-  [key: string]: unknown;
 }
 
 import type {
   ActionNode,
+  CafeMetadata,
   ConditionNode,
   DelayNode,
   FlowEdge,
   FlowGraph,
   FlowNode,
+  HACondition,
   SetVariablesNode,
   TriggerNode,
   WaitNode,
 } from '@cafe/shared';
-import { FlowGraphSchema, validateGraphStructure } from '@cafe/shared';
+import {
+  CafeMetadataSchema,
+  FlowGraphMetadataSchema,
+  FlowGraphSchema,
+  HAConditionSchema,
+  HATriggerSchema,
+  isHACondition,
+  isHATrigger,
+  normalizeHACondition,
+  validateGraphStructure,
+} from '@cafe/shared';
 import { load as yamlLoad } from 'js-yaml';
-import { type CafeMetadata, CafeMetadataSchema } from './ha-zod-schemas';
 
 /**
  * Result of parsing YAML
@@ -394,7 +148,7 @@ export interface ParseResult {
 /**
  * Valid condition types for Home Assistant
  */
-const VALID_CONDITION_TYPES = [
+const VALID_conditionS = [
   'state',
   'numeric_state',
   'template',
@@ -408,7 +162,7 @@ const VALID_CONDITION_TYPES = [
   'trigger',
 ] as const;
 
-type ValidConditionType = (typeof VALID_CONDITION_TYPES)[number];
+type ValidConditionType = (typeof VALID_conditionS)[number];
 
 /**
  * Nested condition type (supports recursive nesting)
@@ -424,45 +178,23 @@ function transformConditions(conditions: unknown[]): NestedCondition[] {
 
 /**
  * Transform Home Assistant condition format to internal nested condition format
- * HA uses 'condition' field, internal schema uses 'condition_type'
+ * HA uses 'condition' field, internal schema uses 'condition'
  * Recursively handles nested conditions for and/or/not
  */
 function transformToNestedCondition(condition: Record<string, unknown>): NestedCondition {
-  const conditionType = (condition.condition as string) || 'template';
-  const validatedType = VALID_CONDITION_TYPES.includes(conditionType as ValidConditionType)
+  // Use spread pattern to preserve unknown properties from custom integrations
+  const { condition: conditionField, conditions, weekday, ...rest } = condition;
+  const conditionType = (conditionField as string) || 'template';
+  const validatedType = VALID_conditionS.includes(conditionType as ValidConditionType)
     ? (conditionType as ValidConditionType)
     : 'template';
 
   // Recursively transform nested conditions if present
-  const nestedConditions = Array.isArray(condition.conditions)
-    ? transformConditions(condition.conditions)
-    : undefined;
+  const nestedConditions = Array.isArray(conditions) ? transformConditions(conditions) : undefined;
 
   return {
-    condition_type: validatedType,
-    enabled: typeof condition.enabled === 'boolean' ? condition.enabled : undefined,
-    alias: typeof condition.alias === 'string' ? condition.alias : undefined,
-    entity_id:
-      typeof condition.entity_id === 'string' || Array.isArray(condition.entity_id)
-        ? condition.entity_id
-        : undefined,
-    state: condition.state as string | string[] | undefined,
-    above: condition.above as number | string | undefined,
-    below: condition.below as number | string | undefined,
-    attribute: condition.attribute as string | undefined,
-
-    value_template: condition.value_template as string | undefined,
-    zone: condition.zone as string | undefined,
-    after: condition.after as string | undefined,
-    before: condition.before as string | undefined,
-    after_offset: condition.after_offset as string | undefined,
-    before_offset: condition.before_offset as string | undefined,
-    weekday: toWeekdayArray(condition.weekday),
-    for: condition.for as
-      | string
-      | { hours?: number; minutes?: number; seconds?: number }
-      | undefined,
-    id: condition.id as string | string[] | undefined,
+    ...rest, // Preserve extra properties
+    condition: validatedType,
     conditions: nestedConditions,
   };
 }
@@ -1056,13 +788,13 @@ export class YamlParser {
       // Check for sun entity
       if (entityId === 'sun.sun') {
         if (state === 'above_horizon') {
-          return { condition_type: 'sun', after: 'sunrise', before: 'sunset' };
+          return { condition: 'sun', after: 'sunrise', before: 'sunset' };
         } else if (state === 'below_horizon') {
-          return { condition_type: 'sun', after: 'sunset', before: 'sunrise' };
+          return { condition: 'sun', after: 'sunset', before: 'sunrise' };
         }
       }
 
-      return { condition_type: 'state', entity_id: entityId, state };
+      return { condition: 'state', entity_id: entityId, state };
     }
 
     // states('entity') | float > number
@@ -1075,7 +807,7 @@ export class YamlParser {
       const value = parseFloat(numericMatch[3]);
 
       const result: Record<string, unknown> = {
-        condition_type: 'numeric_state',
+        condition: 'numeric_state',
         entity_id: entityId,
       };
       if (operator.includes('>')) result.above = value;
@@ -1084,7 +816,7 @@ export class YamlParser {
     }
 
     // Fallback to template condition
-    return { condition_type: 'template', value_template: `{{ ${expr} }}` };
+    return { condition: 'template', value_template: `{{ ${expr} }}` };
   }
 
   /**
@@ -1247,13 +979,14 @@ export class YamlParser {
             type: 'condition',
             position: { x: 0, y: 0 },
             data: {
-              condition_type: 'template',
+              condition: 'template',
               alias: 'Unknown Condition',
               value_template: JSON.stringify(condition),
             },
           });
           return;
         }
+
         const node: ConditionNode = {
           id: nodeId,
           type: 'condition',
@@ -1270,7 +1003,7 @@ export class YamlParser {
           type: 'condition',
           position: { x: 0, y: 0 },
           data: {
-            condition_type: 'template',
+            condition: 'template',
             alias: 'Unknown Condition',
             value_template: JSON.stringify(condition),
           },
@@ -1339,20 +1072,21 @@ export class YamlParser {
         const nodeId = getNextNodeId('condition');
         const act = action as Record<string, unknown>;
         const conditionType = (act.condition as string) || 'template';
-        const validatedType = VALID_CONDITION_TYPES.includes(conditionType as ValidConditionType)
+        const validatedType = VALID_conditionS.includes(conditionType as ValidConditionType)
           ? (conditionType as ValidConditionType)
           : 'template';
 
         // Use Zod schema for parsing and type safety
-        let parsedData: ConditionNode['data'] | undefined;
+        let parsedData: ConditionNode['data'];
         try {
-          parsedData = HAConditionSchema.parse(act);
+          const parsed = HAConditionSchema.parse(act);
+          parsedData = normalizeHACondition(parsed);
         } catch (e) {
           warnings.push(
             `Inline condition at index ${index} failed schema validation: ${e instanceof Error ? e.message : JSON.stringify(e)}`
           );
           parsedData = {
-            condition_type: validatedType,
+            condition: validatedType,
             alias: typeof act.alias === 'string' ? act.alias : undefined,
             value_template: JSON.stringify(act),
           };
@@ -1388,13 +1122,15 @@ export class YamlParser {
       } else if (isDelayAction(action)) {
         const nodeId = getNextNodeId('delay');
         const act = action as Record<string, unknown>;
-        const delayValue = act.delay;
+        // Use spread pattern to preserve unknown properties from custom integrations
+        const { alias, delay: delayValue, ...extraProps } = act;
         const delayNode: DelayNode = {
           id: nodeId,
           type: 'delay',
           position: { x: 0, y: 0 },
           data: {
-            alias: typeof act.alias === 'string' ? act.alias : undefined,
+            ...extraProps, // Preserve extra properties
+            alias: typeof alias === 'string' ? alias : undefined,
             delay:
               typeof delayValue === 'string'
                 ? delayValue
@@ -1414,10 +1150,15 @@ export class YamlParser {
       } else if (isWaitAction(action)) {
         const nodeId = getNextNodeId('wait');
         const act = action as Record<string, unknown>;
-        const waitTemplate = act.wait_template;
-        const waitForTrigger = act.wait_for_trigger;
-        const timeoutValue = act.timeout;
-        const continueOnTimeoutValue = act.continue_on_timeout;
+        // Use spread pattern to preserve unknown properties from custom integrations
+        const {
+          alias,
+          wait_template: waitTemplate,
+          wait_for_trigger: waitForTrigger,
+          timeout: timeoutValue,
+          continue_on_timeout: continueOnTimeoutValue,
+          ...extraProps
+        } = act;
 
         // Handle timeout as either string or object format
         let timeout: WaitNode['data']['timeout'];
@@ -1433,7 +1174,8 @@ export class YamlParser {
         }
 
         const waitData: WaitNode['data'] = {
-          alias: typeof act.alias === 'string' ? act.alias : undefined,
+          ...extraProps, // Preserve extra properties
+          alias: typeof alias === 'string' ? alias : undefined,
           timeout,
           continue_on_timeout:
             typeof continueOnTimeoutValue === 'boolean' ? continueOnTimeoutValue : undefined,
@@ -1648,39 +1390,53 @@ export class YamlParser {
         const nodeId = getNextNodeId('action');
         try {
           const act = action as Record<string, unknown>;
+          // Use spread pattern to preserve unknown properties from custom integrations
+          const {
+            alias,
+            service,
+            action: actionField,
+            target,
+            data,
+            data_template,
+            response_variable,
+            continue_on_error,
+            enabled,
+            ...extraProps
+          } = act;
           const actionNode: ActionNode = {
             id: nodeId,
             type: 'action',
             position: { x: 0, y: 0 },
             data: {
-              alias: typeof act.alias === 'string' ? act.alias : undefined,
+              ...extraProps, // Preserve extra properties
+              alias: typeof alias === 'string' ? alias : undefined,
               service:
-                typeof act.service === 'string'
-                  ? act.service
-                  : typeof act.action === 'string'
-                    ? act.action
+                typeof service === 'string'
+                  ? service
+                  : typeof actionField === 'string'
+                    ? actionField
                     : undefined,
               target:
-                typeof act.target === 'object' && act.target !== null
-                  ? (act.target as {
+                typeof target === 'object' && target !== null
+                  ? (target as {
                       entity_id?: string | string[];
                       area_id?: string | string[];
                       device_id?: string | string[];
                     })
                   : undefined,
               data:
-                typeof act.data === 'object' && act.data !== null
-                  ? (act.data as Record<string, unknown>)
+                typeof data === 'object' && data !== null
+                  ? (data as Record<string, unknown>)
                   : undefined,
               data_template:
-                typeof act.data_template === 'object' && act.data_template !== null
-                  ? (act.data_template as Record<string, string>)
+                typeof data_template === 'object' && data_template !== null
+                  ? (data_template as Record<string, string>)
                   : undefined,
               response_variable:
-                typeof act.response_variable === 'string' ? act.response_variable : undefined,
+                typeof response_variable === 'string' ? response_variable : undefined,
               continue_on_error:
-                typeof act.continue_on_error === 'boolean' ? act.continue_on_error : undefined,
-              enabled: typeof act.enabled === 'boolean' ? act.enabled : undefined,
+                typeof continue_on_error === 'boolean' ? continue_on_error : undefined,
+              enabled: typeof enabled === 'boolean' ? enabled : undefined,
             },
           };
           nodes.push(actionNode);
@@ -1690,6 +1446,26 @@ export class YamlParser {
           warnings.push(`Failed to parse action ${index}: ${error}`);
           nodes.push(this.createUnknownNode(nodeId, action));
         }
+      } else if (isSetConversationResponseAction(action)) {
+        // set_conversation_response action - convert to service call format
+        const nodeId = getNextNodeId('action');
+        const act = action as Record<string, unknown>;
+        const actionNode: ActionNode = {
+          id: nodeId,
+          type: 'action',
+          position: { x: 0, y: 0 },
+          data: {
+            alias: typeof act.alias === 'string' ? act.alias : undefined,
+            // Store the response as a special action
+            set_conversation_response:
+              typeof act.set_conversation_response === 'string'
+                ? act.set_conversation_response
+                : undefined,
+          },
+        };
+        nodes.push(actionNode);
+        createEdgesFromCurrent(nodeId);
+        currentNodeIds = [nodeId];
       } else {
         // Unknown action type - create unknown node
         warnings.push(`Unknown action type (${JSON.stringify(action)}) at index ${index}`);
@@ -1767,7 +1543,7 @@ export class YamlParser {
         position: { x: 0, y: 0 },
         data: {
           alias: choice.alias,
-          condition_type: firstCondition.condition || 'template',
+          condition: firstCondition.condition || 'template',
           entity_id: firstCondition.entity_id,
           state: firstCondition.state,
           // Support both 'template' and 'value_template' (Home Assistant uses value_template)
@@ -1931,14 +1707,14 @@ export class YamlParser {
         position: { x: 0, y: 0 },
         data: {
           alias: ifAction.alias,
-          condition_type: 'and',
+          condition: 'and',
           conditions: transformConditions(ifConditions),
         },
       };
     } else if (firstCondition && Array.isArray(firstCondition.conditions)) {
       // Single condition with nested conditions (or/and/not)
       const rawConditionType = (firstCondition.condition as string) || 'and';
-      const conditionType = VALID_CONDITION_TYPES.includes(rawConditionType as ValidConditionType)
+      const conditionType = VALID_conditionS.includes(rawConditionType as ValidConditionType)
         ? (rawConditionType as ValidConditionType)
         : 'template';
 
@@ -1948,38 +1724,40 @@ export class YamlParser {
         position: { x: 0, y: 0 },
         data: {
           alias: ifAction.alias,
-          condition_type: conditionType,
+          condition: conditionType,
           conditions: transformConditions(firstCondition.conditions),
         },
       };
     } else {
-      // Single simple condition - use its properties directly
+      // Single simple condition - use its properties directly, but normalize with Zod looseObject schema
       const rawConditionType = (firstCondition?.condition as string) || 'numeric_state';
-      const conditionType = VALID_CONDITION_TYPES.includes(rawConditionType as ValidConditionType)
+      const conditionType = VALID_conditionS.includes(rawConditionType as ValidConditionType)
         ? (rawConditionType as ValidConditionType)
         : 'template';
 
+      // Use Zod looseObject for normalization and type safety
+      const looseObj = {
+        ...firstCondition,
+        alias: ifAction.alias ?? firstCondition?.alias,
+        condition: conditionType,
+      };
+      // Validate and normalize with HAConditionSchema
+      let data: HACondition;
+      try {
+        data = HAConditionSchema.parse(looseObj);
+      } catch {
+        // Fallback: minimal valid template
+        data = {
+          alias: ifAction.alias,
+          condition: 'template',
+          value_template: JSON.stringify(firstCondition),
+        };
+      }
       conditionNode = {
         id: conditionId,
         type: 'condition',
         position: { x: 0, y: 0 },
-        data: {
-          alias: ifAction.alias,
-          condition_type: conditionType,
-          entity_id:
-            typeof firstCondition?.entity_id === 'string' ||
-            Array.isArray(firstCondition?.entity_id)
-              ? firstCondition?.entity_id
-              : undefined,
-          state: firstCondition?.state as string | string[] | undefined,
-          above: firstCondition?.above as number | string | undefined,
-          below: firstCondition?.below as number | string | undefined,
-          attribute: firstCondition?.attribute as string | undefined,
-          value_template: firstCondition?.value_template as string | undefined,
-          zone: firstCondition?.zone as string | undefined,
-          // Preserve id for trigger conditions (e.g., condition: trigger, id: "playing")
-          id: firstCondition?.id as string | string[] | undefined,
-        },
+        data,
       };
     }
 

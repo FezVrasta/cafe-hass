@@ -1,0 +1,15 @@
+alias: Import Test
+triggers:
+  - trigger: light.turned_off
+    target:
+      entity_id: light.bathroom_vanity
+    options:
+      behavior: any
+conditions: []
+actions:
+  - action: light.turn_on
+    metadata: {}
+    target:
+      entity_id: light.ceiling_lamp
+    data: {}
+mode: restart

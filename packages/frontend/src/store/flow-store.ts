@@ -32,7 +32,7 @@ export interface TriggerNodeData {
 
 export interface ConditionNodeData {
   alias?: string;
-  condition_type: string;
+  condition: string;
   entity_id?: string | string[];
   state?: string;
   template?: string;

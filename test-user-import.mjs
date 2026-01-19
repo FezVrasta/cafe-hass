@@ -27,7 +27,7 @@ try {
         console.log(`      - platform: ${node.data.platform}`);
         console.log(`      - entity_id: ${node.data.entity_id}`);
       } else if (node.type === 'condition') {
-        console.log(`      - condition_type: ${node.data.condition_type}`);
+        console.log(`      - condition: ${node.data.condition}`);
       } else if (node.type === 'action') {
         console.log(`      - service: ${node.data.service}`);
       }

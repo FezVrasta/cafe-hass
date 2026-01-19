@@ -45,7 +45,7 @@ export const HANDLED_PROPERTIES = {
 
   // Condition properties handled by ConditionFields component
   condition: [
-    'condition_type',
+    'condition',
     'entity_id',
     'state',
     'attribute',
