@@ -244,6 +244,20 @@ export function normalizeHACondition(condition: HACondition): HACondition {
 }
 
 /**
+ * Type guard for Home Assistant device actions.
+ * Returns true if the object has type, device_id, and domain fields.
+ */
+export function isDeviceAction(obj: unknown): obj is Record<string, unknown> {
+  return (
+    typeof obj === 'object' &&
+    obj !== null &&
+    'type' in obj &&
+    'device_id' in obj &&
+    'domain' in obj
+  );
+}
+
+/**
  * C.A.F.E. metadata stored in automation YAML to preserve flow layout.
  */
 export const CafeMetadataSchema = z.object({
@@ -283,38 +297,37 @@ export const HAChooseOptionSchema: z.ZodType<HAChooseOption> = z.lazy(() =>
  * Zod schema for Home Assistant action objects.
  */
 export const HAActionSchema: z.ZodType<HAAction> = z.lazy(() =>
-  z
-    .looseObject({
-      service: z.string().optional(),
-      action: z.string().optional(),
-      id: z.string().optional(),
-      alias: z.string().optional(),
-      target: z.record(z.string(), z.unknown()).optional(),
-      data: z.record(z.string(), z.unknown()).optional(),
-      data_template: z.record(z.string(), z.unknown()).optional(),
-      response_variable: z.string().optional(),
-      continue_on_error: z.boolean().optional(),
-      enabled: z.boolean().optional(),
-      delay: z.union([z.string(), z.number(), z.record(z.string(), z.number())]).optional(),
-      wait_template: z.union([z.string(), z.record(z.string(), z.unknown())]).optional(),
-      timeout: z.union([z.string(), z.number(), z.record(z.string(), z.number())]).optional(),
-      continue_on_timeout: z.boolean().optional(),
-      wait_for_trigger: z.union([HATriggerSchema, z.array(HATriggerSchema)]).optional(),
-      choose: z.union([HAChooseOptionSchema, z.array(HAChooseOptionSchema)]).optional(),
-      default: z.array(HAActionSchema).optional(),
-      if: z.array(HAConditionSchema).optional(),
-      then: z.array(HAActionSchema).optional(),
-      else: z.array(HAActionSchema).optional(),
-      variables: z.record(z.string(), z.unknown()).optional(),
-      repeat: z
-        .object({
-          count: z.union([z.string(), z.number()]).optional(),
-          while: z.array(HAConditionSchema).optional(),
-          until: z.union([z.string(), z.array(z.string()), z.array(HAConditionSchema)]).optional(),
-          sequence: z.array(HAActionSchema),
-        })
-        .optional(),
-    })
+  z.looseObject({
+    service: z.string().optional(),
+    action: z.string().optional(),
+    id: z.string().optional(),
+    alias: z.string().optional(),
+    target: z.record(z.string(), z.unknown()).optional(),
+    data: z.record(z.string(), z.unknown()).optional(),
+    data_template: z.record(z.string(), z.unknown()).optional(),
+    response_variable: z.string().optional(),
+    continue_on_error: z.boolean().optional(),
+    enabled: z.boolean().optional(),
+    delay: z.union([z.string(), z.number(), z.record(z.string(), z.number())]).optional(),
+    wait_template: z.union([z.string(), z.record(z.string(), z.unknown())]).optional(),
+    timeout: z.union([z.string(), z.number(), z.record(z.string(), z.number())]).optional(),
+    continue_on_timeout: z.boolean().optional(),
+    wait_for_trigger: z.union([HATriggerSchema, z.array(HATriggerSchema)]).optional(),
+    choose: z.union([HAChooseOptionSchema, z.array(HAChooseOptionSchema)]).optional(),
+    default: z.array(HAActionSchema).optional(),
+    if: z.array(HAConditionSchema).optional(),
+    then: z.array(HAActionSchema).optional(),
+    else: z.array(HAActionSchema).optional(),
+    variables: z.record(z.string(), z.unknown()).optional(),
+    repeat: z
+      .object({
+        count: z.union([z.string(), z.number()]).optional(),
+        while: z.array(HAConditionSchema).optional(),
+        until: z.union([z.string(), z.array(z.string()), z.array(HAConditionSchema)]).optional(),
+        sequence: z.array(HAActionSchema),
+      })
+      .optional(),
+  })
 );
 
 /**
@@ -351,3 +364,64 @@ export const HAScriptSchema = HAAutomationSchema.omit({ action: true }).extend({
   sequence: z.union([HAActionSchema, z.array(HAActionSchema)]),
 });
 export type HAScript = z.infer<typeof HAScriptSchema>;
+
+/**
+ * Zod schema for Home Assistant delay action.
+ */
+export const HADelaySchema = z.looseObject({
+  id: z.string().optional(),
+  alias: z.string().optional(),
+  delay: z.union([
+    z.string(),
+    z.looseObject({
+      hours: z.number().optional(),
+      minutes: z.number().optional(),
+      seconds: z.number().optional(),
+      milliseconds: z.number().optional(),
+    }),
+  ]),
+});
+export type HADelay = z.infer<typeof HADelaySchema>;
+
+/**
+ * Zod schema for Home Assistant wait action (wait_template or wait_for_trigger).
+ */
+export const HAWaitSchema = z
+  .looseObject({
+    id: z.string().optional(),
+    alias: z.string().optional(),
+    wait_template: z.string().optional(),
+    wait_for_trigger: z.array(HATriggerSchema).optional(),
+    timeout: z
+      .union([
+        z.string(),
+        z.looseObject({
+          hours: z.number().optional(),
+          minutes: z.number().optional(),
+          seconds: z.number().optional(),
+          milliseconds: z.number().optional(),
+        }),
+      ])
+      .optional(),
+    continue_on_timeout: z.boolean().optional(),
+  })
+  .refine(
+    (data) => {
+      return data.wait_template === undefined || data.wait_for_trigger === undefined;
+    },
+    {
+      message: 'Provide either `wait_template` or `wait_for_trigger`, but not both.',
+      path: ['wait_template'],
+    }
+  );
+export type HAWait = z.infer<typeof HAWaitSchema>;
+
+/**
+ * Zod schema for Home Assistant variables action.
+ */
+export const HAVariablesSchema = z.looseObject({
+  id: z.string().optional(),
+  alias: z.string().optional(),
+  variables: z.record(z.string(), z.unknown()),
+});
+export type HAVariables = z.infer<typeof HAVariablesSchema>;

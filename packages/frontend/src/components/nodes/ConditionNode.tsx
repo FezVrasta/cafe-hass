@@ -63,9 +63,7 @@ export const ConditionNode = memo(function ConditionNode({
       </div>
 
       <div className="space-y-0.5 text-blue-700 text-xs">
-        <div className="font-medium">
-          {conditionLabels[data.condition] || data.condition}
-        </div>
+        <div className="font-medium">{conditionLabels[data.condition] || data.condition}</div>
         {data.entity_id && (
           <div className="truncate opacity-75">
             {Array.isArray(data.entity_id) ? data.entity_id.join(', ') : data.entity_id}

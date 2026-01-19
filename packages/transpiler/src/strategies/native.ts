@@ -8,6 +8,7 @@ import type {
   TriggerNode,
   WaitNode,
 } from '@cafe/shared';
+import { isDeviceAction } from '@cafe/shared';
 import type { TopologyAnalysis } from '../analyzer/topology';
 import { BaseStrategy, type HAYamlOutput } from './base';
 
@@ -462,8 +463,8 @@ export class NativeStrategy extends BaseStrategy {
    */
   private buildActionCall(node: ActionNode): Record<string, unknown> {
     // Check if this is a device action (needs special format)
-    if (node.data.isDeviceAction && node.data.data) {
-      const deviceData = node.data.data as Record<string, unknown>;
+    if (isDeviceAction(node.data.data)) {
+      const deviceData = node.data.data;
       const action: Record<string, unknown> = {
         device_id: deviceData.device_id,
         domain: deviceData.domain,
@@ -511,7 +512,6 @@ export class NativeStrategy extends BaseStrategy {
       response_variable,
       continue_on_error,
       enabled,
-      isDeviceAction: _isDeviceAction,
       ...extraProps
     } = node.data;
     const action: Record<string, unknown> = {
