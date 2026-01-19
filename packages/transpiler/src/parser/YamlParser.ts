@@ -1,5 +1,6 @@
 import { generateEdgeId, generateGraphId, generateNodeId } from '../utils/generateIds';
 import { applyHeuristicLayout } from './layout';
+
 // Type guards for Home Assistant objects
 
 /** Returns true if the action is a delay node */
@@ -27,17 +28,6 @@ function isWaitAction(action: unknown): action is Record<string, unknown> {
 /** Returns true if the action is a choose block */
 function isChooseAction(action: unknown): action is Record<string, unknown> {
   return typeof action === 'object' && action !== null && 'choose' in action;
-}
-
-/** Returns true if the action is a device action (type + device_id + domain) */
-function isDeviceAction(action: unknown): action is Record<string, unknown> {
-  return (
-    typeof action === 'object' &&
-    action !== null &&
-    'type' in action &&
-    'device_id' in action &&
-    'domain' in action
-  );
 }
 
 /** Returns true if the action is a parallel block */
@@ -101,11 +91,7 @@ function isVariablesAction(action: unknown): action is Record<string, unknown> {
 
 /** Returns true if the action is a set_conversation_response action */
 function isSetConversationResponseAction(action: unknown): action is Record<string, unknown> {
-  return (
-    typeof action === 'object' &&
-    action !== null &&
-    'set_conversation_response' in action
-  );
+  return typeof action === 'object' && action !== null && 'set_conversation_response' in action;
 }
 
 import type {
@@ -127,6 +113,7 @@ import {
   FlowGraphSchema,
   HAConditionSchema,
   HATriggerSchema,
+  isDeviceAction,
   isHACondition,
   isHATrigger,
   normalizeHACondition,
@@ -1293,8 +1280,6 @@ export class YamlParser {
           position: { x: 0, y: 0 },
           data: {
             alias: typeof act.alias === 'string' ? act.alias : undefined,
-            // Mark this as a device action for proper round-trip
-            isDeviceAction: true,
             // Store the device action fields directly
             service: `${act.domain}.${act.type}`,
             target: {

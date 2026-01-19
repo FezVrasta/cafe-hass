@@ -9,6 +9,7 @@ import type {
   TriggerNode,
   WaitNode,
 } from '@cafe/shared';
+import { isDeviceAction } from '@cafe/shared';
 import type { TopologyAnalysis } from '../analyzer/topology';
 import { BaseStrategy, type HAYamlOutput } from './base';
 
@@ -302,8 +303,8 @@ export class StateMachineStrategy extends BaseStrategy {
    */
   private buildActionCall(node: ActionNode): Record<string, unknown> {
     // Check if this is a device action (needs special format)
-    if (node.data.isDeviceAction && node.data.data) {
-      const deviceData = node.data.data as Record<string, unknown>;
+    if (isDeviceAction(node.data.data)) {
+      const deviceData = node.data.data;
       const action: Record<string, unknown> = {
         device_id: deviceData.device_id,
         domain: deviceData.domain,
@@ -351,7 +352,6 @@ export class StateMachineStrategy extends BaseStrategy {
       response_variable,
       continue_on_error,
       enabled,
-      isDeviceAction: _isDeviceAction,
       ...extraProps
     } = node.data;
     const actionCall: Record<string, unknown> = {
@@ -480,9 +480,7 @@ export class StateMachineStrategy extends BaseStrategy {
 
     // Nested conditions (and/or/not) with complex templates
     if (
-      (data.condition === 'and' ||
-        data.condition === 'or' ||
-        data.condition === 'not') &&
+      (data.condition === 'and' || data.condition === 'or' || data.condition === 'not') &&
       data.conditions
     ) {
       return data.conditions.some((c) => {
