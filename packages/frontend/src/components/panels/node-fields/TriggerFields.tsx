@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { getTriggerFields } from '@/config/triggerFields';
+import { getTriggerDefaults, getTriggerFields } from '@/config/triggerFields';
 import type { HassEntity } from '@/types/hass';
 import { getNodeDataString } from '@/utils/nodeData';
 import { DeviceTriggerFields } from './DeviceTriggerFields';
@@ -40,7 +40,14 @@ export function TriggerFields({ node, onChange, entities }: TriggerFieldsProps) 
   }, [deviceId, platform, onChange]);
 
   const handlePlatformChange = (newPlatform: string) => {
-    onChange('platform', newPlatform);
+    // Get defaults for the new platform (includes platform field and any field defaults)
+    const defaults = getTriggerDefaults(newPlatform as TriggerPlatform);
+
+    // Apply all defaults
+    for (const [key, value] of Object.entries(defaults)) {
+      onChange(key, value);
+    }
+
     // If switching away from device, clear device_id
     if (newPlatform !== 'device' && deviceId) {
       onChange('device_id', undefined);

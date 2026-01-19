@@ -1401,9 +1401,7 @@ export class YamlParser {
                 typeof repeat.count === 'string' || typeof repeat.count === 'number'
                   ? repeat.count
                   : undefined,
-              while: Array.isArray(repeat.while)
-                ? (repeat.while as HACondition[])
-                : undefined,
+              while: Array.isArray(repeat.while) ? (repeat.while as HACondition[]) : undefined,
               until: Array.isArray(repeat.until)
                 ? (repeat.until as HACondition[] | string[])
                 : typeof repeat.until === 'string'

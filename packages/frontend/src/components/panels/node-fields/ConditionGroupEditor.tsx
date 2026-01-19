@@ -1,9 +1,8 @@
+import type { ConditionType } from '@cafe/shared';
 import { Plus, Trash2 } from 'lucide-react';
 import { memo } from 'react';
 import { Button } from '@/components/ui/button';
-import { EntitySelector } from '@/components/ui/EntitySelector';
-import { Input } from '@/components/ui/input';
-import { MultiEntitySelector } from '@/components/ui/MultiEntitySelector';
+import { DynamicFieldRenderer } from '@/components/ui/DynamicFieldRenderer';
 import {
   Select,
   SelectContent,
@@ -11,12 +10,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
+import {
+  getConditionDefaults,
+  getConditionFields,
+  isLogicalGroupType,
+} from '@/config/conditionFields';
 import { useHass } from '@/contexts/HassContext';
 import { cn } from '@/lib/utils';
 import type { ConditionNodeData } from '@/store/flow-store';
 import type { HassEntity } from '@/types/hass';
-import { Label } from '../../ui/label';
 
 interface ConditionGroupEditorProps {
   conditions: ConditionNodeData[];
@@ -32,16 +34,14 @@ const CONDITION_TYPES = [
   { value: 'trigger', label: 'Trigger' },
   { value: 'zone', label: 'Zone' },
   { value: 'time', label: 'Time' },
+  { value: 'sun', label: 'Sun' },
   { value: 'and', label: 'AND (All)' },
   { value: 'or', label: 'OR (Any)' },
   { value: 'not', label: 'NOT' },
 ];
 
-// Logical group types that can have nested conditions
-const GROUP_TYPES = ['and', 'or', 'not'];
-
 /**
- * Renders fields specific to each condition type in a vertical layout
+ * Renders fields for a condition type using the shared config from conditionFields.ts
  */
 function ConditionTypeFields({
   cond,
@@ -52,188 +52,27 @@ function ConditionTypeFields({
   onUpdate: (newCond: ConditionNodeData) => void;
   entities: HassEntity[];
 }) {
-  const condType = cond.condition || 'state';
+  const condType = (cond.condition || 'state') as ConditionType;
+  const fields = getConditionFields(condType);
 
-  switch (condType) {
-    case 'state':
-      return (
-        <div className="space-y-2">
-          <MultiEntitySelector
-            value={
-              Array.isArray(cond.entity_id)
-                ? cond.entity_id
-                : cond.entity_id
-                  ? [cond.entity_id]
-                  : []
-            }
-            onChange={(val) => onUpdate({ ...cond, entity_id: val.length === 1 ? val[0] : val })}
-            entities={entities}
-            placeholder="Select entity..."
-            className="w-full"
-          />
-          <Input
-            value={typeof cond.state === 'string' ? cond.state : ''}
-            onChange={(e) => onUpdate({ ...cond, state: e.target.value })}
-            placeholder="State value (e.g., on, off, home)"
-          />
-        </div>
-      );
-
-    case 'numeric_state':
-      return (
-        <div className="space-y-2">
-          <MultiEntitySelector
-            value={
-              Array.isArray(cond.entity_id)
-                ? cond.entity_id
-                : cond.entity_id
-                  ? [cond.entity_id]
-                  : []
-            }
-            onChange={(val) => onUpdate({ ...cond, entity_id: val.length === 1 ? val[0] : val })}
-            entities={entities}
-            placeholder="Select entity..."
-            className="w-full"
-          />
-          <div className="grid grid-cols-2 gap-2">
-            <Input
-              value={cond.above !== undefined ? String(cond.above) : ''}
-              onChange={(e) =>
-                onUpdate({ ...cond, above: e.target.value ? Number(e.target.value) : undefined })
-              }
-              placeholder="Above"
-              type="number"
-            />
-            <Input
-              value={cond.below !== undefined ? String(cond.below) : ''}
-              onChange={(e) =>
-                onUpdate({ ...cond, below: e.target.value ? Number(e.target.value) : undefined })
-              }
-              placeholder="Below"
-              type="number"
-            />
-          </div>
-        </div>
-      );
-
-    case 'template':
-      return (
-        <Textarea
-          className="min-h-[80px] w-full font-mono text-xs"
-          value={cond.template || cond.value_template || ''}
-          onChange={(e) =>
-            onUpdate({ ...cond, template: e.target.value, value_template: e.target.value })
-          }
-          placeholder="{{ states('sensor.example') == 'on' }}"
-        />
-      );
-
-    case 'trigger':
-      return (
-        <Input
-          value={((cond as Record<string, unknown>).id as string) || ''}
-          onChange={(e) => onUpdate({ ...cond, id: e.target.value } as ConditionNodeData)}
-          placeholder="Trigger ID (e.g., arriving, leaving)"
-        />
-      );
-
-    case 'zone':
-      return (
-        <div className="space-y-2">
-          <MultiEntitySelector
-            value={
-              Array.isArray(cond.entity_id)
-                ? cond.entity_id
-                : cond.entity_id
-                  ? [cond.entity_id]
-                  : []
-            }
-            onChange={(val) => onUpdate({ ...cond, entity_id: val.length === 1 ? val[0] : val })}
-            entities={entities.filter((e) => e.entity_id.startsWith('person.'))}
-            placeholder="Select person..."
-            className="w-full"
-          />
-          <EntitySelector
-            value={cond.zone || ''}
-            onChange={(val) => onUpdate({ ...cond, zone: val })}
-            entities={entities.filter((e) => e.entity_id.startsWith('zone.'))}
-            placeholder="Select zone..."
-            className="w-full"
-          />
-        </div>
-      );
-
-    case 'time': {
-      // weekday is stored as an array, convert to/from comma-separated string
-      const weekdayArray = Array.isArray(cond.weekday) ? cond.weekday : [];
-      const weekdayString = weekdayArray.join(',');
-
-      const handleWeekdayChange = (value: string) => {
-        const days = value
-          .split(',')
-          .map((d) => d.trim().toLowerCase())
-          .filter((d) => d.length > 0);
-        onUpdate({ ...cond, weekday: days.length > 0 ? days : undefined });
-      };
-
-      return (
-        <div className="flex flex-col gap-2">
-          <div className="grid grid-cols-2 gap-2">
-            <Label>
-              <div className="mb-1 block text-muted-foreground text-xs">After</div>
-              <Input
-                value={cond.after || ''}
-                onChange={(e) => onUpdate({ ...cond, after: e.target.value })}
-                placeholder="HH:MM"
-                type="time"
-              />
-            </Label>
-            <Label>
-              <div className="mb-1 block text-muted-foreground text-xs">Before</div>
-              <Input
-                value={cond.before || ''}
-                onChange={(e) => onUpdate({ ...cond, before: e.target.value })}
-                placeholder="HH:MM"
-                type="time"
-              />
-            </Label>
-          </div>
-          <Label>
-            <div className="mb-1 block text-muted-foreground text-xs">Weekday</div>
-            <Input
-              value={weekdayString}
-              onChange={(e) => handleWeekdayChange(e.target.value)}
-              placeholder="mon,tue,wed,thu,fri,sat,sun"
-            />
-          </Label>
-        </div>
-      );
-    }
-
-    default:
-      return (
-        <div className="space-y-2">
-          <MultiEntitySelector
-            value={
-              Array.isArray(cond.entity_id)
-                ? cond.entity_id
-                : cond.entity_id
-                  ? [cond.entity_id]
-                  : []
-            }
-            onChange={(val) => onUpdate({ ...cond, entity_id: val.length === 1 ? val[0] : val })}
-            entities={entities}
-            placeholder="Select entity..."
-            className="w-full"
-          />
-          <Input
-            value={typeof cond.state === 'string' ? cond.state : ''}
-            onChange={(e) => onUpdate({ ...cond, state: e.target.value })}
-            placeholder="State value"
-          />
-        </div>
-      );
+  // No fields for this condition type (e.g., device handled elsewhere)
+  if (fields.length === 0) {
+    return null;
   }
+
+  return (
+    <div className="space-y-2">
+      {fields.map((field) => (
+        <DynamicFieldRenderer
+          key={field.name}
+          field={field}
+          value={(cond as Record<string, unknown>)[field.name]}
+          onChange={(value) => onUpdate({ ...cond, [field.name]: value })}
+          entities={entities}
+        />
+      ))}
+    </div>
+  );
 }
 
 /**
@@ -252,20 +91,11 @@ function ConditionCard({
   entities: HassEntity[];
   depth: number;
 }) {
-  const isGroup = GROUP_TYPES.includes(cond.condition || '');
+  const condType = (cond.condition || 'state') as ConditionType;
+  const isGroup = isLogicalGroupType(condType);
 
   const handleTypeChange = (val: string) => {
-    if (GROUP_TYPES.includes(val)) {
-      onUpdate({ condition: val, conditions: [] });
-    } else if (val === 'template') {
-      onUpdate({ condition: val, template: '', value_template: '' });
-    } else if (val === 'trigger') {
-      onUpdate({ condition: val, id: '' } as ConditionNodeData);
-    } else if (val === 'numeric_state') {
-      onUpdate({ condition: val, entity_id: '' });
-    } else {
-      onUpdate({ condition: val, entity_id: '', state: '' });
-    }
+    onUpdate(getConditionDefaults(val as ConditionType) as ConditionNodeData);
   };
 
   return (
