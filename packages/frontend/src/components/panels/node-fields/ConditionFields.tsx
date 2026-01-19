@@ -1,6 +1,7 @@
-import type { FlowNode } from '@cafe/shared';
+import type { ConditionType, FlowNode } from '@cafe/shared';
 import { FormField } from '@/components/forms/FormField';
 import { ConditionGroupEditor } from '@/components/panels/node-fields/ConditionGroupEditor';
+import { DynamicFieldRenderer } from '@/components/ui/DynamicFieldRenderer';
 import {
   Select,
   SelectContent,
@@ -8,16 +9,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  getConditionDefaults,
+  getConditionFields,
+  isLogicalGroupType,
+} from '@/config/conditionFields';
 import type { ConditionNodeData } from '@/store/flow-store';
 import type { HassEntity } from '@/types/hass';
 import { getNodeDataString } from '@/utils/nodeData';
 import { DeviceConditionFields } from './DeviceConditionFields';
-import { NumericStateConditionFields } from './NumericStateConditionFields';
-import { StateConditionFields } from './StateConditionFields';
-import { TemplateConditionFields } from './TemplateConditionFields';
-import { TimeConditionFields } from './TimeConditionFields';
-import { TriggerConditionFields } from './TriggerConditionFields';
-import { ZoneConditionFields } from './ZoneConditionFields';
 
 interface ConditionFieldsProps {
   node: FlowNode;
@@ -25,50 +25,55 @@ interface ConditionFieldsProps {
   entities: HassEntity[];
 }
 
-// Logical group types that use the ConditionGroupEditor
-const GROUP_TYPES = ['and', 'or', 'not'];
-
 /**
  * Condition node field component.
  * Router component that dispatches to specific condition type components.
- * Extracts the 258-line condition rendering block from PropertyPanel.
+ * Uses a config-based approach similar to TriggerFields for consistency.
  */
 export function ConditionFields({ node, onChange, entities }: ConditionFieldsProps) {
-  const conditionType = getNodeDataString(node, 'condition', 'state');
+  const conditionType = getNodeDataString(node, 'condition', 'state') as ConditionType;
   const nodeData = node.data as Record<string, unknown>;
   const hasNestedConditions = Array.isArray(nodeData.conditions) && nodeData.conditions.length > 0;
-  const isGroupType = GROUP_TYPES.includes(conditionType);
+  const isGroupType = isLogicalGroupType(conditionType);
+
+  const handleConditionTypeChange = (newType: string) => {
+    // Get defaults for the new condition type (includes condition field and any field defaults)
+    const defaults = getConditionDefaults(newType as ConditionType);
+
+    // Apply all defaults
+    for (const [key, value] of Object.entries(defaults)) {
+      onChange(key, value);
+    }
+  };
 
   const renderConditionFields = () => {
-    switch (conditionType) {
-      case 'state':
-        return <StateConditionFields node={node} onChange={onChange} entities={entities} />;
-      case 'numeric_state':
-        return <NumericStateConditionFields node={node} onChange={onChange} entities={entities} />;
-      case 'template':
-        return <TemplateConditionFields node={node} onChange={onChange} />;
-      case 'time':
-        return <TimeConditionFields node={node} onChange={onChange} />;
-      case 'zone':
-        return <ZoneConditionFields node={node} onChange={onChange} entities={entities} />;
-      case 'device':
-        return <DeviceConditionFields node={node} onChange={onChange} />;
-      case 'trigger':
-        return <TriggerConditionFields node={node} onChange={onChange} />;
-      case 'and':
-      case 'or':
-      case 'not':
-        // For group types, only render the group editor (no type-specific fields)
-        return null;
-      default:
-        return null;
+    // Device conditions use a special component with DeviceSelector
+    if (conditionType === 'device') {
+      return <DeviceConditionFields node={node} onChange={onChange} />;
     }
+
+    // Logical group types don't have their own fields
+    if (isGroupType) {
+      return null;
+    }
+
+    // All other condition types use static field configuration
+    const fields = getConditionFields(conditionType);
+    return fields.map((field) => (
+      <DynamicFieldRenderer
+        key={field.name}
+        field={field}
+        value={nodeData[field.name]}
+        onChange={(value) => onChange(field.name, value)}
+        entities={entities}
+      />
+    ));
   };
 
   return (
     <>
       <FormField label="Condition Type" required>
-        <Select value={conditionType} onValueChange={(value) => onChange('condition', value)}>
+        <Select value={conditionType} onValueChange={handleConditionTypeChange}>
           <SelectTrigger>
             <SelectValue />
           </SelectTrigger>

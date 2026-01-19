@@ -297,6 +297,22 @@ export function getTriggerFields(platform: TriggerPlatform): FieldConfig[] {
 }
 
 /**
+ * Get default values for a trigger platform based on field configurations
+ */
+export function getTriggerDefaults(platform: TriggerPlatform): Record<string, unknown> {
+  const fields = getTriggerFields(platform);
+  const defaults: Record<string, unknown> = { platform };
+
+  for (const field of fields) {
+    if (field.default !== undefined) {
+      defaults[field.name] = field.default;
+    }
+  }
+
+  return defaults;
+}
+
+/**
  * Check if a trigger platform uses device automation API
  */
 export function usesDeviceAutomation(platform: TriggerPlatform): boolean {
