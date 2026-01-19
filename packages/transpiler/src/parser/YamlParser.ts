@@ -94,6 +94,17 @@ function isSetConversationResponseAction(action: unknown): action is Record<stri
   return typeof action === 'object' && action !== null && 'set_conversation_response' in action;
 }
 
+/** Returns true if the action is a repeat block */
+function isRepeatAction(action: unknown): action is Record<string, unknown> {
+  return (
+    typeof action === 'object' &&
+    action !== null &&
+    'repeat' in action &&
+    typeof (action as Record<string, unknown>).repeat === 'object' &&
+    (action as Record<string, unknown>).repeat !== null
+  );
+}
+
 import type {
   ActionNode,
   CafeMetadata,
@@ -1370,6 +1381,43 @@ export class YamlParser {
         // After parallel block, all branch end nodes become the current nodes
         // (subsequent actions will connect from all of them)
         currentNodeIds = allBranchEndNodes.length > 0 ? allBranchEndNodes : parallelStartNodes;
+      } else if (isRepeatAction(action)) {
+        // Repeat block - create an action node that represents the entire repeat
+        const act = action as Record<string, unknown>;
+        const repeat = act.repeat as Record<string, unknown>;
+        const repeatSequence = Array.isArray(repeat.sequence) ? repeat.sequence : [];
+
+        // Create an action node that represents the repeat block
+        const nodeId = getNextNodeId('action');
+        const actionNode: ActionNode = {
+          id: nodeId,
+          type: 'action',
+          position: { x: 0, y: 0 },
+          data: {
+            alias: typeof act.alias === 'string' ? act.alias : undefined,
+            // Store the repeat data directly in the action for round-trip preservation
+            repeat: {
+              count:
+                typeof repeat.count === 'string' || typeof repeat.count === 'number'
+                  ? repeat.count
+                  : undefined,
+              while: Array.isArray(repeat.while)
+                ? (repeat.while as HACondition[])
+                : undefined,
+              until: Array.isArray(repeat.until)
+                ? (repeat.until as HACondition[] | string[])
+                : typeof repeat.until === 'string'
+                  ? repeat.until
+                  : undefined,
+              // Include the original sequence for round-trip
+              sequence: repeatSequence as Record<string, unknown>[],
+            },
+          },
+        };
+
+        nodes.push(actionNode);
+        createEdgesFromCurrent(nodeId);
+        currentNodeIds = [nodeId];
       } else if (isServiceAction(action)) {
         // Regular service call action (support both 'service' and 'action' fields)
         const nodeId = getNextNodeId('action');
