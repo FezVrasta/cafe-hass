@@ -174,7 +174,8 @@ describe('Roundtrip Import/Export Tests', () => {
                 actionObj.parallel ||
                 actionObj.sequence ||
                 actionObj.stop ||
-                actionObj.event;
+                actionObj.event ||
+                actionObj.set_conversation_response; // Conversation response
 
               if (!hasValidActionType) {
                 console.error(`Invalid action at index ${actionIndex}:`, action);

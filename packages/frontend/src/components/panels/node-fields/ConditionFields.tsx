@@ -34,7 +34,7 @@ const GROUP_TYPES = ['and', 'or', 'not'];
  * Extracts the 258-line condition rendering block from PropertyPanel.
  */
 export function ConditionFields({ node, onChange, entities }: ConditionFieldsProps) {
-  const conditionType = getNodeDataString(node, 'condition_type', 'state');
+  const conditionType = getNodeDataString(node, 'condition', 'state');
   const nodeData = node.data as Record<string, unknown>;
   const hasNestedConditions = Array.isArray(nodeData.conditions) && nodeData.conditions.length > 0;
   const isGroupType = GROUP_TYPES.includes(conditionType);
@@ -68,7 +68,7 @@ export function ConditionFields({ node, onChange, entities }: ConditionFieldsPro
   return (
     <>
       <FormField label="Condition Type" required>
-        <Select value={conditionType} onValueChange={(value) => onChange('condition_type', value)}>
+        <Select value={conditionType} onValueChange={(value) => onChange('condition', value)}>
           <SelectTrigger>
             <SelectValue />
           </SelectTrigger>

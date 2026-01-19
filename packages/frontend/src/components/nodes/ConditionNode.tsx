@@ -53,7 +53,7 @@ export const ConditionNode = memo(function ConditionNode({
           <GitBranch className="h-4 w-4 text-blue-700" />
         </div>
         <span className="font-semibold text-blue-900 text-sm">
-          {data.alias || conditionLabels[data.condition_type] || 'Condition'}
+          {data.alias || conditionLabels[data.condition] || 'Condition'}
         </span>
         {stepNumber && (
           <div className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 font-bold text-white text-xs">
@@ -64,7 +64,7 @@ export const ConditionNode = memo(function ConditionNode({
 
       <div className="space-y-0.5 text-blue-700 text-xs">
         <div className="font-medium">
-          {conditionLabels[data.condition_type] || data.condition_type}
+          {conditionLabels[data.condition] || data.condition}
         </div>
         {data.entity_id && (
           <div className="truncate opacity-75">

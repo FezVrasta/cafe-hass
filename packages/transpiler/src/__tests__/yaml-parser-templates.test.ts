@@ -103,7 +103,7 @@ actions:
     expect(conditionNodes?.length).toBe(1);
 
     const templateCondition = conditionNodes?.[0];
-    expect(templateCondition?.data.condition_type).toBe('template');
+    expect(templateCondition?.data.condition).toBe('template');
     expect(templateCondition?.data.template).toBeUndefined();
     expect(templateCondition?.data.value_template).toBe("{{ states('sensor.test') == 'on' }}");
   });
@@ -139,13 +139,13 @@ actions:
     expect(conditionNodes?.length).toBe(1);
 
     const andCondition = conditionNodes?.[0];
-    expect(andCondition?.data.condition_type).toBe('and');
+    expect(andCondition?.data.condition).toBe('and');
     expect(andCondition?.data.conditions).toBeDefined();
     expect(andCondition?.data.conditions?.length).toBe(2);
 
     // Verify the template condition within the 'and' has its template populated
     const nestedTemplateCondition = andCondition?.data.conditions?.find(
-      (c) => c.condition_type === 'template'
+      (c) => c.condition === 'template'
     );
     expect(nestedTemplateCondition).toBeDefined();
     expect(nestedTemplateCondition?.template).toBeUndefined();
@@ -180,7 +180,7 @@ actions:
     expect(conditionNodes?.length).toBe(1);
 
     const ifCondition = conditionNodes?.[0];
-    expect(ifCondition?.data.condition_type).toBe('template');
+    expect(ifCondition?.data.condition).toBe('template');
     expect(ifCondition?.data.template).toBeUndefined();
     expect(ifCondition?.data.value_template).toBe('{{ now().hour >= 18 }}');
   });
@@ -209,7 +209,7 @@ actions:
     expect(conditionNodes?.length).toBe(1);
 
     const templateCondition = conditionNodes?.[0];
-    expect(templateCondition?.data.condition_type).toBe('template');
+    expect(templateCondition?.data.condition).toBe('template');
     expect(templateCondition?.data.template).toBeUndefined();
     expect(templateCondition?.data.value_template).toBe(
       "{{ states('input_boolean.enabled') == 'on' }}"

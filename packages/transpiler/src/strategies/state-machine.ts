@@ -340,36 +340,51 @@ export class StateMachineStrategy extends BaseStrategy {
     }
 
     // Standard service call format
+    // Use spread pattern to preserve unknown properties from custom integrations
+    const {
+      alias,
+      service,
+      id,
+      target,
+      data,
+      data_template,
+      response_variable,
+      continue_on_error,
+      enabled,
+      isDeviceAction: _isDeviceAction,
+      ...extraProps
+    } = node.data;
     const actionCall: Record<string, unknown> = {
-      alias: node.data.alias,
-      service: node.data.service,
+      ...extraProps, // Preserve extra properties
+      alias,
+      service,
     };
 
-    if (node.data.id) {
-      actionCall.id = node.data.id;
+    if (id) {
+      actionCall.id = id;
     }
 
-    if (node.data.target) {
-      actionCall.target = node.data.target;
+    if (target) {
+      actionCall.target = target;
     }
 
-    if (node.data.data) {
-      actionCall.data = node.data.data;
+    if (data) {
+      actionCall.data = data;
     }
 
-    if (node.data.data_template) {
-      actionCall.data_template = node.data.data_template;
+    if (data_template) {
+      actionCall.data_template = data_template;
     }
 
-    if (node.data.response_variable) {
-      actionCall.response_variable = node.data.response_variable;
+    if (response_variable) {
+      actionCall.response_variable = response_variable;
     }
 
-    if (node.data.continue_on_error) {
-      actionCall.continue_on_error = node.data.continue_on_error;
+    if (continue_on_error) {
+      actionCall.continue_on_error = continue_on_error;
     }
 
-    if (node.data.enabled === false) {
+    if (enabled === false) {
       actionCall.enabled = false;
     }
 
@@ -456,7 +471,7 @@ export class StateMachineStrategy extends BaseStrategy {
     const data = node.data;
 
     // Template conditions with {% %} statements need native check
-    if (data.condition_type === 'template') {
+    if (data.condition === 'template') {
       const template = data.value_template || '';
       if (template.includes('{%')) {
         return true;
@@ -465,13 +480,13 @@ export class StateMachineStrategy extends BaseStrategy {
 
     // Nested conditions (and/or/not) with complex templates
     if (
-      (data.condition_type === 'and' ||
-        data.condition_type === 'or' ||
-        data.condition_type === 'not') &&
+      (data.condition === 'and' ||
+        data.condition === 'or' ||
+        data.condition === 'not') &&
       data.conditions
     ) {
       return data.conditions.some((c) => {
-        if (c.condition_type === 'template') {
+        if (c.condition === 'template') {
           const template = c.value_template || '';
           return template.includes('{%');
         }
@@ -488,7 +503,7 @@ export class StateMachineStrategy extends BaseStrategy {
   private buildNativeCondition(node: ConditionNode): Record<string, unknown> {
     const data = node.data;
     const condition: Record<string, unknown> = {
-      condition: data.condition_type,
+      condition: data.condition,
     };
 
     // Copy relevant fields based on condition type
@@ -510,7 +525,7 @@ export class StateMachineStrategy extends BaseStrategy {
     if (data.conditions && data.conditions.length > 0) {
       condition.conditions = data.conditions.map((c) => {
         const nested: Record<string, unknown> = {
-          condition: c.condition_type,
+          condition: c.condition,
         };
         if (c.entity_id) nested.entity_id = c.entity_id;
         if (c.state !== undefined) nested.state = c.state;
@@ -541,13 +556,16 @@ export class StateMachineStrategy extends BaseStrategy {
     const nextNode = nextNodeId === 'END' ? 'END' : nextNodeId;
     const currentNodeId = node.id;
 
+    // Use spread pattern to preserve unknown properties from custom integrations
+    const { alias, delay, id, ...extraProps } = node.data;
     const delayAction: Record<string, unknown> = {
-      alias: node.data.alias,
-      delay: node.data.delay,
+      ...extraProps, // Preserve extra properties
+      alias,
+      delay,
     };
 
-    if (node.data.id) {
-      delayAction.id = node.data.id;
+    if (id) {
+      delayAction.id = id;
     }
 
     return {
@@ -576,18 +594,29 @@ export class StateMachineStrategy extends BaseStrategy {
     const nextNode = nextNodeId === 'END' ? 'END' : nextNodeId;
     const currentNodeId = node.id;
 
+    // Use spread pattern to preserve unknown properties from custom integrations
+    const {
+      alias,
+      id,
+      wait_template,
+      wait_for_trigger,
+      timeout,
+      continue_on_timeout,
+      ...extraProps
+    } = node.data;
     const waitAction: Record<string, unknown> = {
-      alias: node.data.alias,
+      ...extraProps, // Preserve extra properties
+      alias,
     };
 
-    if (node.data.id) {
-      waitAction.id = node.data.id;
+    if (id) {
+      waitAction.id = id;
     }
 
-    if (node.data.wait_template) {
-      waitAction.wait_template = node.data.wait_template;
-    } else if (node.data.wait_for_trigger) {
-      waitAction.wait_for_trigger = node.data.wait_for_trigger.map((triggerData) => {
+    if (wait_template) {
+      waitAction.wait_template = wait_template;
+    } else if (wait_for_trigger) {
+      waitAction.wait_for_trigger = wait_for_trigger.map((triggerData) => {
         const trigger = { ...triggerData };
         // Don't include alias in the trigger definition itself
         delete trigger.alias;
@@ -597,12 +626,12 @@ export class StateMachineStrategy extends BaseStrategy {
       });
     }
 
-    if (node.data.timeout) {
-      waitAction.timeout = node.data.timeout;
+    if (timeout) {
+      waitAction.timeout = timeout;
     }
 
-    if (node.data.continue_on_timeout !== undefined) {
-      waitAction.continue_on_timeout = node.data.continue_on_timeout;
+    if (continue_on_timeout !== undefined) {
+      waitAction.continue_on_timeout = continue_on_timeout;
     }
 
     return {
@@ -634,16 +663,19 @@ export class StateMachineStrategy extends BaseStrategy {
     const nextNode = nextNodeId === 'END' ? 'END' : nextNodeId;
     const currentNodeId = node.id;
 
+    // Use spread pattern to preserve unknown properties from custom integrations
+    const { alias, id, variables, ...extraProps } = node.data;
     const setVarsAction: Record<string, unknown> = {
-      variables: node.data.variables,
+      ...extraProps, // Preserve extra properties
+      variables,
     };
 
-    if (node.data.alias) {
-      setVarsAction.alias = node.data.alias;
+    if (alias) {
+      setVarsAction.alias = alias;
     }
 
-    if (node.data.id) {
-      setVarsAction.id = node.data.id;
+    if (id) {
+      setVarsAction.id = id;
     }
 
     return {
@@ -695,7 +727,7 @@ export class StateMachineStrategy extends BaseStrategy {
   private buildConditionTemplate(node: ConditionNode): string {
     const data = node.data;
 
-    switch (data.condition_type) {
+    switch (data.condition) {
       case 'state':
         if (data.attribute) {
           // Use state_attr for attribute checks

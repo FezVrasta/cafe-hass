@@ -52,7 +52,7 @@ function ConditionTypeFields({
   onUpdate: (newCond: ConditionNodeData) => void;
   entities: HassEntity[];
 }) {
-  const condType = cond.condition_type || 'state';
+  const condType = cond.condition || 'state';
 
   switch (condType) {
     case 'state':
@@ -252,19 +252,19 @@ function ConditionCard({
   entities: HassEntity[];
   depth: number;
 }) {
-  const isGroup = GROUP_TYPES.includes(cond.condition_type || '');
+  const isGroup = GROUP_TYPES.includes(cond.condition || '');
 
   const handleTypeChange = (val: string) => {
     if (GROUP_TYPES.includes(val)) {
-      onUpdate({ condition_type: val, conditions: [] });
+      onUpdate({ condition: val, conditions: [] });
     } else if (val === 'template') {
-      onUpdate({ condition_type: val, template: '', value_template: '' });
+      onUpdate({ condition: val, template: '', value_template: '' });
     } else if (val === 'trigger') {
-      onUpdate({ condition_type: val, id: '' } as ConditionNodeData);
+      onUpdate({ condition: val, id: '' } as ConditionNodeData);
     } else if (val === 'numeric_state') {
-      onUpdate({ condition_type: val, entity_id: '' });
+      onUpdate({ condition: val, entity_id: '' });
     } else {
-      onUpdate({ condition_type: val, entity_id: '', state: '' });
+      onUpdate({ condition: val, entity_id: '', state: '' });
     }
   };
 
@@ -272,7 +272,7 @@ function ConditionCard({
     <div className={cn('space-y-3 rounded-md border bg-card p-3', depth > 0 && 'bg-muted/30')}>
       {/* Header row: type selector and delete button */}
       <div className="flex items-center justify-between gap-2">
-        <Select value={cond.condition_type || 'state'} onValueChange={handleTypeChange}>
+        <Select value={cond.condition || 'state'} onValueChange={handleTypeChange}>
           <SelectTrigger className="w-full max-w-[180px]">
             <SelectValue />
           </SelectTrigger>
@@ -299,7 +299,7 @@ function ConditionCard({
         <ConditionGroupEditor
           conditions={(cond.conditions as ConditionNodeData[]) || []}
           onChange={(newConds) => onUpdate({ ...cond, conditions: newConds })}
-          parentType={cond.condition_type as 'and' | 'or' | 'not'}
+          parentType={cond.condition as 'and' | 'or' | 'not'}
           depth={depth + 1}
         />
       ) : (
@@ -318,7 +318,7 @@ export const ConditionGroupEditor = memo(function ConditionGroupEditor({
   const entities = hass ? Object.values(hass.states) : [];
 
   const handleAdd = () => {
-    onChange([...conditions, { condition_type: 'state', entity_id: '', state: '' }]);
+    onChange([...conditions, { condition: 'state', entity_id: '', state: '' }]);
   };
 
   const handleRemove = (idx: number) => {

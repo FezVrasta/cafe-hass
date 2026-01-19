@@ -31,7 +31,7 @@
       "position": { "x": 200, "y": 250 },
       "data": {
         "alias": "Is sun below horizon?",
-        "condition_type": "state",
+        "condition": "state",
         "entity_id": "sun.sun",
         "state": "below_horizon"
       }

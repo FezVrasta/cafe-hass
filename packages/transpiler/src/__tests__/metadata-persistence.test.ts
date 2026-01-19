@@ -26,7 +26,7 @@ describe('Metadata Persistence', () => {
           type: 'condition',
           position: { x: 0, y: 0 },
           data: {
-            condition_type: 'state',
+            condition: 'state',
             entity_id: ['binary_sensor.a', 'binary_sensor.b'],
             state: 'on',
           },
@@ -442,7 +442,7 @@ mode: single
             type: 'condition',
             position: { x: 200, y: 200 },
             data: {
-              condition_type: 'state',
+              condition: 'state',
               entity_id: 'sun.sun',
               state: 'below_horizon',
             },
@@ -797,7 +797,7 @@ mode: single
             type: 'condition',
             position: { x: 250, y: 150 },
             data: {
-              condition_type: 'numeric_state',
+              condition: 'numeric_state',
               entity_id: 'sensor.sensore_di_luminosita_bagno_di_servizio',
               above: 10,
               below: 200,

@@ -178,7 +178,7 @@ program
           position: { x: 100, y: 200 },
           data: {
             alias: 'Is it dark?',
-            condition_type: 'state',
+            condition: 'state',
             entity_id: 'sun.sun',
             state: 'below_horizon',
           },

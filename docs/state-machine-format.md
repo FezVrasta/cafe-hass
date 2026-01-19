@@ -158,11 +158,11 @@ Parses Jinja2 condition expressions back to condition data:
 
 | Jinja Template                            | Parsed Result                                                                         |
 | ----------------------------------------- | ------------------------------------------------------------------------------------- |
-| `is_state('entity', 'on')`                | `{ condition_type: 'state', entity_id: 'entity', state: 'on' }`                       |
-| `states('entity') \| float > 10`          | `{ condition_type: 'numeric_state', entity_id: 'entity', above: 10 }`                 |
-| `state_attr('entity', 'attr') == 'value'` | `{ condition_type: 'state', entity_id: 'entity', attribute: 'attr', state: 'value' }` |
-| `is_state('sun.sun', 'above_horizon')`    | `{ condition_type: 'sun', after: 'sunrise', before: 'sunset' }`                       |
-| Complex expressions                       | `{ condition_type: 'template', template: '{{ ... }}' }`                               |
+| `is_state('entity', 'on')`                | `{ condition: 'state', entity_id: 'entity', state: 'on' }`                       |
+| `states('entity') \| float > 10`          | `{ condition: 'numeric_state', entity_id: 'entity', above: 10 }`                 |
+| `state_attr('entity', 'attr') == 'value'` | `{ condition: 'state', entity_id: 'entity', attribute: 'attr', state: 'value' }` |
+| `is_state('sun.sun', 'above_horizon')`    | `{ condition: 'sun', after: 'sunrise', before: 'sunset' }`                       |
+| Complex expressions                       | `{ condition: 'template', template: '{{ ... }}' }`                               |
 
 ### Node Type Detection
 

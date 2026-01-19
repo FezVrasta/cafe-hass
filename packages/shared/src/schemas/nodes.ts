@@ -1,81 +1,22 @@
 import { z } from 'zod';
+import { HAConditionSchema, HATriggerSchema } from './ha-schemas';
 import { PositionSchema } from './base';
 import {
   ConditionTypeSchema,
   OptionalTargetSchema,
   ServiceDataSchema,
   ServiceDataTemplateSchema,
-  TriggerPlatformSchema,
 } from './ha-entities';
 
 // ============================================
 // TRIGGER NODE
 // ============================================
 
-/**
- * Data schema for trigger nodes
- * Contains HA-specific trigger configuration
- */
-export const TriggerDataSchema = z.looseObject({
-  id: z.string().optional(), // User-defined ID for referencing in templates
-  alias: z.string().optional(),
-  platform: TriggerPlatformSchema,
-  // State trigger
-  entity_id: z.union([z.string(), z.array(z.string())]).optional(),
-  // Home Assistant supports both string and array for from/to fields
-  from: z.union([z.string(), z.array(z.string()), z.null()]).optional(),
-  to: z.union([z.string(), z.array(z.string()), z.null()]).optional(),
-  for: z
-    .union([
-      z.string(),
-      z.looseObject({
-        hours: z.number().optional(),
-        minutes: z.number().optional(),
-        seconds: z.number().optional(),
-      }),
-    ])
-    .optional(),
-  // Time trigger
-  at: z.string().optional(),
-  // Time pattern trigger
-  hours: z.string().optional(),
-  minutes: z.string().optional(),
-  seconds: z.string().optional(),
-  // Event trigger
-  event_type: z.string().optional(),
-  event_data: z.record(z.string(), z.unknown()).optional(),
-  // Event field used by multiple trigger types:
-  // - homeassistant trigger: start, shutdown
-  // - sun trigger: sunrise, sunset
-  // - zone trigger: enter, leave
-  event: z.enum(['start', 'shutdown', 'sunrise', 'sunset', 'enter', 'leave']).optional(),
-  offset: z.union([z.number(), z.string()]).optional(),
-  // Numeric state trigger
-  above: z.union([z.number(), z.string()]).optional(),
-  below: z.union([z.number(), z.string()]).optional(),
-  value_template: z.string().optional(),
-  // Template trigger
-  template: z.string().optional(),
-  // Webhook trigger
-  webhook_id: z.string().optional(),
-  // Zone trigger
-  zone: z.string().optional(),
-  // MQTT trigger
-  topic: z.string().optional(),
-  payload: z.string().optional(),
-  // Device trigger fields
-  device_id: z.string().optional(),
-  domain: z.string().optional(),
-  type: z.string().optional(), // Not to be confused with node type
-  subtype: z.string().optional(),
-});
-export type TriggerData = z.infer<typeof TriggerDataSchema>;
-
 export const TriggerNodeSchema = z.looseObject({
   id: z.string().min(1),
   type: z.literal('trigger'),
   position: PositionSchema,
-  data: TriggerDataSchema,
+  data: HATriggerSchema,
 });
 export type TriggerNode = z.infer<typeof TriggerNodeSchema>;
 
@@ -88,7 +29,7 @@ export type TriggerNode = z.infer<typeof TriggerNodeSchema>;
  */
 const BaseConditionDataSchema = z.looseObject({
   alias: z.string().optional(),
-  condition_type: ConditionTypeSchema,
+  condition: ConditionTypeSchema,
   // Enabled flag (disabled conditions still exist but are skipped)
   enabled: z.boolean().optional(),
   // Common fields
@@ -145,17 +86,12 @@ const NestedConditionSchema: z.ZodType<NestedCondition> = BaseConditionDataSchem
  * Data schema for condition nodes
  * Contains HA-specific condition configuration
  */
-export const ConditionDataSchema = BaseConditionDataSchema.extend({
-  // Nested conditions (for and/or/not) - limited to one level
-  conditions: z.array(NestedConditionSchema).optional(),
-});
-export type ConditionData = z.infer<typeof ConditionDataSchema>;
 
 export const ConditionNodeSchema = z.looseObject({
   id: z.string().min(1),
   type: z.literal('condition'),
   position: PositionSchema,
-  data: ConditionDataSchema,
+  data: HAConditionSchema,
 });
 export type ConditionNode = z.infer<typeof ConditionNodeSchema>;
 
@@ -217,6 +153,8 @@ export const ActionDataSchema = z.looseObject({
   repeat: RepeatBlockSchema.optional(),
   choose: z.array(ChooseBlockSchema).optional(),
   variables: VariablesSchema.optional(),
+  // Conversation response action
+  set_conversation_response: z.string().optional(),
 });
 export type ActionData = z.infer<typeof ActionDataSchema>;
 
@@ -270,7 +208,7 @@ export const WaitDataSchema = z
     id: z.string().optional(), // User-defined ID for referencing in templates
     alias: z.string().optional(),
     wait_template: z.string().optional(),
-    wait_for_trigger: z.array(TriggerDataSchema).optional(),
+    wait_for_trigger: z.array(HATriggerSchema).optional(),
     // Home Assistant supports both string and object timeout formats
     timeout: z
       .union([
