@@ -68,7 +68,6 @@ export {
   isDeviceAction,
   isHACondition,
   isHATrigger,
-  normalizeHACondition,
   VALID_WEEKDAYS,
   type Weekday,
 } from './ha-schemas';

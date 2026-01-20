@@ -236,14 +236,6 @@ export function isHACondition(obj: unknown): obj is HACondition {
 }
 
 /**
- * Normalizes an HACondition to the internal ConditionNode['data'] format.
- * Transforms 'condition' field from HA format to internal 'condition' field.
- */
-export function normalizeHACondition(condition: HACondition): HACondition {
-  return condition;
-}
-
-/**
  * Type guard for Home Assistant device actions.
  * Returns true if the object has type, device_id, and domain fields.
  */
