@@ -1,10 +1,38 @@
+import type {
+  ActionNode,
+  CafeMetadata,
+  ConditionNode,
+  DelayNode,
+  FlowEdge,
+  FlowGraph,
+  FlowNode,
+  HAAction,
+  HACondition,
+  HADelay,
+  HAWait,
+  SetVariablesNode,
+  TriggerNode,
+  WaitNode,
+} from '@cafe/shared';
+import {
+  CafeMetadataSchema,
+  FlowGraphMetadataSchema,
+  FlowGraphSchema,
+  HAConditionSchema,
+  HATriggerSchema,
+  isDeviceAction,
+  isHACondition,
+  isHATrigger,
+  validateGraphStructure,
+} from '@cafe/shared';
+import { load as yamlLoad } from 'js-yaml';
 import { generateEdgeId, generateGraphId, generateNodeId } from '../utils/generateIds';
 import { applyHeuristicLayout } from './layout';
 
 // Type guards for Home Assistant objects
 
 /** Returns true if the action is a delay node */
-function isDelayAction(action: unknown): action is Record<string, unknown> {
+function isDelayAction(action: unknown): action is HADelay {
   return (
     typeof action === 'object' &&
     action !== null &&
@@ -17,7 +45,7 @@ function isDelayAction(action: unknown): action is Record<string, unknown> {
 }
 
 /** Returns true if the action is a wait node */
-function isWaitAction(action: unknown): action is Record<string, unknown> {
+function isWaitAction(action: unknown): action is HAWait {
   return (
     typeof action === 'object' &&
     action !== null &&
@@ -63,7 +91,7 @@ function isServiceAction(action: unknown): action is Record<string, unknown> {
 }
 
 /** Returns true if the action is an inline condition (guard) in the action sequence */
-function isConditionAction(action: unknown): action is Record<string, unknown> {
+function isConditionAction(action: unknown): action is HACondition {
   return (
     typeof action === 'object' &&
     action !== null &&
@@ -104,34 +132,6 @@ function isRepeatAction(action: unknown): action is Record<string, unknown> {
     (action as Record<string, unknown>).repeat !== null
   );
 }
-
-import type {
-  ActionNode,
-  CafeMetadata,
-  ConditionNode,
-  DelayNode,
-  FlowEdge,
-  FlowGraph,
-  FlowNode,
-  HACondition,
-  SetVariablesNode,
-  TriggerNode,
-  WaitNode,
-} from '@cafe/shared';
-import {
-  CafeMetadataSchema,
-  FlowGraphMetadataSchema,
-  FlowGraphSchema,
-  HAConditionSchema,
-  HATriggerSchema,
-  isDeviceAction,
-  isHACondition,
-  isHATrigger,
-  normalizeHACondition,
-  validateGraphStructure,
-} from '@cafe/shared';
-import { load as yamlLoad } from 'js-yaml';
-
 /**
  * Result of parsing YAML
  */
@@ -146,7 +146,7 @@ export interface ParseResult {
 /**
  * Valid condition types for Home Assistant
  */
-const VALID_conditionS = [
+const VALID_CONDITIONS = [
   'state',
   'numeric_state',
   'template',
@@ -160,7 +160,7 @@ const VALID_conditionS = [
   'trigger',
 ] as const;
 
-type ValidConditionType = (typeof VALID_conditionS)[number];
+type ValidConditionType = (typeof VALID_CONDITIONS)[number];
 
 /**
  * Nested condition type (supports recursive nesting)
@@ -170,8 +170,8 @@ type NestedCondition = NonNullable<ConditionNode['data']['conditions']>[number];
 /**
  * Transform an array of Home Assistant conditions to internal format
  */
-function transformConditions(conditions: unknown[]): NestedCondition[] {
-  return conditions.map((c) => transformToNestedCondition(c as Record<string, unknown>));
+function transformConditions(conditions: HACondition[]): NestedCondition[] {
+  return conditions.map((c) => transformToNestedCondition(c));
 }
 
 /**
@@ -179,11 +179,11 @@ function transformConditions(conditions: unknown[]): NestedCondition[] {
  * HA uses 'condition' field, internal schema uses 'condition'
  * Recursively handles nested conditions for and/or/not
  */
-function transformToNestedCondition(condition: Record<string, unknown>): NestedCondition {
+function transformToNestedCondition(condition: HACondition): NestedCondition {
   // Use spread pattern to preserve unknown properties from custom integrations
   const { condition: conditionField, conditions, weekday, ...rest } = condition;
-  const conditionType = (conditionField as string) || 'template';
-  const validatedType = VALID_conditionS.includes(conditionType as ValidConditionType)
+  const conditionType = conditionField || 'template';
+  const validatedType = VALID_CONDITIONS.includes(conditionType as ValidConditionType)
     ? (conditionType as ValidConditionType)
     : 'template';
 
@@ -1015,7 +1015,7 @@ export class YamlParser {
    * Parse action sequences (including choose blocks, delays, etc.)
    */
   private parseActions(
-    actions: Record<string, unknown>[],
+    actions: (HAAction | HACondition)[],
     warnings: string[],
     previousNodeIds: string[],
     getNextNodeId: (type: string) => string,
@@ -1070,15 +1070,14 @@ export class YamlParser {
         const nodeId = getNextNodeId('condition');
         const act = action as Record<string, unknown>;
         const conditionType = (act.condition as string) || 'template';
-        const validatedType = VALID_conditionS.includes(conditionType as ValidConditionType)
+        const validatedType = VALID_CONDITIONS.includes(conditionType as ValidConditionType)
           ? (conditionType as ValidConditionType)
           : 'template';
 
         // Use Zod schema for parsing and type safety
         let parsedData: ConditionNode['data'];
         try {
-          const parsed = HAConditionSchema.parse(act);
-          parsedData = normalizeHACondition(parsed);
+          parsedData = HAConditionSchema.parse(act);
         } catch (e) {
           warnings.push(
             `Inline condition at index ${index} failed schema validation: ${e instanceof Error ? e.message : JSON.stringify(e)}`
@@ -1702,9 +1701,9 @@ export class YamlParser {
    */
   private parseIfBlock(
     ifAction: {
-      if: unknown[];
-      then: unknown[];
-      else?: unknown[];
+      if: HACondition[];
+      then: (HACondition | HAAction)[];
+      else?: (HACondition | HAAction)[];
       alias?: string;
     },
     warnings: string[],
@@ -1745,7 +1744,7 @@ export class YamlParser {
     } else if (firstCondition && Array.isArray(firstCondition.conditions)) {
       // Single condition with nested conditions (or/and/not)
       const rawConditionType = (firstCondition.condition as string) || 'and';
-      const conditionType = VALID_conditionS.includes(rawConditionType as ValidConditionType)
+      const conditionType = VALID_CONDITIONS.includes(rawConditionType as ValidConditionType)
         ? (rawConditionType as ValidConditionType)
         : 'template';
 
@@ -1762,7 +1761,7 @@ export class YamlParser {
     } else {
       // Single simple condition - use its properties directly, but normalize with Zod looseObject schema
       const rawConditionType = (firstCondition?.condition as string) || 'numeric_state';
-      const conditionType = VALID_conditionS.includes(rawConditionType as ValidConditionType)
+      const conditionType = VALID_CONDITIONS.includes(rawConditionType as ValidConditionType)
         ? (rawConditionType as ValidConditionType)
         : 'template';
 
@@ -1805,9 +1804,7 @@ export class YamlParser {
     if (ifAction.then) {
       const thenSequence = Array.isArray(ifAction.then) ? ifAction.then : [ifAction.then];
       const thenResult = this.parseActions(
-        thenSequence.filter(
-          (a): a is Record<string, unknown> => typeof a === 'object' && a !== null
-        ),
+        thenSequence,
         warnings,
         [conditionId],
         getNextNodeId,
@@ -1836,9 +1833,7 @@ export class YamlParser {
       const elseSequence = Array.isArray(ifAction.else) ? ifAction.else : [ifAction.else];
       // For else branch, we need to connect from condition with 'false' handle
       const elseResult = this.parseActions(
-        elseSequence.filter(
-          (a): a is Record<string, unknown> => typeof a === 'object' && a !== null
-        ),
+        elseSequence,
         warnings,
         [conditionId],
         getNextNodeId,
