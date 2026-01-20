@@ -8,10 +8,12 @@ import {
   FileUp,
   FolderOpenDotIcon,
   Loader2,
+  Menu,
   Save,
   Settings,
   Wifi,
 } from 'lucide-react';
+
 import { useEffect, useState } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
 import { Toaster } from 'sonner';
@@ -55,6 +57,10 @@ import { useFlowStore } from './store/flow-store';
 type RightPanelTab = 'properties' | 'yaml' | 'simulator';
 
 function App() {
+  // Sidebar toggle button handler
+  const handleSidebarToggle = () => {
+    window.parent.postMessage({ type: 'CAFE_TOGGLE_SIDEBAR' }, '*');
+  };
   const {
     hass,
     isRemote: actualIsRemote,
@@ -82,12 +88,26 @@ function App() {
   const [automationImportOpen, setAutomationImportOpen] = useState(false);
   const [importDropdownOpen, setImportDropdownOpen] = useState(false);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [parentWidth, setParentWidth] = useState(() => {
+    const win = window.parent ?? window;
+    return win.innerWidth;
+  });
   const forceSettingsOpen = actualIsRemote && (config.url === '' || config.token === '');
   const isDark = useDarkMode();
 
   useEffect(() => {
     document.body.classList.toggle('dark', isDark);
   }, [isDark]);
+
+  useEffect(() => {
+    const win = window.parent ?? window;
+    const handleResize = () => {
+      setParentWidth(win.innerWidth);
+    };
+
+    win.addEventListener('resize', handleResize);
+    return () => win.removeEventListener('resize', handleResize);
+  }, []);
 
   const handleImport = () => {
     const input = document.createElement('input');
@@ -187,14 +207,27 @@ function App() {
       <ReactFlowProvider>
         <div className="flex h-screen flex-col bg-background">
           {/* Header */}
-          <header className="flex h-16 items-center justify-between gap-4 border-border border-b bg-card px-4 shadow-sm">
+          <header className="flex h-14 items-center justify-between gap-4 border-border border-b bg-card px-4 shadow-sm">
             <div className="flex flex-1 items-center gap-4">
-              <h1
-                className="font-bold text-foreground text-lg"
-                title="Complex Automation Flow Editor"
-              >
-                ☕ C.A.F.E.
-              </h1>
+              {/* Sidebar toggle button, only visible when parent window width <= 870px */}
+              {parentWidth <= 870 ? (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="inline-flex items-center justify-center rounded-md p-2 text-muted-foreground hover:bg-accent focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  onClick={handleSidebarToggle}
+                  aria-label="Toggle sidebar"
+                >
+                  <Menu className="h-5 w-5" />
+                </Button>
+              ) : (
+                <h1
+                  className="whitespace-nowrap font-bold text-foreground text-lg"
+                  title="Complex Automation Flow Editor"
+                >
+                  ☕ C.A.F.E.
+                </h1>
+              )}
               <Input
                 type="text"
                 value={flowName}
@@ -254,6 +287,10 @@ function App() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={reset}>
+                      <DiamondPlus className="mr-2 size-4" />
+                      New Automation
+                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={handleImport}>
                       <FileUp className="mr-2 h-4 w-4" />
                       Import from JSON
@@ -291,10 +328,6 @@ function App() {
                 title="Export flow as JSON"
               >
                 <FileDown className="h-5 w-5" />
-              </Button>
-
-              <Button onClick={reset} variant="ghost" size="icon" title="New flow">
-                <DiamondPlus className="h-5 w-5" />
               </Button>
             </div>
           </header>

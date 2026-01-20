@@ -8,12 +8,10 @@ import type { HomeAssistant } from './types/hass';
 // Type for window with hass
 declare const window: Window & {
   hass?: HomeAssistant;
-  cafeNarrow?: boolean;
-  cafeRoute?: unknown;
-  cafePanel?: unknown;
 };
 
 class CafePanelWrapper extends HTMLElement {
+  private _messageHandler?: (event: MessageEvent) => void;
   private iframe: HTMLIFrameElement | null = null;
   private _hass: HomeAssistant | undefined = undefined;
 
@@ -26,18 +24,6 @@ class CafePanelWrapper extends HTMLElement {
 
   get hass() {
     return this._hass;
-  }
-
-  set narrow(value: boolean) {
-    window.cafeNarrow = value;
-  }
-
-  set route(value: unknown) {
-    window.cafeRoute = value;
-  }
-
-  set panel(value: unknown) {
-    window.cafePanel = value;
   }
 
   connectedCallback() {
@@ -58,6 +44,16 @@ class CafePanelWrapper extends HTMLElement {
     this.iframe.setAttribute('allow', 'clipboard-read *; clipboard-write *');
 
     this.appendChild(this.iframe);
+
+    // Listen for messages from the iframe to trigger sidebar toggle
+    this._messageHandler = (event: MessageEvent) => {
+      // Only accept messages from our iframe
+      if (event.source !== this.iframe?.contentWindow) return;
+      if (event.data && event.data.type === 'CAFE_TOGGLE_SIDEBAR') {
+        this.dispatchEvent(new Event('hass-toggle-menu', { bubbles: true, composed: true }));
+      }
+    };
+    window.addEventListener('message', this._messageHandler);
   }
 
   disconnectedCallback() {
@@ -67,9 +63,10 @@ class CafePanelWrapper extends HTMLElement {
     }
     // Clean up window properties
     window.hass = undefined;
-    window.cafeNarrow = undefined;
-    window.cafeRoute = undefined;
-    window.cafePanel = undefined;
+    if (this._messageHandler) {
+      window.removeEventListener('message', this._messageHandler);
+      this._messageHandler = undefined;
+    }
   }
 }
 
