@@ -1,4 +1,4 @@
-import { AlertTriangle, Check, Loader2, Save } from 'lucide-react';
+import { AlertTriangle, Check, Copy, Loader2, Save } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -30,6 +30,7 @@ export function AutomationSaveDialog({ isOpen, onClose, onSaved }: AutomationSav
     isSaving,
     setFlowName,
     setFlowDescription,
+    setAutomationId,
     saveAutomation,
     updateAutomation,
   } = useFlowStore();
@@ -123,6 +124,34 @@ export function AutomationSaveDialog({ isOpen, onClose, onSaved }: AutomationSav
     }
   };
 
+  const handleSaveAsCopy = async () => {
+    if (!hass) {
+      setError('Home Assistant is not connected');
+      return;
+    }
+
+    setError(null);
+
+    try {
+      // Get a unique name for the copy
+      const copyName = await getHomeAssistantAPI(hass).getUniqueAutomationAlias(flowName);
+      setFlowName(copyName);
+      setFlowDescription(localDescription.trim());
+
+      // Clear the automation ID to force creating a new one
+      setAutomationId(null);
+
+      // Save as new automation
+      const resultId = await saveAutomation(hass);
+
+      onSaved?.(resultId);
+      onClose();
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+      setError(errorMessage);
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-md">
@@ -185,6 +214,20 @@ export function AutomationSaveDialog({ isOpen, onClose, onSaved }: AutomationSav
             <Button variant="outline" onClick={handleClose} disabled={isSaving}>
               Cancel
             </Button>
+            {isUpdate && (
+              <Button
+                variant="outline"
+                onClick={handleSaveAsCopy}
+                disabled={isSaving || !flowName.trim()}
+              >
+                {isSaving ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Copy className="mr-2 h-4 w-4" />
+                )}
+                Save as Copy
+              </Button>
+            )}
             <Button onClick={handleSave} disabled={isSaving || !flowName.trim()}>
               {isSaving ? (
                 <>
