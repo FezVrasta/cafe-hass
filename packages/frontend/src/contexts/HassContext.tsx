@@ -342,7 +342,8 @@ export const HassProvider: FC<
           });
 
           if (!response.ok) {
-            throw new Error(`API error: ${response.status} ${response.statusText}`);
+            const error = await response.json();
+            throw new Error(`API error: ${error.message}`);
           }
 
           return await response.json();
