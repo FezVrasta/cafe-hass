@@ -132,6 +132,16 @@ function isRepeatAction(action: unknown): action is Record<string, unknown> {
     (action as Record<string, unknown>).repeat !== null
   );
 }
+
+/** Returns true if the action is an event firing action */
+function isEventAction(action: unknown): action is Record<string, unknown> {
+  return (
+    typeof action === 'object' &&
+    action !== null &&
+    'event' in action &&
+    typeof (action as Record<string, unknown>).event === 'string'
+  );
+}
 /**
  * Result of parsing YAML
  */
@@ -161,6 +171,28 @@ const VALID_CONDITIONS = [
 ] as const;
 
 type ValidConditionType = (typeof VALID_CONDITIONS)[number];
+
+/**
+ * Options for parsing actions and nested blocks
+ */
+interface ParseOptions {
+  /** Warnings array to append to */
+  warnings: string[];
+  /** Node IDs to connect from */
+  previousNodeIds: string[];
+  /** Function to generate unique node IDs */
+  getNextNodeId: (type: string) => string;
+  /** Set of condition node IDs for proper edge handle assignment */
+  conditionNodeIds?: Set<string>;
+  /** Set of condition node IDs whose FALSE path should connect to next action */
+  falsePathConditionIds?: Set<string>;
+  /**
+   * Inherited enabled state from parent block.
+   * When false, all child nodes will be created with enabled: false.
+   * When undefined, nodes inherit their own enabled property.
+   */
+  inheritedEnabled?: boolean;
+}
 
 /**
  * Nested condition type (supports recursive nesting)
@@ -905,13 +937,12 @@ export class YamlParser {
       return { nodes, edges };
     }
     const actions = Array.isArray(actionData) ? actionData : [actionData];
-    const actionResults = this.parseActions(
-      actions,
+    const actionResults = this.parseActions(actions, {
       warnings,
-      firstActionNodeIds,
+      previousNodeIds: firstActionNodeIds,
       getNextNodeId,
-      conditionNodeIds
-    );
+      conditionNodeIds,
+    });
     nodes.push(...actionResults.nodes);
     edges.push(...actionResults.edges);
 
@@ -1016,11 +1047,16 @@ export class YamlParser {
    */
   private parseActions(
     actions: (HAAction | HACondition)[],
-    warnings: string[],
-    previousNodeIds: string[],
-    getNextNodeId: (type: string) => string,
-    conditionNodeIds: Set<string> = new Set()
+    options: ParseOptions
   ): { nodes: FlowNode[]; edges: FlowEdge[] } {
+    const {
+      warnings,
+      previousNodeIds,
+      getNextNodeId,
+      conditionNodeIds = new Set(),
+      inheritedEnabled,
+    } = options;
+
     const nodes: FlowNode[] = [];
     const edges: FlowEdge[] = [];
     let currentNodeIds = previousNodeIds;
@@ -1028,6 +1064,14 @@ export class YamlParser {
     const localConditionNodeIds = new Set(conditionNodeIds);
     // Track condition nodes whose FALSE path should connect to next action
     const falsePathConditionIds = new Set<string>();
+
+    // Helper to compute the enabled state for a node
+    const getNodeEnabled = (nodeEnabled: boolean | undefined): boolean | undefined => {
+      // If parent is disabled, child is always disabled
+      if (inheritedEnabled === false) return false;
+      // Otherwise use the node's own enabled state
+      return nodeEnabled;
+    };
 
     // Helper to create edges from current nodes to a target
     const createEdgesFromCurrent = (targetId: string): void => {
@@ -1088,6 +1132,8 @@ export class YamlParser {
             value_template: JSON.stringify(act),
           };
         }
+        // Apply inherited enabled state
+        parsedData.enabled = getNodeEnabled(parsedData.enabled);
         const conditionNode: ConditionNode = {
           id: nodeId,
           type: 'condition',
@@ -1111,6 +1157,7 @@ export class YamlParser {
           data: {
             alias: typeof act.alias === 'string' ? act.alias : undefined,
             variables: (act.variables as Record<string, unknown>) || {},
+            enabled: getNodeEnabled(typeof act.enabled === 'boolean' ? act.enabled : undefined),
           },
         };
         nodes.push(setVariablesNode);
@@ -1120,7 +1167,7 @@ export class YamlParser {
         const nodeId = getNextNodeId('delay');
         const act = action as Record<string, unknown>;
         // Use spread pattern to preserve unknown properties from custom integrations
-        const { alias, delay: delayValue, ...extraProps } = act;
+        const { alias, delay: delayValue, enabled, ...extraProps } = act;
         const delayNode: DelayNode = {
           id: nodeId,
           type: 'delay',
@@ -1139,6 +1186,7 @@ export class YamlParser {
                       milliseconds?: number;
                     })
                   : '',
+            enabled: getNodeEnabled(typeof enabled === 'boolean' ? enabled : undefined),
           },
         };
         nodes.push(delayNode);
@@ -1154,6 +1202,7 @@ export class YamlParser {
           wait_for_trigger: waitForTrigger,
           timeout: timeoutValue,
           continue_on_timeout: continueOnTimeoutValue,
+          enabled,
           ...extraProps
         } = act;
 
@@ -1176,6 +1225,7 @@ export class YamlParser {
           timeout,
           continue_on_timeout:
             typeof continueOnTimeoutValue === 'boolean' ? continueOnTimeoutValue : undefined,
+          enabled: getNodeEnabled(typeof enabled === 'boolean' ? enabled : undefined),
         };
 
         if (typeof waitTemplate === 'string') {
@@ -1207,14 +1257,14 @@ export class YamlParser {
         currentNodeIds = [nodeId];
       } else if (isChooseAction(action)) {
         // Handle condition branching (choose blocks)
-        const chooseResult = this.parseChooseBlock(
-          action as Record<string, unknown>,
+        const chooseResult = this.parseChooseBlock(action as Record<string, unknown>, {
           warnings,
-          currentNodeIds,
+          previousNodeIds: currentNodeIds,
           getNextNodeId,
-          localConditionNodeIds,
-          falsePathConditionIds
-        );
+          conditionNodeIds: localConditionNodeIds,
+          falsePathConditionIds,
+          inheritedEnabled,
+        });
         nodes.push(...chooseResult.nodes);
         edges.push(...chooseResult.edges);
         // Add any new condition nodes to our tracking set
@@ -1243,14 +1293,15 @@ export class YamlParser {
           then: thenArr,
           else: elseArr,
           alias: typeof act.alias === 'string' ? act.alias : undefined,
+          enabled: act.enabled,
         };
-        const ifResult = this.parseIfBlock(
-          ifAction,
+        const ifResult = this.parseIfBlock(ifAction, {
           warnings,
-          currentNodeIds,
+          previousNodeIds: currentNodeIds,
           getNextNodeId,
-          localConditionNodeIds
-        );
+          conditionNodeIds: localConditionNodeIds,
+          inheritedEnabled,
+        });
         nodes.push(...ifResult.nodes);
         edges.push(...ifResult.edges);
         // Add any new condition nodes to our tracking set
@@ -1304,7 +1355,7 @@ export class YamlParser {
               subtype: act.subtype,
               ...additionalParams,
             } as Record<string, unknown>,
-            enabled: typeof act.enabled === 'boolean' ? act.enabled : undefined,
+            enabled: getNodeEnabled(typeof act.enabled === 'boolean' ? act.enabled : undefined),
           },
         };
         nodes.push(actionNode);
@@ -1324,13 +1375,13 @@ export class YamlParser {
         for (const parallelItem of parallelActions) {
           if (Array.isArray(parallelItem)) {
             // It's a sequence array
-            const seqResult = this.parseActions(
-              parallelItem as Record<string, unknown>[],
+            const seqResult = this.parseActions(parallelItem as Record<string, unknown>[], {
               warnings,
-              parallelStartNodes,
+              previousNodeIds: parallelStartNodes,
               getNextNodeId,
-              localConditionNodeIds
-            );
+              conditionNodeIds: localConditionNodeIds,
+              inheritedEnabled,
+            });
             if (seqResult.nodes.length > 0) {
               nodes.push(...seqResult.nodes);
               edges.push(...seqResult.edges);
@@ -1343,13 +1394,13 @@ export class YamlParser {
             const item = parallelItem as Record<string, unknown>;
             if ('sequence' in item && Array.isArray(item.sequence)) {
               // Nested sequence in parallel
-              const seqResult = this.parseActions(
-                item.sequence as Record<string, unknown>[],
+              const seqResult = this.parseActions(item.sequence as Record<string, unknown>[], {
                 warnings,
-                parallelStartNodes,
+                previousNodeIds: parallelStartNodes,
                 getNextNodeId,
-                localConditionNodeIds
-              );
+                conditionNodeIds: localConditionNodeIds,
+                inheritedEnabled,
+              });
               if (seqResult.nodes.length > 0) {
                 nodes.push(...seqResult.nodes);
                 edges.push(...seqResult.edges);
@@ -1359,13 +1410,13 @@ export class YamlParser {
               }
             } else {
               // Single action in parallel - parse it as a single-item array
-              const singleResult = this.parseActions(
-                [parallelItem] as Record<string, unknown>[],
+              const singleResult = this.parseActions([parallelItem] as Record<string, unknown>[], {
                 warnings,
-                parallelStartNodes,
+                previousNodeIds: parallelStartNodes,
                 getNextNodeId,
-                localConditionNodeIds
-              );
+                conditionNodeIds: localConditionNodeIds,
+                inheritedEnabled,
+              });
               if (singleResult.nodes.length > 0) {
                 nodes.push(...singleResult.nodes);
                 edges.push(...singleResult.edges);
@@ -1380,6 +1431,27 @@ export class YamlParser {
         // After parallel block, all branch end nodes become the current nodes
         // (subsequent actions will connect from all of them)
         currentNodeIds = allBranchEndNodes.length > 0 ? allBranchEndNodes : parallelStartNodes;
+      } else if (isEventAction(action)) {
+        // Event action - fires a Home Assistant event
+        const nodeId = getNextNodeId('action');
+        const act = action as Record<string, unknown>;
+        const actionNode: ActionNode = {
+          id: nodeId,
+          type: 'action',
+          position: { x: 0, y: 0 },
+          data: {
+            alias: typeof act.alias === 'string' ? act.alias : undefined,
+            event: typeof act.event === 'string' ? act.event : undefined,
+            event_data:
+              typeof act.event_data === 'object' && act.event_data !== null
+                ? (act.event_data as Record<string, unknown>)
+                : undefined,
+            enabled: getNodeEnabled(typeof act.enabled === 'boolean' ? act.enabled : undefined),
+          },
+        };
+        nodes.push(actionNode);
+        createEdgesFromCurrent(nodeId);
+        currentNodeIds = [nodeId];
       } else if (isRepeatAction(action)) {
         // Repeat block - create an action node that represents the entire repeat
         const act = action as Record<string, unknown>;
@@ -1409,6 +1481,7 @@ export class YamlParser {
               // Include the original sequence for round-trip
               sequence: repeatSequence as Record<string, unknown>[],
             },
+            enabled: getNodeEnabled(typeof act.enabled === 'boolean' ? act.enabled : undefined),
           },
         };
 
@@ -1466,7 +1539,7 @@ export class YamlParser {
                 typeof response_variable === 'string' ? response_variable : undefined,
               continue_on_error:
                 typeof continue_on_error === 'boolean' ? continue_on_error : undefined,
-              enabled: typeof enabled === 'boolean' ? enabled : undefined,
+              enabled: getNodeEnabled(typeof enabled === 'boolean' ? enabled : undefined),
             },
           };
           nodes.push(actionNode);
@@ -1491,6 +1564,7 @@ export class YamlParser {
               typeof act.set_conversation_response === 'string'
                 ? act.set_conversation_response
                 : undefined,
+            enabled: getNodeEnabled(typeof act.enabled === 'boolean' ? act.enabled : undefined),
           },
         };
         nodes.push(actionNode);
@@ -1530,22 +1604,35 @@ export class YamlParser {
    */
   private parseChooseBlock(
     chooseAction: Record<string, unknown>,
-    warnings: string[],
-    previousNodeIds: string[],
-    getNextNodeId: (type: string) => string,
-    conditionNodeIds: Set<string> = new Set(),
-    falsePathConditionIds: Set<string> = new Set()
+    options: ParseOptions
   ): {
     nodes: FlowNode[];
     edges: FlowEdge[];
     outputNodeIds: string[];
     falsePathOutputIds: string[];
   } {
+    const {
+      warnings,
+      previousNodeIds,
+      getNextNodeId,
+      conditionNodeIds = new Set(),
+      falsePathConditionIds = new Set(),
+      inheritedEnabled,
+    } = options;
+
     const nodes: FlowNode[] = [];
     const edges: FlowEdge[] = [];
     const outputNodeIds: string[] = [];
     const falsePathOutputIds: string[] = [];
     const localConditionIds = new Set(conditionNodeIds);
+
+    // Compute effective enabled state: if parent is disabled or this block is disabled
+    const blockEnabled = chooseAction.enabled;
+    const effectiveEnabled =
+      inheritedEnabled === false ? false : blockEnabled === false ? false : undefined;
+
+    // Helper to get enabled state for nodes in this block
+    const getNodeEnabled = (): boolean | undefined => effectiveEnabled;
 
     const choices = Array.isArray(chooseAction.choose)
       ? chooseAction.choose
@@ -1592,6 +1679,7 @@ export class YamlParser {
               conditions: transformConditions(condition.conditions),
               // Preserve id for trigger conditions
               id: condition.id as string | undefined,
+              enabled: getNodeEnabled(),
             },
           };
         } else {
@@ -1606,6 +1694,7 @@ export class YamlParser {
             ...condition,
             alias: i === 0 ? (choice.alias ?? condition?.alias) : condition?.alias,
             condition: conditionType,
+            enabled: getNodeEnabled(),
           };
 
           // Validate and normalize with HAConditionSchema
@@ -1618,6 +1707,7 @@ export class YamlParser {
               alias: i === 0 ? choice.alias : undefined,
               condition: 'template',
               value_template: JSON.stringify(condition),
+              enabled: getNodeEnabled(),
             };
           }
 
@@ -1664,13 +1754,13 @@ export class YamlParser {
       // Parse sequence for this choice (TRUE path from last condition)
       if (choice.sequence) {
         const sequence = Array.isArray(choice.sequence) ? choice.sequence : [choice.sequence];
-        const sequenceResult = this.parseActions(
-          sequence,
+        const sequenceResult = this.parseActions(sequence, {
           warnings,
-          [lastConditionId],
+          previousNodeIds: [lastConditionId],
           getNextNodeId,
-          localConditionIds
-        );
+          conditionNodeIds: localConditionIds,
+          inheritedEnabled: effectiveEnabled,
+        });
         nodes.push(...sequenceResult.nodes);
         edges.push(...sequenceResult.edges);
 
@@ -1705,13 +1795,13 @@ export class YamlParser {
       const defaultSequence = Array.isArray(chooseAction.default)
         ? chooseAction.default
         : [chooseAction.default];
-      const defaultResult = this.parseActions(
-        defaultSequence,
+      const defaultResult = this.parseActions(defaultSequence, {
         warnings,
-        currentPreviousIds,
+        previousNodeIds: currentPreviousIds,
         getNextNodeId,
-        localConditionIds
-      );
+        conditionNodeIds: localConditionIds,
+        inheritedEnabled: effectiveEnabled,
+      });
       nodes.push(...defaultResult.nodes);
       edges.push(...defaultResult.edges);
 
@@ -1750,16 +1840,29 @@ export class YamlParser {
       then: (HACondition | HAAction)[];
       else?: (HACondition | HAAction)[];
       alias?: string;
+      enabled?: unknown;
     },
-    warnings: string[],
-    previousNodeIds: string[],
-    getNextNodeId: (type: string) => string,
-    conditionNodeIds: Set<string> = new Set()
+    options: ParseOptions
   ): { nodes: FlowNode[]; edges: FlowEdge[]; outputNodeIds: string[] } {
+    const {
+      warnings,
+      previousNodeIds,
+      getNextNodeId,
+      conditionNodeIds = new Set(),
+      inheritedEnabled,
+    } = options;
+
     const nodes: FlowNode[] = [];
     const edges: FlowEdge[] = [];
     const outputNodeIds: string[] = [];
     const localConditionIds = new Set(conditionNodeIds);
+
+    // Compute effective enabled state: if parent is disabled or this block is disabled
+    const effectiveEnabled =
+      inheritedEnabled === false ? false : ifAction.enabled === false ? false : undefined;
+
+    // Helper to get enabled state for nodes in this block
+    const getNodeEnabled = (): boolean | undefined => effectiveEnabled;
 
     const ifConditions = Array.isArray(ifAction.if) ? ifAction.if : [ifAction.if];
 
@@ -1789,6 +1892,7 @@ export class YamlParser {
             alias: i === 0 ? ifAction.alias : undefined,
             condition: conditionType,
             conditions: transformConditions(condition.conditions),
+            enabled: getNodeEnabled(),
           },
         };
       } else {
@@ -1804,6 +1908,7 @@ export class YamlParser {
           // Only first condition gets the alias from ifAction
           alias: i === 0 ? (ifAction.alias ?? condition?.alias) : condition?.alias,
           condition: conditionType,
+          enabled: getNodeEnabled(),
         };
 
         // Validate and normalize with HAConditionSchema
@@ -1816,6 +1921,7 @@ export class YamlParser {
             alias: i === 0 ? ifAction.alias : undefined,
             condition: 'template',
             value_template: JSON.stringify(condition),
+            enabled: getNodeEnabled(),
           };
         }
 
@@ -1850,13 +1956,13 @@ export class YamlParser {
     // Parse 'then' sequence (true branch) - connects from last condition
     if (ifAction.then) {
       const thenSequence = Array.isArray(ifAction.then) ? ifAction.then : [ifAction.then];
-      const thenResult = this.parseActions(
-        thenSequence,
+      const thenResult = this.parseActions(thenSequence, {
         warnings,
-        [lastConditionId],
+        previousNodeIds: [lastConditionId],
         getNextNodeId,
-        localConditionIds
-      );
+        conditionNodeIds: localConditionIds,
+        inheritedEnabled: effectiveEnabled,
+      });
       nodes.push(...thenResult.nodes);
       edges.push(...thenResult.edges);
 
@@ -1880,13 +1986,13 @@ export class YamlParser {
     if (ifAction.else) {
       const elseSequence = Array.isArray(ifAction.else) ? ifAction.else : [ifAction.else];
       // For else branch, we need to connect from first condition with 'false' handle
-      const elseResult = this.parseActions(
-        elseSequence,
+      const elseResult = this.parseActions(elseSequence, {
         warnings,
-        [firstConditionId],
+        previousNodeIds: [firstConditionId],
         getNextNodeId,
-        new Set() // Don't use localConditionIds for else - we handle the edge manually
-      );
+        conditionNodeIds: new Set(), // Don't use localConditionIds for else - we handle the edge manually
+        inheritedEnabled: effectiveEnabled,
+      });
       nodes.push(...elseResult.nodes);
 
       // Add edges manually with 'false' handle for first connection

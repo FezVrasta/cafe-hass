@@ -1,0 +1,65 @@
+# Paste the original Home Assistant YAML here
+alias: Command - Sofabaton Dispatcher
+description: >-
+  Triggers actions based on URL query parameters and passes control to the
+  Command Router.
+triggers:
+  - webhook_id: sofabaton_webkook
+    allowed_methods:
+      - GET
+      - POST
+    local_only: true
+    trigger: webhook
+conditions: []
+actions:
+  - variables:
+      action_type: "{{ trigger.query.action | lower | default(none) }}"
+      action_value: "{{ trigger.query.value | default(none) }}"
+      sofabaton_area: "{{ trigger.query.area_key | default('living_room') }}"
+      trigger_receiver: "{{ trigger.query.receiver | default(none, true) }}"
+      target_home_music_player: |
+        {{ 
+          states.sensor.home_music_player.state
+        }}
+      target_receiver: |
+        {{ label_entities('receiver') 
+          | select('match', 'media_player.')
+          | list
+        }}
+      default_receiver: |
+        {{
+          area_entities(sofabaton_area) 
+          | select('match','media_player.')
+          | select('in', target_receiver )
+          | first
+        }}
+      target_media_player: |
+        {{ default_receiver if trigger_receiver == 1 else 0 }}
+      target_remote: |
+        {% set remotes = target_list | select('match', 'remote.') | list %} 
+        {{ remotes[0] if remotes | length > 0 else none }}
+      incoming_payload: |
+        {{ trigger.json | default({"hold_secs":0}) }}
+      current_source: |
+        {{ state_attr(default_receiver, 'source') }}
+  - alias: Emit Generic Universal Controller Command Event
+    event: universal_controller_command
+    event_data:
+      source_device: sofabaton
+      action_type: "{{ action_type }}"
+      action_value: "{{ action_value }}"
+      command_input: "{{ router_command }}"
+      area_key: "{{ sofabaton_area }}"
+      data_payload: "{{ incoming_payload }}"
+      overrides: {}
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ action_type == 'activity_call' }}"
+        sequence:
+          - alias: Execute Universal Activity Orchestrator
+            data:
+              activity_key: "{{ action_value }}"
+            action: script.universal_media_activity_orchestrator
+    enabled: false
+mode: single
