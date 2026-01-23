@@ -1087,6 +1087,8 @@ action:
                   - light-toggled-off
                   - fan-switch-toggled-off
               - condition: time
+                after: "05:45:00"
+                before: "21:00:00"
             then:
               - if:
                   - condition: trigger
