@@ -181,7 +181,7 @@ function transformConditions(conditions: HACondition[]): NestedCondition[] {
  */
 function transformToNestedCondition(condition: HACondition): NestedCondition {
   // Use spread pattern to preserve unknown properties from custom integrations
-  const { condition: conditionField, conditions, weekday, ...rest } = condition;
+  const { condition: conditionField, conditions, ...rest } = condition;
   const conditionType = conditionField || 'template';
   const validatedType = VALID_CONDITIONS.includes(conditionType as ValidConditionType)
     ? (conditionType as ValidConditionType)
@@ -191,7 +191,7 @@ function transformToNestedCondition(condition: HACondition): NestedCondition {
   const nestedConditions = Array.isArray(conditions) ? transformConditions(conditions) : undefined;
 
   return {
-    ...rest, // Preserve extra properties
+    ...rest, // Preserve extra properties (including weekday, after, before, etc.)
     condition: validatedType,
     conditions: nestedConditions,
   };
@@ -1595,30 +1595,37 @@ export class YamlParser {
             },
           };
         } else {
-          // Simple condition - use its properties directly
+          // Simple condition - use Zod schema for parsing and type safety
           const rawConditionType = (condition?.condition as string) || 'template';
           const conditionType = VALID_CONDITIONS.includes(rawConditionType as ValidConditionType)
             ? (rawConditionType as ValidConditionType)
             : 'template';
 
+          // Build object with alias override for first condition
+          const looseObj = {
+            ...condition,
+            alias: i === 0 ? (choice.alias ?? condition?.alias) : condition?.alias,
+            condition: conditionType,
+          };
+
+          // Validate and normalize with HAConditionSchema
+          let data: HACondition;
+          try {
+            data = HAConditionSchema.parse(looseObj);
+          } catch {
+            // Fallback: minimal valid template
+            data = {
+              alias: i === 0 ? choice.alias : undefined,
+              condition: 'template',
+              value_template: JSON.stringify(condition),
+            };
+          }
+
           conditionNode = {
             id: conditionId,
             type: 'condition',
             position: { x: 0, y: 0 },
-            data: {
-              // Only first condition gets the alias
-              alias: i === 0 ? choice.alias : undefined,
-              condition: conditionType,
-              entity_id: condition.entity_id as string | string[] | undefined,
-              state: condition.state as string | string[] | undefined,
-              value_template: condition.value_template as string | undefined,
-              above: condition.above as string | number | undefined,
-              below: condition.below as string | number | undefined,
-              attribute: condition.attribute as string | undefined,
-              zone: condition.zone as string | undefined,
-              // Preserve id for trigger conditions
-              id: condition.id as string | undefined,
-            },
+            data,
           };
         }
 
