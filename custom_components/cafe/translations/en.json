@@ -1,0 +1,14 @@
+{
+  "config": {
+    "title": "C.A.F.E.",
+    "step": {
+      "user": {
+        "title": "Set up C.A.F.E.",
+        "description": "C.A.F.E. is a visual automation editor for Home Assistant. It allows you to create and manage your automations using a visual flow editor.\n\nClick Submit to add C.A.F.E. to your Home Assistant."
+      }
+    },
+    "abort": {
+      "already_configured": "C.A.F.E. is already configured"
+    }
+  }
+}
