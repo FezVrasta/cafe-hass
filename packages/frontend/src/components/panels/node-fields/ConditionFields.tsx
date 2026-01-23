@@ -59,15 +59,40 @@ export function ConditionFields({ node, onChange, entities }: ConditionFieldsPro
 
     // All other condition types use static field configuration
     const fields = getConditionFields(conditionType);
-    return fields.map((field) => (
-      <DynamicFieldRenderer
-        key={field.name}
-        field={field}
-        value={nodeData[field.name]}
-        onChange={(value) => onChange(field.name, value)}
-        entities={entities}
-      />
-    ));
+    return fields.map((field) => {
+      // Special handling for weekday: convert array to comma-separated string for display,
+      // and convert back to array when saving
+      if (field.name === 'weekday') {
+        const rawValue = nodeData[field.name];
+        const displayValue = Array.isArray(rawValue) ? rawValue.join(',') : rawValue;
+        return (
+          <DynamicFieldRenderer
+            key={field.name}
+            field={field}
+            value={displayValue}
+            onChange={(value) => {
+              // Convert comma-separated string to array
+              const arrayValue =
+                typeof value === 'string' && value.trim()
+                  ? value.split(',').map((d) => d.trim())
+                  : [];
+              onChange(field.name, arrayValue);
+            }}
+            entities={entities}
+          />
+        );
+      }
+
+      return (
+        <DynamicFieldRenderer
+          key={field.name}
+          field={field}
+          value={nodeData[field.name]}
+          onChange={(value) => onChange(field.name, value)}
+          entities={entities}
+        />
+      );
+    });
   };
 
   return (
