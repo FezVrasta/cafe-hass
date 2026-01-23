@@ -16,10 +16,10 @@ variables:
   _cafe_metadata:
     version: 1
     nodes:
-      trigger_test_0_141:
+      trigger_test_0_149:
         x: 12
         "y": 12
-      action_test_1_142:
+      action_test_1_150:
         x: 312
         "y": 12
     graph_id: a18b0fbb-d966-432c-aba7-4f7361da8d29
@@ -71,16 +71,16 @@ variables:
   _cafe_metadata:
     version: 1
     nodes:
-      trigger_test_0_137:
+      trigger_test_0_145:
         x: 12
         "y": 92
-      condition_test_1_138:
+      condition_test_1_146:
         x: 312
         "y": 82
-      action_test_2_139:
+      action_test_2_147:
         x: 632
         "y": 12
-      action_test_3_140:
+      action_test_3_148:
         x: 632
         "y": 172
     graph_id: a18b0fbb-d966-432c-aba7-4f7361da8d29
@@ -99,7 +99,7 @@ trigger:
     for: "00:00:05"
 action:
   - variables:
-      current_node: condition_test_1_130
+      current_node: condition_test_1_138
       flow_context: {}
   - alias: State Machine Loop
     repeat:
@@ -108,53 +108,53 @@ action:
         - choose:
             - conditions:
                 - condition: template
-                  value_template: "{{ current_node == \\"condition_test_1_130\\" }}"
+                  value_template: "{{ current_node == \\"condition_test_1_138\\" }}"
               sequence:
                 - variables:
-                    current_node: "{% if states('sensor.brightness_sensor') | float > 120 %}\\"condition_test_2_131\\"{% else %}\\"END\\"{% endif %}"
+                    current_node: "{% if states('sensor.brightness_sensor') | float > 120 %}\\"condition_test_2_139\\"{% else %}\\"END\\"{% endif %}"
             - conditions:
                 - condition: template
-                  value_template: "{{ current_node == \\"condition_test_2_131\\" }}"
+                  value_template: "{{ current_node == \\"condition_test_2_139\\" }}"
               sequence:
                 - if:
                     - condition: template
                       value_template: "{% set app = (state_attr('media_player.tv', 'app_name') or '') | string %} {% set ok_apps = ['TV','Apple TV','Prime Video','Netflix'] %} {{ app in ok_apps }}"
                   then:
                     - variables:
-                        current_node: condition_test_3_132
+                        current_node: condition_test_3_140
                   else:
                     - variables:
                         current_node: END
             - conditions:
                 - condition: template
-                  value_template: "{{ current_node == \\"condition_test_3_132\\" }}"
+                  value_template: "{{ current_node == \\"condition_test_3_140\\" }}"
               sequence:
                 - variables:
-                    current_node: "{% if (state_attr('media_player.tv','media_content_type') or '') | lower == 'movie' %}\\"condition_test_4_133\\"{% else %}\\"END\\"{% endif %}"
+                    current_node: "{% if (state_attr('media_player.tv','media_content_type') or '') | lower == 'movie' %}\\"condition_test_4_141\\"{% else %}\\"END\\"{% endif %}"
             - conditions:
                 - condition: template
-                  value_template: "{{ current_node == \\"condition_test_4_133\\" }}"
+                  value_template: "{{ current_node == \\"condition_test_4_141\\" }}"
               sequence:
                 - variables:
-                    current_node: "{% if states('cover.velux_blind') != 'closed' %}\\"action_test_5_134\\"{% else %}\\"condition_test_6_135\\"{% endif %}"
+                    current_node: "{% if states('cover.velux_blind') != 'closed' %}\\"action_test_5_142\\"{% else %}\\"condition_test_6_143\\"{% endif %}"
             - conditions:
                 - condition: template
-                  value_template: "{{ current_node == \\"action_test_5_134\\" }}"
+                  value_template: "{{ current_node == \\"action_test_5_142\\" }}"
               sequence:
                 - service: cover.close_cover
                   target:
                     entity_id: cover.velux_blind
                 - variables:
-                    current_node: condition_test_6_135
+                    current_node: condition_test_6_143
             - conditions:
                 - condition: template
-                  value_template: "{{ current_node == \\"condition_test_6_135\\" }}"
+                  value_template: "{{ current_node == \\"condition_test_6_143\\" }}"
               sequence:
                 - variables:
-                    current_node: "{% if states('cover.main_blind') != 'closed' %}\\"action_test_7_136\\"{% else %}\\"END\\"{% endif %}"
+                    current_node: "{% if states('cover.main_blind') != 'closed' %}\\"action_test_7_144\\"{% else %}\\"END\\"{% endif %}"
             - conditions:
                 - condition: template
-                  value_template: "{{ current_node == \\"action_test_7_136\\" }}"
+                  value_template: "{{ current_node == \\"action_test_7_144\\" }}"
               sequence:
                 - service: cover.close_cover
                   target:
@@ -173,28 +173,28 @@ variables:
   _cafe_metadata:
     version: 1
     nodes:
-      trigger_test_0_129:
+      trigger_test_0_137:
         x: 12
         "y": 32.5
-      condition_test_1_130:
+      condition_test_1_138:
         x: 312
         "y": 22.5
-      condition_test_2_131:
+      condition_test_2_139:
         x: 632
         "y": 22.5
-      condition_test_3_132:
+      condition_test_3_140:
         x: 952
         "y": 22.5
-      condition_test_4_133:
+      condition_test_4_141:
         x: 1272
         "y": 22.5
-      action_test_5_134:
+      action_test_5_142:
         x: 1592
         "y": 53
-      condition_test_6_135:
+      condition_test_6_143:
         x: 1892
         "y": 22.5
-      action_test_7_136:
+      action_test_7_144:
         x: 2212
         "y": 32.5
     graph_id: a18b0fbb-d966-432c-aba7-4f7361da8d29
@@ -252,22 +252,22 @@ variables:
   _cafe_metadata:
     version: 1
     nodes:
-      trigger_test_0_123:
+      trigger_test_0_131:
         x: 12
         "y": 102
-      condition_test_1_124:
+      condition_test_1_132:
         x: 312
         "y": 92
-      action_test_2_125:
+      action_test_2_133:
         x: 632
         "y": 192
-      condition_test_3_126:
+      condition_test_3_134:
         x: 632
         "y": 12
-      action_test_4_127:
+      action_test_4_135:
         x: 952
         "y": 22
-      action_test_5_128:
+      action_test_5_136:
         x: 952
         "y": 182
     graph_id: a18b0fbb-d966-432c-aba7-4f7361da8d29
@@ -306,25 +306,25 @@ variables:
   _cafe_metadata:
     version: 1
     nodes:
-      trigger_test_0_116:
+      trigger_test_0_124:
         x: 12
         "y": 12
-      action_test_1_117:
+      action_test_1_125:
         x: 312
         "y": 12
-      delay_test_2_118:
+      delay_test_2_126:
         x: 612
         "y": 17
-      action_test_3_119:
+      action_test_3_127:
         x: 892
         "y": 12
-      wait_test_4_120:
+      wait_test_4_128:
         x: 1192
         "y": 17
-      delay_test_5_121:
+      delay_test_5_129:
         x: 1472
         "y": 17
-      action_test_6_122:
+      action_test_6_130:
         x: 1752
         "y": 12
     graph_id: a18b0fbb-d966-432c-aba7-4f7361da8d29
@@ -363,22 +363,22 @@ variables:
   _cafe_metadata:
     version: 1
     nodes:
-      trigger_test_0_110:
+      trigger_test_0_118:
         x: 12
         "y": 172
-      trigger_test_1_111:
+      trigger_test_1_119:
         x: 12
         "y": 332
-      trigger_test_2_112:
+      trigger_test_2_120:
         x: 12
         "y": 492
-      trigger_test_3_113:
+      trigger_test_3_121:
         x: 12
         "y": 12
-      action_test_4_114:
+      action_test_4_122:
         x: 312
         "y": 252
-      action_test_5_115:
+      action_test_5_123:
         x: 612
         "y": 252
     graph_id: a18b0fbb-d966-432c-aba7-4f7361da8d29
@@ -409,7 +409,7 @@ trigger:
       - 0/0/1
 action:
   - variables:
-      current_node: condition_test_1_94
+      current_node: condition_test_1_102
       flow_context: {}
   - alias: State Machine Loop
     repeat:
@@ -418,33 +418,33 @@ action:
         - choose:
             - conditions:
                 - condition: template
-                  value_template: "{{ current_node == \\"condition_test_1_94\\" }}"
+                  value_template: "{{ current_node == \\"condition_test_1_102\\" }}"
               sequence:
                 - variables:
-                    current_node: "{% if trigger.payload == 1 %}\\"condition_test_2_95\\"{% else %}\\"END\\"{% endif %}"
+                    current_node: "{% if trigger.payload == 1 %}\\"condition_test_2_103\\"{% else %}\\"END\\"{% endif %}"
             - conditions:
                 - condition: template
-                  value_template: "{{ current_node == \\"condition_test_2_95\\" }}"
+                  value_template: "{{ current_node == \\"condition_test_2_103\\" }}"
               sequence:
                 - variables:
-                    current_node: "{% if target_light is not none %}\\"wait_test_3_96\\"{% else %}\\"END\\"{% endif %}"
+                    current_node: "{% if target_light is not none %}\\"wait_test_3_104\\"{% else %}\\"END\\"{% endif %}"
             - conditions:
                 - condition: template
-                  value_template: "{{ current_node == \\"wait_test_3_96\\" }}"
+                  value_template: "{{ current_node == \\"wait_test_3_104\\" }}"
               sequence:
                 - wait_template: "{{ is_state(target_light, 'on') }}"
                   timeout: "00:00:03"
                 - variables:
-                    current_node: condition_test_4_97
+                    current_node: condition_test_4_105
             - conditions:
                 - condition: template
-                  value_template: "{{ current_node == \\"condition_test_4_97\\" }}"
+                  value_template: "{{ current_node == \\"condition_test_4_105\\" }}"
               sequence:
                 - variables:
-                    current_node: "{% if is_state(target_light, 'on') %}\\"action_test_5_98\\"{% else %}\\"END\\"{% endif %}"
+                    current_node: "{% if is_state(target_light, 'on') %}\\"action_test_5_106\\"{% else %}\\"END\\"{% endif %}"
             - conditions:
                 - condition: template
-                  value_template: "{{ current_node == \\"action_test_5_98\\" }}"
+                  value_template: "{{ current_node == \\"action_test_5_106\\" }}"
               sequence:
                 - service: light.turn_on
                   target:
@@ -453,26 +453,26 @@ action:
                     brightness_pct: 100
                     transition: 0
                 - variables:
-                    current_node: delay_test_6_99
+                    current_node: delay_test_6_107
             - conditions:
                 - condition: template
-                  value_template: "{{ current_node == \\"delay_test_6_99\\" }}"
+                  value_template: "{{ current_node == \\"delay_test_6_107\\" }}"
               sequence:
                 - delay:
                     milliseconds: 500
                 - variables:
-                    current_node: set_variables_test_7_100
+                    current_node: set_variables_test_7_108
             - conditions:
                 - condition: template
-                  value_template: "{{ current_node == \\"set_variables_test_7_100\\" }}"
+                  value_template: "{{ current_node == \\"set_variables_test_7_108\\" }}"
               sequence:
                 - variables:
                     color_before: "{% set a = state_attr(target_light, 'hs_color') %} {% set b = state_attr(target_light, 'xy_color') %} {% set c = state_attr(target_light, 'color_temp_kelvin') %} {% set d = state_attr(target_light, 'color_temp') %} {{ [a, b, c, d] }}"
                 - variables:
-                    current_node: action_test_8_101
+                    current_node: action_test_8_109
             - conditions:
                 - condition: template
-                  value_template: "{{ current_node == \\"action_test_8_101\\" }}"
+                  value_template: "{{ current_node == \\"action_test_8_109\\" }}"
               sequence:
                 - service: adaptive_lighting.apply
                   data:
@@ -484,32 +484,32 @@ action:
                     adapt_color: true
                     transition: 0
                 - variables:
-                    current_node: delay_test_9_102
+                    current_node: delay_test_9_110
             - conditions:
                 - condition: template
-                  value_template: "{{ current_node == \\"delay_test_9_102\\" }}"
+                  value_template: "{{ current_node == \\"delay_test_9_110\\" }}"
               sequence:
                 - delay:
                     milliseconds: 350
                 - variables:
-                    current_node: set_variables_test_10_103
+                    current_node: set_variables_test_10_111
             - conditions:
                 - condition: template
-                  value_template: "{{ current_node == \\"set_variables_test_10_103\\" }}"
+                  value_template: "{{ current_node == \\"set_variables_test_10_111\\" }}"
               sequence:
                 - variables:
                     color_after_1: "{% set a = state_attr(target_light, 'hs_color') %} {% set b = state_attr(target_light, 'xy_color') %} {% set c = state_attr(target_light, 'color_temp_kelvin') %} {% set d = state_attr(target_light, 'color_temp') %} {{ [a, b, c, d] }}"
                 - variables:
-                    current_node: condition_test_11_104
+                    current_node: condition_test_11_112
             - conditions:
                 - condition: template
-                  value_template: "{{ current_node == \\"condition_test_11_104\\" }}"
+                  value_template: "{{ current_node == \\"condition_test_11_112\\" }}"
               sequence:
                 - variables:
-                    current_node: "{% if is_state(target_light, 'on') and (color_after_1 == color_before) %}\\"action_test_12_105\\"{% else %}\\"set_variables_test_14_107\\"{% endif %}"
+                    current_node: "{% if is_state(target_light, 'on') and (color_after_1 == color_before) %}\\"action_test_12_113\\"{% else %}\\"set_variables_test_14_115\\"{% endif %}"
             - conditions:
                 - condition: template
-                  value_template: "{{ current_node == \\"action_test_12_105\\" }}"
+                  value_template: "{{ current_node == \\"action_test_12_113\\" }}"
               sequence:
                 - service: adaptive_lighting.apply
                   data:
@@ -521,32 +521,32 @@ action:
                     adapt_color: true
                     transition: 0
                 - variables:
-                    current_node: delay_test_13_106
+                    current_node: delay_test_13_114
             - conditions:
                 - condition: template
-                  value_template: "{{ current_node == \\"delay_test_13_106\\" }}"
+                  value_template: "{{ current_node == \\"delay_test_13_114\\" }}"
               sequence:
                 - delay:
                     milliseconds: 350
                 - variables:
-                    current_node: set_variables_test_14_107
+                    current_node: set_variables_test_14_115
             - conditions:
                 - condition: template
-                  value_template: "{{ current_node == \\"set_variables_test_14_107\\" }}"
+                  value_template: "{{ current_node == \\"set_variables_test_14_115\\" }}"
               sequence:
                 - variables:
                     color_after_2: "{% set a = state_attr(target_light, 'hs_color') %} {% set b = state_attr(target_light, 'xy_color') %} {% set c = state_attr(target_light, 'color_temp_kelvin') %} {% set d = state_attr(target_light, 'color_temp') %} {{ [a, b, c, d] }}"
                 - variables:
-                    current_node: condition_test_15_108
+                    current_node: condition_test_15_116
             - conditions:
                 - condition: template
-                  value_template: "{{ current_node == \\"condition_test_15_108\\" }}"
+                  value_template: "{{ current_node == \\"condition_test_15_116\\" }}"
               sequence:
                 - variables:
-                    current_node: "{% if is_state(target_light, 'on') and (color_after_2 == color_before) %}\\"action_test_16_109\\"{% else %}\\"END\\"{% endif %}"
+                    current_node: "{% if is_state(target_light, 'on') and (color_after_2 == color_before) %}\\"action_test_16_117\\"{% else %}\\"END\\"{% endif %}"
             - conditions:
                 - condition: template
-                  value_template: "{{ current_node == \\"action_test_16_109\\" }}"
+                  value_template: "{{ current_node == \\"action_test_16_117\\" }}"
               sequence:
                 - service: adaptive_lighting.apply
                   data:
@@ -583,55 +583,55 @@ variables:
   _cafe_metadata:
     version: 1
     nodes:
-      trigger_test_0_93:
+      trigger_test_0_101:
         x: 12
         "y": 32.5
-      condition_test_1_94:
+      condition_test_1_102:
         x: 312
         "y": 22.5
-      condition_test_2_95:
+      condition_test_2_103:
         x: 632
         "y": 22.5
-      wait_test_3_96:
+      wait_test_3_104:
         x: 952
         "y": 37.5
-      condition_test_4_97:
+      condition_test_4_105:
         x: 1232
         "y": 22.5
-      action_test_5_98:
+      action_test_5_106:
         x: 1552
         "y": 32.5
-      delay_test_6_99:
+      delay_test_6_107:
         x: 1852
         "y": 37.5
-      set_variables_test_7_100:
+      set_variables_test_7_108:
         x: 2132
         "y": 32.5
-      action_test_8_101:
+      action_test_8_109:
         x: 2432
         "y": 32.5
-      delay_test_9_102:
+      delay_test_9_110:
         x: 2732
         "y": 37.5
-      set_variables_test_10_103:
+      set_variables_test_10_111:
         x: 3012
         "y": 32.5
-      condition_test_11_104:
+      condition_test_11_112:
         x: 3312
         "y": 22.5
-      action_test_12_105:
+      action_test_12_113:
         x: 3632
         "y": 53
-      delay_test_13_106:
+      delay_test_13_114:
         x: 3932
         "y": 58
-      set_variables_test_14_107:
+      set_variables_test_14_115:
         x: 4212
         "y": 32.5
-      condition_test_15_108:
+      condition_test_15_116:
         x: 4512
         "y": 22.5
-      action_test_16_109:
+      action_test_16_117:
         x: 4832
         "y": 32.5
     graph_id: a18b0fbb-d966-432c-aba7-4f7361da8d29
@@ -693,12 +693,9 @@ action:
   - if:
       - condition: trigger
         id: arriving
-        conditions:
-          - condition: trigger
-            id: arriving
-          - condition: template
-            value_template: |
-              {{ (as_timestamp(now()) - as_timestamp(trigger.from_state.last_changed)) > 3600 }}
+      - condition: template
+        value_template: |
+          {{ (as_timestamp(now()) - as_timestamp(trigger.from_state.last_changed)) > 3600 }}
     then:
       - if:
           - condition: numeric_state
@@ -722,21 +719,19 @@ action:
       - if:
           - condition: or
             conditions:
-              - condition: or
-                conditions:
-                  - condition: trigger
-                    id: leaving
-                  - condition: trigger
-                    id: temp_limit_reached
-              - condition: numeric_state
-                entity_id: water_heater.altherma
-                above: 33
-                attribute: current_temperature
-              - condition: not
-                conditions:
-                  - condition: zone
-                    entity_id: person.maria
-                    zone: zone.city_limits
+              - condition: trigger
+                id: leaving
+              - condition: trigger
+                id: temp_limit_reached
+          - condition: numeric_state
+            entity_id: water_heater.altherma
+            above: 33
+            attribute: current_temperature
+          - condition: not
+            conditions:
+              - condition: zone
+                entity_id: person.maria
+                zone: zone.city_limits
         then:
           - service: water_heater.turn_off
             target:
@@ -747,36 +742,45 @@ variables:
   _cafe_metadata:
     version: 1
     nodes:
-      trigger_test_0_83:
+      trigger_test_0_88:
         x: 12
-        "y": 332
-      trigger_test_1_84:
+        "y": 342
+      trigger_test_1_89:
         x: 12
-        "y": 172
-      trigger_test_2_85:
+        "y": 182
+      trigger_test_2_90:
         x: 12
-        "y": 12
-      condition_test_3_86:
+        "y": 22
+      condition_test_3_91:
         x: 312
-        "y": 162
-      condition_test_4_87:
-        x: 632
-        "y": 252
-      action_test_5_88:
-        x: 952
         "y": 172
-      action_test_6_89:
-        x: 952
-        "y": 332
-      action_test_7_90:
-        x: 1252
-        "y": 172
-      condition_test_8_91:
+      condition_test_4_92:
         x: 632
-        "y": 72
-      action_test_9_92:
+        "y": 82
+      condition_test_5_93:
         x: 952
+        "y": 82
+      action_test_6_94:
+        x: 1272
         "y": 12
+      action_test_7_95:
+        x: 1282
+        "y": 172
+      action_test_8_96:
+        x: 1592
+        "y": 102
+      condition_test_9_97:
+        x: 632
+        "y": 262
+      condition_test_10_98:
+        x: 952
+        "y": 262
+      condition_test_11_99:
+        x: 1272
+        "y": 332
+      action_test_12_100:
+        x: 1592
+        "y": 262
     graph_id: a18b0fbb-d966-432c-aba7-4f7361da8d29
     graph_version: 1
     strategy: native
@@ -838,25 +842,25 @@ variables:
   _cafe_metadata:
     version: 1
     nodes:
-      trigger_test_0_76:
+      trigger_test_0_81:
         x: 12
         "y": 182
-      trigger_test_1_77:
+      trigger_test_1_82:
         x: 12
         "y": 22
-      condition_test_2_78:
+      condition_test_2_83:
         x: 312
         "y": 92
-      condition_test_3_79:
+      condition_test_3_84:
         x: 632
         "y": 92
-      action_test_4_80:
+      action_test_4_85:
         x: 952
         "y": 12
-      condition_test_5_81:
+      condition_test_5_86:
         x: 952
         "y": 172
-      action_test_6_82:
+      action_test_6_87:
         x: 1272
         "y": 102
     graph_id: a18b0fbb-d966-432c-aba7-4f7361da8d29
@@ -965,22 +969,22 @@ variables:
   _cafe_metadata:
     version: 1
     nodes:
-      trigger_test_0_70:
+      trigger_test_0_75:
         x: 12
         "y": 22
-      condition_test_1_71:
+      condition_test_1_76:
         x: 312
         "y": 12
-      wait_test_2_72:
+      wait_test_2_77:
         x: 632
         "y": 27
-      wait_test_3_73:
+      wait_test_3_78:
         x: 912
         "y": 27
-      wait_test_4_74:
+      wait_test_4_79:
         x: 1192
         "y": 27
-      action_test_5_75:
+      action_test_5_80:
         x: 1472
         "y": 22
     graph_id: a18b0fbb-d966-432c-aba7-4f7361da8d29
@@ -1059,42 +1063,30 @@ action:
             id:
               - light-toggled-on
               - fan-switch-toggled-on
+          - condition: time
+            after: "05:45:00"
+            before: "21:00:00"
+          - condition: state
+            entity_id: light.ensuite
+            state:
+              - "on"
+          - condition: state
+            entity_id: switch.ensuite_fan
+            state:
+              - "off"
         then:
-          - if:
-              - condition: and
-                conditions:
-                  - condition: time
-                    after: "05:45:00"
-                    before: "21:00:00"
-                  - condition: state
-                    entity_id: light.ensuite
-                    state:
-                      - "on"
-                  - condition: state
-                    entity_id: switch.ensuite_fan
-                    state:
-                      - "off"
-            then:
-              - metadata: {}
-                service: switch.turn_on
-                target:
-                  entity_id: switch.ensuite_fan
-                data: {}
-            else: []
+          - metadata: {}
+            service: switch.turn_on
+            target:
+              entity_id: switch.ensuite_fan
+            data: {}
         else:
           - if:
               - condition: trigger
                 id:
                   - light-toggled-off
                   - fan-switch-toggled-off
-                conditions:
-                  - condition: trigger
-                    id:
-                      - light-toggled-off
-                      - fan-switch-toggled-off
-                  - condition: time
-                    after: "05:45:00"
-                    before: "21:00:00"
+              - condition: time
             then:
               - if:
                   - condition: trigger
@@ -1128,59 +1120,68 @@ variables:
   _cafe_metadata:
     version: 1
     nodes:
-      trigger_test_0_52:
+      trigger_test_0_54:
         x: 12
         "y": 187
-      trigger_test_1_53:
+      trigger_test_1_55:
         x: 12
         "y": 347
-      trigger_test_2_54:
+      trigger_test_2_56:
         x: 12
         "y": 507
-      trigger_test_3_55:
+      trigger_test_3_57:
         x: 12
         "y": 27
-      condition_test_4_56:
+      condition_test_4_58:
         x: 312
         "y": 257
-      condition_test_5_57:
+      condition_test_5_59:
+        x: 632
+        "y": 347
+      wait_test_6_60:
+        x: 972
+        "y": 532
+      action_test_7_61:
+        x: 1272
+        "y": 447
+      action_test_8_62:
+        x: 952
+        "y": 372
+      condition_test_9_63:
         x: 632
         "y": 167
-      wait_test_6_58:
-        x: 972
+      condition_test_10_64:
+        x: 952
         "y": 12
-      action_test_7_59:
+      condition_test_11_65:
         x: 1272
-        "y": 97
-      action_test_8_60:
-        x: 952
-        "y": 162
-      condition_test_9_61:
-        x: 632
-        "y": 347
-      condition_test_10_62:
-        x: 952
-        "y": 322
-      action_test_11_63:
-        x: 1272
-        "y": 257
-      condition_test_12_64:
-        x: 952
-        "y": 502
-      condition_test_13_65:
-        x: 1272
-        "y": 417
-      delay_test_14_66:
+        "y": 87
+      condition_test_12_66:
         x: 1592
-        "y": 197
-      action_test_15_67:
-        x: 1872
+        "y": 167
+      action_test_13_67:
+        x: 1912
+        "y": 117
+      condition_test_14_68:
+        x: 952
+        "y": 192
+      condition_test_15_69:
+        x: 1272
+        "y": 267
+      condition_test_16_70:
+        x: 1592
+        "y": 347
+      delay_test_17_71:
+        x: 1922
+        "y": 277
+      action_test_18_72:
+        x: 2212
         "y": 187
-      delay_test_16_68:
-        x: 1592
-        "y": 347
-      action_test_17_69:
-        x: 1872
+      delay_test_19_73:
+        x: 1922
+        "y": 427
+      action_test_20_74:
+        x: 2212
         "y": 347
     graph_id: a18b0fbb-d966-432c-aba7-4f7361da8d29
     graph_version: 1
@@ -1214,12 +1215,9 @@ action:
   - if:
       - condition: trigger
         id: machine_on
-        conditions:
-          - condition: trigger
-            id: machine_on
-          - condition: state
-            entity_id: input_boolean.wasmachine_status
-            state: "off"
+      - condition: state
+        entity_id: input_boolean.wasmachine_status
+        state: "off"
     then:
       - service: input_boolean.turn_on
         target:
@@ -1234,12 +1232,9 @@ action:
       - if:
           - condition: trigger
             id: machine_off
-            conditions:
-              - condition: trigger
-                id: machine_off
-              - condition: state
-                entity_id: input_boolean.wasmachine_status
-                state: "on"
+          - condition: state
+            entity_id: input_boolean.wasmachine_status
+            state: "on"
         then:
           - service: input_boolean.turn_off
             target:
@@ -1268,34 +1263,40 @@ variables:
     nodes:
       trigger_test_0_42:
         x: 12
-        "y": 182
+        "y": 192
       trigger_test_1_43:
         x: 12
-        "y": 22
+        "y": 32
       condition_test_2_44:
         x: 312
-        "y": 92
-      action_test_3_45:
-        x: 642
+        "y": 102
+      condition_test_3_45:
+        x: 632
         "y": 192
       action_test_4_46:
-        x: 952
-        "y": 182
-      condition_test_5_47:
+        x: 962
+        "y": 202
+      action_test_5_47:
+        x: 1272
+        "y": 192
+      condition_test_6_48:
         x: 632
         "y": 12
-      action_test_6_48:
+      condition_test_7_49:
         x: 952
         "y": 22
-      set_variables_test_7_49:
-        x: 1252
-        "y": 102
       action_test_8_50:
-        x: 1552
-        "y": 102
-      action_test_9_51:
-        x: 1852
-        "y": 102
+        x: 1272
+        "y": 32
+      set_variables_test_9_51:
+        x: 1572
+        "y": 112
+      action_test_10_52:
+        x: 1872
+        "y": 112
+      action_test_11_53:
+        x: 2172
+        "y": 112
     graph_id: a18b0fbb-d966-432c-aba7-4f7361da8d29
     graph_version: 1
     strategy: native

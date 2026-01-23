@@ -66,15 +66,18 @@ describe('YamlParser', () => {
     // Strict: check exact node counts for this fixture
     // The fixture has:
     // - 3 triggers (2 zone triggers, 1 numeric_state trigger)
-    // - 3 conditions (1 template in first choose branch, 1 numeric_state from if block, 1 template in second choose branch)
+    // - 6 conditions (exploded from choose blocks):
+    //   - Choice 1: 2 conditions (trigger + template)
+    //   - Choice 1 sequence if block: 1 condition (numeric_state)
+    //   - Choice 2: 3 conditions (or, numeric_state, not)
     // - 4 actions (1 notify in then, 2 in else branch: water_heater.turn_on + notify, 1 water_heater.turn_off in second choose)
     const triggerCount = nodes.filter((n) => n.type === 'trigger').length;
     const conditionCount = nodes.filter((n) => n.type === 'condition').length;
     const actionCount = nodes.filter((n) => n.type === 'action').length;
     expect(triggerCount).toBe(3);
-    expect(conditionCount).toBe(3);
+    expect(conditionCount).toBe(6);
     expect(actionCount).toBe(4);
-    expect(nodes.length).toBe(10);
+    expect(nodes.length).toBe(13);
   });
 
   it('parses template condition with value_template field', async () => {

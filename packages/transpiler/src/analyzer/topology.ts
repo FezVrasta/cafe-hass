@@ -389,20 +389,21 @@ function checkParallelConvergence(
   _outgoingEdges: Map<string, string[]>,
   convergenceTargetId: string
 ): boolean {
-  // First check: if all converging sources are conditions and all incoming edges
-  // to the convergence point have sourceHandle='true', this is condition branching,
-  // not parallel execution.
+  // Check: if all converging sources are conditions and all incoming edges
+  // to the convergence point have the same sourceHandle (all 'true' OR all 'false'),
+  // this is an OR condition pattern that CAN be handled by native strategy.
   const incomingEdgesToTarget = flow.edges.filter((e) => e.target === convergenceTargetId);
   const allSourcesAreConditions = convergingSources.every((sourceId) => {
     const node = flow.nodes.find((n) => n.id === sourceId);
     return node?.type === 'condition';
   });
   const allIncomingFromTruePath = incomingEdgesToTarget.every((e) => e.sourceHandle === 'true');
+  const allIncomingFromFalsePath = incomingEdgesToTarget.every((e) => e.sourceHandle === 'false');
 
-  if (allSourcesAreConditions && allIncomingFromTruePath) {
-    // This is condition branching (multiple conditions' true paths converging)
-    // NOT parallel execution - requires state machine
-    return false;
+  if (allSourcesAreConditions && (allIncomingFromTruePath || allIncomingFromFalsePath)) {
+    // This is an OR condition pattern (multiple conditions' true/false paths converging)
+    // This CAN be represented as native "condition: or" in Home Assistant YAML
+    return true;
   }
 
   // Find predecessors of each converging source
