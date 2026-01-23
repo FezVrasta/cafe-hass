@@ -239,9 +239,10 @@ export class NativeStrategy extends BaseStrategy {
 
       // Now add the current node to visited and build the then sequence
       visited.add(nodeId);
-      const thenSequence = node.type === 'condition'
-        ? this.buildSequenceFromNode(flow, nodeId, new Set()) // Process this condition node fresh
-        : this.buildSequenceFromNode(flow, nodeId, new Set(visited));
+      const thenSequence =
+        node.type === 'condition'
+          ? this.buildSequenceFromNode(flow, nodeId, new Set()) // Process this condition node fresh
+          : this.buildSequenceFromNode(flow, nodeId, new Set(visited));
 
       // For OR conditions, prepend the current node's action to the then sequence if it's not a condition
       let finalThenSequence: unknown[];
@@ -271,9 +272,10 @@ export class NativeStrategy extends BaseStrategy {
 
       // Now add the current node to visited and build the then sequence
       visited.add(nodeId);
-      const thenSequence = node.type === 'condition'
-        ? this.buildSequenceFromNode(flow, nodeId, new Set())
-        : this.buildSequenceFromNode(flow, nodeId, new Set(visited));
+      const thenSequence =
+        node.type === 'condition'
+          ? this.buildSequenceFromNode(flow, nodeId, new Set())
+          : this.buildSequenceFromNode(flow, nodeId, new Set(visited));
 
       // For OR conditions, prepend the current node's action to the then sequence if it's not a condition
       let finalThenSequence: unknown[];
@@ -311,7 +313,7 @@ export class NativeStrategy extends BaseStrategy {
 
       // The 'else' path is taken from the very first condition in the chain
       const originalElsePath = this.getOutgoingEdges(flow, node.id).find(
-        (edge) => edge.sourceHandle === 'false',
+        (edge) => edge.sourceHandle === 'false'
       );
       if (originalElsePath) {
         elseNodeId = originalElsePath.target;
@@ -323,7 +325,7 @@ export class NativeStrategy extends BaseStrategy {
         conditions.push(this.buildCondition(currentNode as ConditionNode));
 
         const truePath = this.getOutgoingEdges(flow, currentNode.id).find(
-          (edge) => edge.sourceHandle === 'true',
+          (edge) => edge.sourceHandle === 'true'
         );
 
         if (!truePath) {
@@ -337,7 +339,7 @@ export class NativeStrategy extends BaseStrategy {
         if (nextNode?.type === 'condition' && !visited.has(nextNode.id)) {
           // Check if the next condition has a false path
           const nextFalsePath = this.getOutgoingEdges(flow, nextNode.id).find(
-            (edge) => edge.sourceHandle === 'false',
+            (edge) => edge.sourceHandle === 'false'
           );
 
           // Only continue chaining if:
@@ -392,12 +394,12 @@ export class NativeStrategy extends BaseStrategy {
         // Multiple outgoing edges (parallel paths)
         const convergencePoint = this.findConvergencePoint(
           flow,
-          outgoing.map((e) => e.target),
+          outgoing.map((e) => e.target)
         );
 
         if (convergencePoint) {
           const parallelActions = outgoing.map((edge) =>
-            this.buildSequenceUntilNode(flow, edge.target, convergencePoint, new Set(visited)),
+            this.buildSequenceUntilNode(flow, edge.target, convergencePoint, new Set(visited))
           );
           const filteredBranches = parallelActions.filter((a) => a.length > 0);
           if (filteredBranches.length > 0) {
@@ -412,12 +414,12 @@ export class NativeStrategy extends BaseStrategy {
           const afterParallel = this.buildSequenceFromNode(
             flow,
             convergencePoint,
-            new Set(visited),
+            new Set(visited)
           );
           sequence.push(...afterParallel);
         } else {
           const parallelActions = outgoing.map((edge) =>
-            this.buildSequenceFromNode(flow, edge.target, new Set(visited)),
+            this.buildSequenceFromNode(flow, edge.target, new Set(visited))
           );
           const filteredBranches = parallelActions.filter((a) => a.length > 0);
           if (filteredBranches.length > 0) {

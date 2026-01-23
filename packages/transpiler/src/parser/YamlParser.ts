@@ -1748,7 +1748,9 @@ export class YamlParser {
 
       // Chain condition nodes together with 'true' edges
       for (let i = 0; i < choiceConditionNodes.length - 1; i++) {
-        edges.push(this.createEdge(choiceConditionNodes[i].id, choiceConditionNodes[i + 1].id, 'true'));
+        edges.push(
+          this.createEdge(choiceConditionNodes[i].id, choiceConditionNodes[i + 1].id, 'true')
+        );
       }
 
       // Parse sequence for this choice (TRUE path from last condition)
@@ -1969,7 +1971,9 @@ export class YamlParser {
       // The edges from last condition to first action should use 'true' handle
       if (thenResult.nodes.length > 0) {
         const firstActionId = thenResult.nodes[0].id;
-        const trueEdge = edges.find((e) => e.source === lastConditionId && e.target === firstActionId);
+        const trueEdge = edges.find(
+          (e) => e.source === lastConditionId && e.target === firstActionId
+        );
         if (trueEdge) {
           trueEdge.sourceHandle = 'true';
         }

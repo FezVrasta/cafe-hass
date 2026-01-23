@@ -1,12 +1,9 @@
+import type { FlowGraph } from '@cafe/shared';
 import { describe, expect, it } from 'vitest';
 import { FlowTranspiler } from '../FlowTranspiler';
 import { YamlParser } from '../parser/YamlParser';
-import type { FlowGraph } from '@cafe/shared';
 
-const createBaseGraph = (
-  nodes: FlowGraph['nodes'],
-  edges: FlowGraph['edges'],
-): FlowGraph => ({
+const createBaseGraph = (nodes: FlowGraph['nodes'], edges: FlowGraph['edges']): FlowGraph => ({
   id: '123e4567-e89b-12d3-a456-426614174000',
   version: 1,
   name: 'Test Nested Conditions',
@@ -59,7 +56,7 @@ describe('Nested Conditions', () => {
         { id: 'e2', source: 'cond1', target: 'cond2', sourceHandle: 'true' },
         { id: 'e3', source: 'cond1', target: 'action_else', sourceHandle: 'false' },
         { id: 'e4', source: 'cond2', target: 'action_then', sourceHandle: 'true' },
-      ],
+      ]
     );
 
     const transpiler = new FlowTranspiler();
@@ -134,7 +131,7 @@ describe('Nested Conditions', () => {
         { id: 'e3', source: 'cond1', target: 'action_else', sourceHandle: 'false' },
         { id: 'e4', source: 'cond2', target: 'cond3', sourceHandle: 'true' },
         { id: 'e5', source: 'cond3', target: 'action_then', sourceHandle: 'true' },
-      ],
+      ]
     );
 
     const transpiler = new FlowTranspiler();
@@ -189,7 +186,7 @@ describe('Nested Conditions', () => {
         { id: 'e1', source: 'trigger', target: 'cond1' },
         { id: 'e2', source: 'cond1', target: 'action_then', sourceHandle: 'true' },
         { id: 'e3', source: 'cond1', target: 'action_else', sourceHandle: 'false' },
-      ],
+      ]
     );
 
     const transpiler = new FlowTranspiler();
@@ -243,7 +240,7 @@ describe('Nested Conditions', () => {
         { id: 'e1', source: 'trigger', target: 'cond1' },
         { id: 'e2', source: 'cond1', target: 'cond2', sourceHandle: 'true' },
         { id: 'e3', source: 'cond2', target: 'action_then', sourceHandle: 'true' },
-      ],
+      ]
     );
 
     const transpiler = new FlowTranspiler();
@@ -319,7 +316,7 @@ describe('Nested Conditions', () => {
         { id: 'e3', source: 'cond1', target: 'action_else1', sourceHandle: 'false' },
         { id: 'e4', source: 'cond2', target: 'action_then', sourceHandle: 'true' },
         { id: 'e5', source: 'cond2', target: 'action_else2', sourceHandle: 'false' },
-      ],
+      ]
     );
 
     const transpiler = new FlowTranspiler();
@@ -352,7 +349,12 @@ describe('Nested Conditions', () => {
           id: 'cond1',
           type: 'condition',
           position: { x: 200, y: 0 },
-          data: { condition: 'state', entity_id: 'light.living_room', state: 'off', alias: 'Check light is off' },
+          data: {
+            condition: 'state',
+            entity_id: 'light.living_room',
+            state: 'off',
+            alias: 'Check light is off',
+          },
         },
         {
           id: 'cond2',
@@ -376,7 +378,7 @@ describe('Nested Conditions', () => {
         { id: 'e1', source: 'trigger', target: 'cond1' },
         { id: 'e2', source: 'cond1', target: 'cond2', sourceHandle: 'true' },
         { id: 'e3', source: 'cond2', target: 'action_then', sourceHandle: 'true' },
-      ],
+      ]
     );
 
     const transpiler = new FlowTranspiler();
@@ -430,7 +432,7 @@ describe('Nested Conditions', () => {
         { id: 'e2', source: 'cond1', target: 'cond2', sourceHandle: 'true' },
         { id: 'e3', source: 'cond1', target: 'action_else', sourceHandle: 'false' },
         { id: 'e4', source: 'cond2', target: 'action_then', sourceHandle: 'true' },
-      ],
+      ]
     );
 
     const transpiler = new FlowTranspiler();
@@ -501,7 +503,7 @@ describe('Nested Conditions', () => {
         { id: 'e3', source: 'cond1', target: 'else_action', sourceHandle: 'false' },
         { id: 'e4', source: 'cond2', target: 'action1', sourceHandle: 'true' },
         { id: 'e5', source: 'action1', target: 'action2' },
-      ],
+      ]
     );
 
     const transpiler = new FlowTranspiler();
@@ -563,7 +565,7 @@ describe('Nested Conditions', () => {
           { id: 'e2', source: 'trigger', target: 'cond2' },
           { id: 'e3', source: 'cond1', target: 'action_then', sourceHandle: 'true' },
           { id: 'e4', source: 'cond2', target: 'action_then', sourceHandle: 'true' },
-        ],
+        ]
       );
 
       const transpiler = new FlowTranspiler();
@@ -622,7 +624,7 @@ describe('Nested Conditions', () => {
           { id: 'e2', source: 'trigger', target: 'cond2' },
           { id: 'e3', source: 'cond1', target: 'action_else', sourceHandle: 'false' },
           { id: 'e4', source: 'cond2', target: 'action_else', sourceHandle: 'false' },
-        ],
+        ]
       );
 
       const transpiler = new FlowTranspiler();
@@ -687,7 +689,7 @@ describe('Nested Conditions', () => {
           { id: 'e4', source: 'cond1', target: 'action_then', sourceHandle: 'true' },
           { id: 'e5', source: 'cond2', target: 'action_then', sourceHandle: 'true' },
           { id: 'e6', source: 'cond3', target: 'action_then', sourceHandle: 'true' },
-        ],
+        ]
       );
 
       const transpiler = new FlowTranspiler();
@@ -747,7 +749,7 @@ describe('Nested Conditions', () => {
           { id: 'e3', source: 'cond1', target: 'action1', sourceHandle: 'true' },
           { id: 'e4', source: 'cond2', target: 'action1', sourceHandle: 'true' },
           { id: 'e5', source: 'action1', target: 'action2' },
-        ],
+        ]
       );
 
       const transpiler = new FlowTranspiler();
