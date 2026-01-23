@@ -116,16 +116,18 @@ export function PropertyPanel() {
         />
       </FormField>
 
-      {/* Common fields for all nodes */}
-      <FormField label="ID">
-        <Input
-          type="text"
-          value={typeof selectedNode.data.id === 'string' ? selectedNode.data.id : ''}
-          onChange={(e) => handleChange('id', e.target.value || undefined)}
-          placeholder="Optional unique ID"
-          className="font-mono"
-        />
-      </FormField>
+      {/* ID field - not applicable for action nodes */}
+      {selectedNode.type !== 'action' && (
+        <FormField label="ID">
+          <Input
+            type="text"
+            value={typeof selectedNode.data.id === 'string' ? selectedNode.data.id : ''}
+            onChange={(e) => handleChange('id', e.target.value || undefined)}
+            placeholder="Optional unique ID"
+            className="font-mono"
+          />
+        </FormField>
+      )}
 
       {/* Enabled toggle */}
       <div className="flex items-center justify-between">
