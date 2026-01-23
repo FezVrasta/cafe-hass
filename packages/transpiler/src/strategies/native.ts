@@ -45,14 +45,34 @@ export class NativeStrategy extends BaseStrategy {
     if (uniqueFirstActions.length === 1) {
       actions = this.buildSequenceFromNode(flow, uniqueFirstActions[0], new Set());
     } else if (uniqueFirstActions.length > 1) {
-      // Multiple paths from triggers - use parallel
-      actions = [
-        {
-          parallel: uniqueFirstActions.map((nodeId) =>
-            this.buildSequenceFromNode(flow, nodeId, new Set())
-          ),
-        },
-      ];
+      // Check if this is an OR pattern: all first actions are conditions
+      // whose true/false paths converge to the same target
+      const orPattern = this.detectOrPattern(flow, uniqueFirstActions);
+
+      if (orPattern) {
+        // Build OR condition block
+        const orConditions = orPattern.conditions.map((c) => this.buildCondition(c));
+        const visited = new Set(orPattern.conditions.map((c) => c.id));
+
+        const thenSequence = this.buildSequenceFromNode(flow, orPattern.convergenceNode, visited);
+
+        actions = [
+          {
+            if: [{ condition: 'or', conditions: orConditions }],
+            then: thenSequence,
+            else: orPattern.isFromFalsePaths ? [] : [], // OR conditions from true paths have empty else
+          },
+        ];
+      } else {
+        // Multiple paths from triggers - use parallel
+        actions = [
+          {
+            parallel: uniqueFirstActions.map((nodeId) =>
+              this.buildSequenceFromNode(flow, nodeId, new Set())
+            ),
+          },
+        ];
+      }
     } else {
       actions = [];
       warnings.push('No actions found after trigger nodes');
@@ -91,6 +111,61 @@ export class NativeStrategy extends BaseStrategy {
   }
 
   /**
+   * Detect if multiple first actions form an OR pattern
+   * (all are conditions whose true OR false paths converge to the same node)
+   */
+  private detectOrPattern(
+    flow: FlowGraph,
+    firstActionIds: string[]
+  ): { conditions: ConditionNode[]; convergenceNode: string; isFromFalsePaths: boolean } | null {
+    // All first actions must be condition nodes
+    const conditions = firstActionIds.map((id) => this.getNode(flow, id));
+    if (!conditions.every((n): n is ConditionNode => n?.type === 'condition')) {
+      return null;
+    }
+
+    // Check if all true paths converge to the same node
+    const trueTargets = new Set<string>();
+    for (const cond of conditions) {
+      const trueEdge = flow.edges.find((e) => e.source === cond.id && e.sourceHandle === 'true');
+      if (trueEdge) {
+        trueTargets.add(trueEdge.target);
+      }
+    }
+
+    if (trueTargets.size === 1 && conditions.length === firstActionIds.length) {
+      // All conditions have the same true target
+      const convergenceNode = [...trueTargets][0];
+      return {
+        conditions: conditions as ConditionNode[],
+        convergenceNode,
+        isFromFalsePaths: false,
+      };
+    }
+
+    // Check if all false paths converge to the same node
+    const falseTargets = new Set<string>();
+    for (const cond of conditions) {
+      const falseEdge = flow.edges.find((e) => e.source === cond.id && e.sourceHandle === 'false');
+      if (falseEdge) {
+        falseTargets.add(falseEdge.target);
+      }
+    }
+
+    if (falseTargets.size === 1 && conditions.length === firstActionIds.length) {
+      // All conditions have the same false target
+      const convergenceNode = [...falseTargets][0];
+      return {
+        conditions: conditions as ConditionNode[],
+        convergenceNode,
+        isFromFalsePaths: true,
+      };
+    }
+
+    return null;
+  }
+
+  /**
    * Build a single trigger configuration
    */
   private buildTrigger(node: TriggerNode): Record<string, unknown> {
@@ -113,13 +188,30 @@ export class NativeStrategy extends BaseStrategy {
   }
 
   /**
+   * Find condition nodes whose specified handle (true/false) points to a given target node
+   * Returns the condition sources if there are multiple (OR pattern), empty array otherwise
+   */
+  private findOrConditionSources(
+    flow: FlowGraph,
+    targetNodeId: string,
+    handleType: 'true' | 'false',
+    visited: Set<string>
+  ): ConditionNode[] {
+    const sources = flow.edges
+      .filter((e) => e.target === targetNodeId && e.sourceHandle === handleType)
+      .map((e) => this.getNode(flow, e.source))
+      .filter((n): n is ConditionNode => n?.type === 'condition' && !visited.has(n.id));
+
+    return sources.length > 1 ? sources : [];
+  }
+
+  /**
    * Recursively build action sequence from a node
    */
   private buildSequenceFromNode(flow: FlowGraph, nodeId: string, visited: Set<string>): unknown[] {
     if (visited.has(nodeId)) {
       return []; // Avoid infinite loops
     }
-    visited.add(nodeId);
 
     const node = this.getNode(flow, nodeId);
     if (!node) {
@@ -128,71 +220,200 @@ export class NativeStrategy extends BaseStrategy {
 
     const sequence: unknown[] = [];
 
-    // Build the current node's action
-    const action = this.buildNodeAction(node);
-    if (action) {
-      sequence.push(action);
+    // Check if this node is an OR convergence point (multiple conditions' true/false paths converge here)
+    const orTrueSources = this.findOrConditionSources(flow, nodeId, 'true', visited);
+    const orFalseSources = this.findOrConditionSources(flow, nodeId, 'false', visited);
+
+    if (orTrueSources.length > 1) {
+      // Multiple conditions' TRUE paths converge here - build OR block
+      const orConditions = orTrueSources.map((c) => this.buildCondition(c));
+      // Mark these conditions as visited
+      for (const c of orTrueSources) {
+        visited.add(c.id);
+      }
+
+      // Now add the current node to visited and build the then sequence
+      visited.add(nodeId);
+      const thenSequence = node.type === 'condition'
+        ? this.buildSequenceFromNode(flow, nodeId, new Set()) // Process this condition node fresh
+        : this.buildSequenceFromNode(flow, nodeId, new Set(visited));
+
+      // For OR conditions, prepend the current node's action to the then sequence if it's not a condition
+      let finalThenSequence: unknown[];
+      if (node.type !== 'condition') {
+        const currentAction = this.buildNodeAction(node);
+        finalThenSequence = currentAction ? [currentAction, ...thenSequence] : thenSequence;
+      } else {
+        finalThenSequence = thenSequence;
+      }
+
+      sequence.push({
+        if: [{ condition: 'or', conditions: orConditions }],
+        then: finalThenSequence,
+        else: [], // OR conditions don't have a shared else path
+      });
+      return sequence;
     }
+
+    if (orFalseSources.length > 1) {
+      // Multiple conditions' FALSE paths converge here - build OR block (negated logic)
+      // When false paths converge, it means "if NOT cond1 AND NOT cond2" which is equivalent to "if NOT (cond1 OR cond2)"
+      const orConditions = orFalseSources.map((c) => this.buildCondition(c));
+      // Mark these conditions as visited
+      for (const c of orFalseSources) {
+        visited.add(c.id);
+      }
+
+      // Now add the current node to visited and build the then sequence
+      visited.add(nodeId);
+      const thenSequence = node.type === 'condition'
+        ? this.buildSequenceFromNode(flow, nodeId, new Set())
+        : this.buildSequenceFromNode(flow, nodeId, new Set(visited));
+
+      // For OR conditions, prepend the current node's action to the then sequence if it's not a condition
+      let finalThenSequence: unknown[];
+      if (node.type !== 'condition') {
+        const currentAction = this.buildNodeAction(node);
+        finalThenSequence = currentAction ? [currentAction, ...thenSequence] : thenSequence;
+      } else {
+        finalThenSequence = thenSequence;
+      }
+
+      // Since false paths converge, we negate by swapping then/else
+      // "if any condition is false, do this" = "if NOT(all conditions true), do this"
+      sequence.push({
+        if: [{ condition: 'or', conditions: orConditions }],
+        then: [], // When OR is true, we don't execute (this is the "else" in normal terms)
+        else: finalThenSequence, // When OR is false (all conditions false), execute
+      });
+      return sequence;
+    }
+
+    // Normal processing - add to visited now
+    visited.add(nodeId);
 
     // Get outgoing edges
     const outgoing = this.getOutgoingEdges(flow, nodeId);
 
     if (node.type === 'condition') {
-      // Condition nodes are handled specially - they become choose blocks
-      // We need to fill in the then/else branches from the connected nodes
-      const chooseAction = action as Record<string, unknown>;
+      // ===== Condition Chain Logic =====
+      // This logic identifies chains of conditions and merges them into a single 'choose'
 
-      // Find then and else paths
-      const truePath = outgoing.filter((edge) => edge.sourceHandle === 'true');
-      const falsePath = outgoing.filter((edge) => edge.sourceHandle === 'false');
+      const conditions: unknown[] = [];
+      let currentNode: FlowNode = node;
+      let thenNodeId: string | null = null;
+      let elseNodeId: string | null = null;
 
-      if (truePath.length > 0) {
-        const thenActions = truePath.flatMap((edge) =>
-          this.buildSequenceFromNode(flow, edge.target, new Set(visited))
-        );
-        chooseAction.then = thenActions;
-      }
-
-      if (falsePath.length > 0) {
-        const elseActions = falsePath.flatMap((edge) =>
-          this.buildSequenceFromNode(flow, edge.target, new Set(visited))
-        );
-        chooseAction.else = elseActions;
-      }
-    } else if (outgoing.length === 1) {
-      // Single outgoing edge - continue the sequence
-      const nextActions = this.buildSequenceFromNode(flow, outgoing[0].target, new Set(visited));
-      sequence.push(...nextActions);
-    } else if (outgoing.length > 1) {
-      // Multiple outgoing edges (parallel paths)
-      // First, find if branches converge to a common node
-      const convergencePoint = this.findConvergencePoint(
-        flow,
-        outgoing.map((e) => e.target)
+      // The 'else' path is taken from the very first condition in the chain
+      const originalElsePath = this.getOutgoingEdges(flow, node.id).find(
+        (edge) => edge.sourceHandle === 'false',
       );
+      if (originalElsePath) {
+        elseNodeId = originalElsePath.target;
+      }
 
-      if (convergencePoint) {
-        // Build each branch up to (but not including) the convergence point
-        const parallelActions = outgoing.map((edge) =>
-          this.buildSequenceUntilNode(flow, edge.target, convergencePoint, new Set(visited))
+      // Start traversing the 'true' path to find all sequential conditions
+      // Only chain conditions that share the same "else" behavior (no else, or same else target)
+      while (currentNode?.type === 'condition') {
+        conditions.push(this.buildCondition(currentNode as ConditionNode));
+
+        const truePath = this.getOutgoingEdges(flow, currentNode.id).find(
+          (edge) => edge.sourceHandle === 'true',
         );
-        if (parallelActions.some((a) => a.length > 0)) {
-          sequence.push({
-            parallel: parallelActions.filter((a) => a.length > 0),
-          });
+
+        if (!truePath) {
+          thenNodeId = null;
+          break;
         }
-        // Continue from the convergence point
-        const afterParallel = this.buildSequenceFromNode(flow, convergencePoint, new Set(visited));
-        sequence.push(...afterParallel);
-      } else {
-        // No convergence - just build all branches
-        const parallelActions = outgoing.map((edge) =>
-          this.buildSequenceFromNode(flow, edge.target, new Set(visited))
+
+        const nextNode = this.getNode(flow, truePath.target);
+
+        // If the next node is a condition and not visited, check if we should continue chaining
+        if (nextNode?.type === 'condition' && !visited.has(nextNode.id)) {
+          // Check if the next condition has a false path
+          const nextFalsePath = this.getOutgoingEdges(flow, nextNode.id).find(
+            (edge) => edge.sourceHandle === 'false',
+          );
+
+          // Only continue chaining if:
+          // 1. The next condition has no false path (it can be merged), OR
+          // 2. The next condition's false path goes to the same target as the first condition's false path
+          const canChain = !nextFalsePath || nextFalsePath.target === elseNodeId;
+
+          if (canChain) {
+            currentNode = nextNode;
+            visited.add(currentNode.id); // Mark as visited to avoid re-processing
+          } else {
+            // The next condition has its own else branch - don't merge it
+            // Instead, it becomes part of the "then" sequence as a nested if
+            thenNodeId = truePath.target;
+            break;
+          }
+        } else {
+          // End of chain: the target is not a condition or is already visited
+          thenNodeId = truePath.target;
+          break;
+        }
+      }
+
+      // Put conditions directly in the if: array - HA implicitly ANDs them
+      const chooseAction: Record<string, unknown> = {
+        alias: node.data.alias, // Use alias from the first condition
+        if: conditions,
+        then: [],
+        else: [],
+      };
+
+      if (thenNodeId) {
+        chooseAction.then = this.buildSequenceFromNode(flow, thenNodeId, new Set(visited));
+      }
+      if (elseNodeId) {
+        chooseAction.else = this.buildSequenceFromNode(flow, elseNodeId, new Set(visited));
+      }
+
+      sequence.push(chooseAction);
+    } else {
+      // ===== Default Logic for Non-Condition Nodes =====
+      const action = this.buildNodeAction(node);
+      if (action) {
+        sequence.push(action);
+      }
+
+      if (outgoing.length === 1) {
+        // Single outgoing edge - continue the sequence
+        const nextActions = this.buildSequenceFromNode(flow, outgoing[0].target, new Set(visited));
+        sequence.push(...nextActions);
+      } else if (outgoing.length > 1) {
+        // Multiple outgoing edges (parallel paths)
+        const convergencePoint = this.findConvergencePoint(
+          flow,
+          outgoing.map((e) => e.target),
         );
-        if (parallelActions.some((a) => a.length > 0)) {
-          sequence.push({
-            parallel: parallelActions.filter((a) => a.length > 0),
-          });
+
+        if (convergencePoint) {
+          const parallelActions = outgoing.map((edge) =>
+            this.buildSequenceUntilNode(flow, edge.target, convergencePoint, new Set(visited)),
+          );
+          if (parallelActions.some((a) => a.length > 0)) {
+            sequence.push({
+              parallel: parallelActions.filter((a) => a.length > 0),
+            });
+          }
+          const afterParallel = this.buildSequenceFromNode(
+            flow,
+            convergencePoint,
+            new Set(visited),
+          );
+          sequence.push(...afterParallel);
+        } else {
+          const parallelActions = outgoing.map((edge) =>
+            this.buildSequenceFromNode(flow, edge.target, new Set(visited)),
+          );
+          if (parallelActions.some((a) => a.length > 0)) {
+            sequence.push({
+              parallel: parallelActions.filter((a) => a.length > 0),
+            });
+          }
         }
       }
     }

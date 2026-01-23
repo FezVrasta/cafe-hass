@@ -1559,51 +1559,83 @@ export class YamlParser {
     // Track what nodes should connect to the next condition (false path of current)
     let currentPreviousIds = [...previousNodeIds];
 
-    validChoices.forEach((choice, index) => {
-      const conditionId = getNextNodeId('condition');
+    validChoices.forEach((choice, choiceIndex) => {
       // choice.conditions can be an array of conditions or a single condition object
       const conditionsArray = Array.isArray(choice.conditions)
         ? choice.conditions
         : [choice.conditions];
-      // Use the first condition to determine the type and extract properties
-      const firstCondition = conditionsArray[0] || {};
-      const conditionNode: ConditionNode = {
-        id: conditionId,
-        type: 'condition',
-        position: { x: 0, y: 0 },
-        data: {
-          alias: choice.alias,
-          condition: firstCondition.condition || 'template',
-          entity_id: firstCondition.entity_id,
-          state: firstCondition.state,
-          // Support both 'template' and 'value_template' (Home Assistant uses value_template)
 
-          value_template: firstCondition.value_template,
-          above: firstCondition.above,
-          below: firstCondition.below,
-          attribute: firstCondition.attribute,
-          zone: firstCondition.zone,
-          // Preserve id for trigger conditions (e.g., condition: trigger, id: "playing")
-          id: firstCondition.id,
-          // Store all conditions if there are multiple
-          conditions:
-            conditionsArray.length > 1
-              ? transformConditions(conditionsArray)
-              : Array.isArray(firstCondition.conditions)
-                ? transformConditions(firstCondition.conditions)
-                : undefined,
-        },
-      };
+      // Create separate condition nodes for each condition in the choice (explode AND conditions)
+      const choiceConditionNodes: ConditionNode[] = [];
 
-      nodes.push(conditionNode);
-      localConditionIds.add(conditionId);
+      for (let i = 0; i < conditionsArray.length; i++) {
+        const condition = conditionsArray[i] as Record<string, unknown>;
+        const conditionId = getNextNodeId('condition');
 
-      // Connect from current previous nodes
-      // For first condition, connect from original previousNodeIds
-      // For subsequent conditions, connect from previous condition's FALSE path
+        let conditionNode: ConditionNode;
+
+        if (condition && Array.isArray(condition.conditions)) {
+          // Condition with nested conditions (or/and/not) - preserve structure
+          const rawConditionType = (condition.condition as string) || 'and';
+          const conditionType = VALID_CONDITIONS.includes(rawConditionType as ValidConditionType)
+            ? (rawConditionType as ValidConditionType)
+            : 'template';
+
+          conditionNode = {
+            id: conditionId,
+            type: 'condition',
+            position: { x: 0, y: 0 },
+            data: {
+              // Only first condition in first choice gets the alias
+              alias: i === 0 ? choice.alias : undefined,
+              condition: conditionType,
+              conditions: transformConditions(condition.conditions),
+              // Preserve id for trigger conditions
+              id: condition.id as string | undefined,
+            },
+          };
+        } else {
+          // Simple condition - use its properties directly
+          const rawConditionType = (condition?.condition as string) || 'template';
+          const conditionType = VALID_CONDITIONS.includes(rawConditionType as ValidConditionType)
+            ? (rawConditionType as ValidConditionType)
+            : 'template';
+
+          conditionNode = {
+            id: conditionId,
+            type: 'condition',
+            position: { x: 0, y: 0 },
+            data: {
+              // Only first condition gets the alias
+              alias: i === 0 ? choice.alias : undefined,
+              condition: conditionType,
+              entity_id: condition.entity_id as string | string[] | undefined,
+              state: condition.state as string | string[] | undefined,
+              value_template: condition.value_template as string | undefined,
+              above: condition.above as string | number | undefined,
+              below: condition.below as string | number | undefined,
+              attribute: condition.attribute as string | undefined,
+              zone: condition.zone as string | undefined,
+              // Preserve id for trigger conditions
+              id: condition.id as string | undefined,
+            },
+          };
+        }
+
+        choiceConditionNodes.push(conditionNode);
+        nodes.push(conditionNode);
+        localConditionIds.add(conditionId);
+      }
+
+      const firstConditionId = choiceConditionNodes[0].id;
+      const lastConditionId = choiceConditionNodes[choiceConditionNodes.length - 1].id;
+
+      // Connect from current previous nodes to first condition of this choice
+      // For first choice, connect from original previousNodeIds
+      // For subsequent choices, connect from previous choice's first condition's FALSE path
       for (const prevId of currentPreviousIds) {
         let sourceHandle: string | undefined;
-        if (index > 0 && localConditionIds.has(prevId) && !conditionNodeIds.has(prevId)) {
+        if (choiceIndex > 0 && localConditionIds.has(prevId) && !conditionNodeIds.has(prevId)) {
           // Previous is a condition from this choose block - use FALSE path
           sourceHandle = 'false';
         } else if (falsePathConditionIds.has(prevId)) {
@@ -1614,27 +1646,32 @@ export class YamlParser {
           sourceHandle = 'true';
         }
         // else: previous is not a condition - no sourceHandle needed
-        edges.push(this.createEdge(prevId, conditionId, sourceHandle));
+        edges.push(this.createEdge(prevId, firstConditionId, sourceHandle));
       }
 
-      // Parse sequence for this choice (TRUE path)
+      // Chain condition nodes together with 'true' edges
+      for (let i = 0; i < choiceConditionNodes.length - 1; i++) {
+        edges.push(this.createEdge(choiceConditionNodes[i].id, choiceConditionNodes[i + 1].id, 'true'));
+      }
+
+      // Parse sequence for this choice (TRUE path from last condition)
       if (choice.sequence) {
         const sequence = Array.isArray(choice.sequence) ? choice.sequence : [choice.sequence];
         const sequenceResult = this.parseActions(
           sequence,
           warnings,
-          [conditionId],
+          [lastConditionId],
           getNextNodeId,
           localConditionIds
         );
         nodes.push(...sequenceResult.nodes);
         edges.push(...sequenceResult.edges);
 
-        // Connect condition node to first action in sequence via 'true' handle
+        // Connect last condition node to first action in sequence via 'true' handle
         if (sequenceResult.nodes.length > 0) {
           const firstActionId = sequenceResult.nodes[0].id;
           const trueEdge = edges.find(
-            (e) => e.source === conditionId && e.target === firstActionId
+            (e) => e.source === lastConditionId && e.target === firstActionId
           );
           if (trueEdge) {
             trueEdge.sourceHandle = 'true';
@@ -1643,16 +1680,17 @@ export class YamlParser {
           const lastNodeId = sequenceResult.nodes[sequenceResult.nodes.length - 1].id;
           outputNodeIds.push(lastNodeId);
         } else {
-          // Empty sequence - condition itself is output
-          outputNodeIds.push(conditionId);
+          // Empty sequence - last condition itself is output
+          outputNodeIds.push(lastConditionId);
         }
       } else {
-        // No sequence - the condition's true path is an output
-        outputNodeIds.push(conditionId);
+        // No sequence - the last condition's true path is an output
+        outputNodeIds.push(lastConditionId);
       }
 
-      // Next condition connects from this condition's FALSE path
-      currentPreviousIds = [conditionId];
+      // Next choice connects from this choice's FIRST condition's FALSE path
+      // (If any condition in the chain fails, we skip to the next choice)
+      currentPreviousIds = [firstConditionId];
     });
 
     // Handle default sequence (connects from last condition's FALSE path)
@@ -1716,107 +1754,109 @@ export class YamlParser {
     const outputNodeIds: string[] = [];
     const localConditionIds = new Set(conditionNodeIds);
 
-    // Create condition node from the 'if' conditions
-    const conditionId = getNextNodeId('condition');
     const ifConditions = Array.isArray(ifAction.if) ? ifAction.if : [ifAction.if];
 
-    // Get the first condition for analysis
-    const firstCondition = ifConditions[0] as Record<string, unknown> | undefined;
+    // Create separate condition nodes for each condition in the if: array
+    // This "explodes" combined conditions into separate linked nodes
+    const conditionNodes: ConditionNode[] = [];
 
-    // Determine how to structure the condition node:
-    // - If multiple conditions in if: array, treat as implicit AND
-    // - If single condition with nested conditions (or/and/not), preserve structure
-    // - If single simple condition, use its properties directly
-    let conditionNode: ConditionNode;
+    for (let i = 0; i < ifConditions.length; i++) {
+      const condition = ifConditions[i] as Record<string, unknown>;
+      const conditionId = getNextNodeId('condition');
 
-    if (ifConditions.length > 1) {
-      // Multiple conditions in the if: array - implicit AND
-      conditionNode = {
-        id: conditionId,
-        type: 'condition',
-        position: { x: 0, y: 0 },
-        data: {
-          alias: ifAction.alias,
-          condition: 'and',
-          conditions: transformConditions(ifConditions),
-        },
-      };
-    } else if (firstCondition && Array.isArray(firstCondition.conditions)) {
-      // Single condition with nested conditions (or/and/not)
-      const rawConditionType = (firstCondition.condition as string) || 'and';
-      const conditionType = VALID_CONDITIONS.includes(rawConditionType as ValidConditionType)
-        ? (rawConditionType as ValidConditionType)
-        : 'template';
+      let conditionNode: ConditionNode;
 
-      conditionNode = {
-        id: conditionId,
-        type: 'condition',
-        position: { x: 0, y: 0 },
-        data: {
-          alias: ifAction.alias,
+      if (condition && Array.isArray(condition.conditions)) {
+        // Condition with nested conditions (or/and/not) - preserve structure
+        const rawConditionType = (condition.condition as string) || 'and';
+        const conditionType = VALID_CONDITIONS.includes(rawConditionType as ValidConditionType)
+          ? (rawConditionType as ValidConditionType)
+          : 'template';
+
+        conditionNode = {
+          id: conditionId,
+          type: 'condition',
+          position: { x: 0, y: 0 },
+          data: {
+            // Only first condition gets the alias from ifAction
+            alias: i === 0 ? ifAction.alias : undefined,
+            condition: conditionType,
+            conditions: transformConditions(condition.conditions),
+          },
+        };
+      } else {
+        // Simple condition - use its properties directly
+        const rawConditionType = (condition?.condition as string) || 'numeric_state';
+        const conditionType = VALID_CONDITIONS.includes(rawConditionType as ValidConditionType)
+          ? (rawConditionType as ValidConditionType)
+          : 'template';
+
+        // Use Zod looseObject for normalization and type safety
+        const looseObj = {
+          ...condition,
+          // Only first condition gets the alias from ifAction
+          alias: i === 0 ? (ifAction.alias ?? condition?.alias) : condition?.alias,
           condition: conditionType,
-          conditions: transformConditions(firstCondition.conditions),
-        },
-      };
-    } else {
-      // Single simple condition - use its properties directly, but normalize with Zod looseObject schema
-      const rawConditionType = (firstCondition?.condition as string) || 'numeric_state';
-      const conditionType = VALID_CONDITIONS.includes(rawConditionType as ValidConditionType)
-        ? (rawConditionType as ValidConditionType)
-        : 'template';
+        };
 
-      // Use Zod looseObject for normalization and type safety
-      const looseObj = {
-        ...firstCondition,
-        alias: ifAction.alias ?? firstCondition?.alias,
-        condition: conditionType,
-      };
-      // Validate and normalize with HAConditionSchema
-      let data: HACondition;
-      try {
-        data = HAConditionSchema.parse(looseObj);
-      } catch {
-        // Fallback: minimal valid template
-        data = {
-          alias: ifAction.alias,
-          condition: 'template',
-          value_template: JSON.stringify(firstCondition),
+        // Validate and normalize with HAConditionSchema
+        let data: HACondition;
+        try {
+          data = HAConditionSchema.parse(looseObj);
+        } catch {
+          // Fallback: minimal valid template
+          data = {
+            alias: i === 0 ? ifAction.alias : undefined,
+            condition: 'template',
+            value_template: JSON.stringify(condition),
+          };
+        }
+
+        conditionNode = {
+          id: conditionId,
+          type: 'condition',
+          position: { x: 0, y: 0 },
+          data,
         };
       }
-      conditionNode = {
-        id: conditionId,
-        type: 'condition',
-        position: { x: 0, y: 0 },
-        data,
-      };
+
+      conditionNodes.push(conditionNode);
+      nodes.push(conditionNode);
+      localConditionIds.add(conditionId);
     }
 
-    nodes.push(conditionNode);
-    localConditionIds.add(conditionId);
-
-    // Connect from previous nodes (use localConditionIds which includes newly tracked conditions)
+    // Connect from previous nodes to the first condition
+    const firstConditionId = conditionNodes[0].id;
     for (const prevId of previousNodeIds) {
       const sourceHandle = localConditionIds.has(prevId) ? 'true' : undefined;
-      edges.push(this.createEdge(prevId, conditionId, sourceHandle));
+      edges.push(this.createEdge(prevId, firstConditionId, sourceHandle));
     }
 
-    // Parse 'then' sequence (true branch)
+    // Chain condition nodes together with 'true' edges
+    for (let i = 0; i < conditionNodes.length - 1; i++) {
+      edges.push(this.createEdge(conditionNodes[i].id, conditionNodes[i + 1].id, 'true'));
+    }
+
+    // The last condition node connects to the 'then' actions
+    const lastConditionId = conditionNodes[conditionNodes.length - 1].id;
+
+    // Parse 'then' sequence (true branch) - connects from last condition
     if (ifAction.then) {
       const thenSequence = Array.isArray(ifAction.then) ? ifAction.then : [ifAction.then];
       const thenResult = this.parseActions(
         thenSequence,
         warnings,
-        [conditionId],
+        [lastConditionId],
         getNextNodeId,
         localConditionIds
       );
       nodes.push(...thenResult.nodes);
       edges.push(...thenResult.edges);
 
-      // The edges from condition to first action should use 'true' handle
+      // The edges from last condition to first action should use 'true' handle
       if (thenResult.nodes.length > 0) {
         const firstActionId = thenResult.nodes[0].id;
-        const trueEdge = edges.find((e) => e.source === conditionId && e.target === firstActionId);
+        const trueEdge = edges.find((e) => e.source === lastConditionId && e.target === firstActionId);
         if (trueEdge) {
           trueEdge.sourceHandle = 'true';
         }
@@ -1828,14 +1868,15 @@ export class YamlParser {
       }
     }
 
-    // Parse 'else' sequence (false branch)
+    // Parse 'else' sequence (false branch) - connects from FIRST condition only
+    // (This matches the expected behavior: only the first condition handles the else path)
     if (ifAction.else) {
       const elseSequence = Array.isArray(ifAction.else) ? ifAction.else : [ifAction.else];
-      // For else branch, we need to connect from condition with 'false' handle
+      // For else branch, we need to connect from first condition with 'false' handle
       const elseResult = this.parseActions(
         elseSequence,
         warnings,
-        [conditionId],
+        [firstConditionId],
         getNextNodeId,
         new Set() // Don't use localConditionIds for else - we handle the edge manually
       );
@@ -1844,15 +1885,15 @@ export class YamlParser {
       // Add edges manually with 'false' handle for first connection
       if (elseResult.nodes.length > 0) {
         const firstElseNodeId = elseResult.nodes[0].id;
-        // Remove any auto-generated edges from condition to first else node
+        // Remove any auto-generated edges from first condition to first else node
         const existingEdgeIndex = elseResult.edges.findIndex(
-          (e) => e.source === conditionId && e.target === firstElseNodeId
+          (e) => e.source === firstConditionId && e.target === firstElseNodeId
         );
         if (existingEdgeIndex >= 0) {
           elseResult.edges.splice(existingEdgeIndex, 1);
         }
         // Add edge with 'false' handle
-        edges.push(this.createEdge(conditionId, firstElseNodeId, 'false'));
+        edges.push(this.createEdge(firstConditionId, firstElseNodeId, 'false'));
       }
 
       // Add remaining edges from else result
@@ -1864,9 +1905,9 @@ export class YamlParser {
       }
     }
 
-    // If no outputs were added, the condition itself is the output
+    // If no outputs were added, the last condition itself is the output
     if (outputNodeIds.length === 0) {
-      outputNodeIds.push(conditionId);
+      outputNodeIds.push(lastConditionId);
     }
 
     return { nodes, edges, outputNodeIds };
