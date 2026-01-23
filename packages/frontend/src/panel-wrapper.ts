@@ -33,6 +33,13 @@ class CafePanelWrapper extends HTMLElement {
     this.style.height = '100%';
     this.style.position = 'relative';
 
+    // Detect dark mode from hass to set initial background and avoid white flash
+    const isDarkMode = this._hass?.themes?.darkMode ?? false;
+    // These match the CSS variables in index.css:
+    // Light: --background: 0 0% 100% (white)
+    // Dark: --background: 222.2 84% 4.9% (dark blue)
+    const bgColor = isDarkMode ? 'hsl(222.2, 84%, 4.9%)' : 'hsl(0, 0%, 100%)';
+
     // Create iframe pointing to the app
     this.iframe = document.createElement('iframe');
     this.iframe.src = '/cafe-hass/index.html';
@@ -40,6 +47,7 @@ class CafePanelWrapper extends HTMLElement {
     this.iframe.style.height = '100%';
     this.iframe.style.border = 'none';
     this.iframe.style.display = 'block';
+    this.iframe.style.background = bgColor;
     // Allow same-origin access
     this.iframe.setAttribute('allow', 'clipboard-read *; clipboard-write *');
 

@@ -5,6 +5,22 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>C.A.F.E. - Home Assistant</title>
+    <script>
+      // Set background color immediately to avoid white flash in dark mode
+      // This runs before CSS loads, checking parent window's hass dark mode setting
+      (function() {
+        try {
+          var isDark = window.parent && window.parent.hass && window.parent.hass.themes && window.parent.hass.themes.darkMode;
+          // Match CSS variables: light = hsl(0, 0%, 100%), dark = hsl(222.2, 84%, 4.9%)
+          var bg = isDark ? 'hsl(222.2, 84%, 4.9%)' : 'hsl(0, 0%, 100%)';
+          document.documentElement.style.background = bg;
+          // Inject style for body since it doesn't exist yet
+          var style = document.createElement('style');
+          style.textContent = 'body { background: ' + bg + ' !important; }';
+          document.head.appendChild(style);
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
