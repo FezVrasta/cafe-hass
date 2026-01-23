@@ -65,11 +65,16 @@ export class NativeStrategy extends BaseStrategy {
         ];
       } else {
         // Multiple paths from triggers - use parallel
+        const parallelBranches = uniqueFirstActions.map((nodeId) =>
+          this.buildSequenceFromNode(flow, nodeId, new Set())
+        );
+        // Flatten single-action branches to avoid double-nesting (- - service:)
+        const flattenedBranches = parallelBranches
+          .filter((branch) => branch.length > 0)
+          .map((branch) => (branch.length === 1 ? branch[0] : branch));
         actions = [
           {
-            parallel: uniqueFirstActions.map((nodeId) =>
-              this.buildSequenceFromNode(flow, nodeId, new Set())
-            ),
+            parallel: flattenedBranches,
           },
         ];
       }
@@ -394,9 +399,14 @@ export class NativeStrategy extends BaseStrategy {
           const parallelActions = outgoing.map((edge) =>
             this.buildSequenceUntilNode(flow, edge.target, convergencePoint, new Set(visited)),
           );
-          if (parallelActions.some((a) => a.length > 0)) {
+          const filteredBranches = parallelActions.filter((a) => a.length > 0);
+          if (filteredBranches.length > 0) {
+            // Flatten single-action branches to avoid double-nesting (- - service:)
+            const flattenedBranches = filteredBranches.map((branch) =>
+              branch.length === 1 ? branch[0] : branch
+            );
             sequence.push({
-              parallel: parallelActions.filter((a) => a.length > 0),
+              parallel: flattenedBranches,
             });
           }
           const afterParallel = this.buildSequenceFromNode(
@@ -409,9 +419,14 @@ export class NativeStrategy extends BaseStrategy {
           const parallelActions = outgoing.map((edge) =>
             this.buildSequenceFromNode(flow, edge.target, new Set(visited)),
           );
-          if (parallelActions.some((a) => a.length > 0)) {
+          const filteredBranches = parallelActions.filter((a) => a.length > 0);
+          if (filteredBranches.length > 0) {
+            // Flatten single-action branches to avoid double-nesting (- - service:)
+            const flattenedBranches = filteredBranches.map((branch) =>
+              branch.length === 1 ? branch[0] : branch
+            );
             sequence.push({
-              parallel: parallelActions.filter((a) => a.length > 0),
+              parallel: flattenedBranches,
             });
           }
         }
@@ -569,9 +584,14 @@ export class NativeStrategy extends BaseStrategy {
       const parallelActions = outgoing.map((edge) =>
         this.buildSequenceUntilNode(flow, edge.target, stopNodeId, new Set(visited))
       );
-      if (parallelActions.some((a) => a.length > 0)) {
+      const filteredBranches = parallelActions.filter((a) => a.length > 0);
+      if (filteredBranches.length > 0) {
+        // Flatten single-action branches to avoid double-nesting (- - service:)
+        const flattenedBranches = filteredBranches.map((branch) =>
+          branch.length === 1 ? branch[0] : branch
+        );
         sequence.push({
-          parallel: parallelActions.filter((a) => a.length > 0),
+          parallel: flattenedBranches,
         });
       }
     }
