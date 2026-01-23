@@ -4,6 +4,8 @@ import { useMemo } from 'react';
 import { FormField } from '@/components/forms/FormField';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { getHandledProperties } from '@/config/handledProperties';
 import { useHass } from '@/contexts/HassContext';
 import { useFlowStore } from '@/store/flow-store';
@@ -124,6 +126,18 @@ export function PropertyPanel() {
           className="font-mono"
         />
       </FormField>
+
+      {/* Enabled toggle */}
+      <div className="flex items-center justify-between">
+        <Label htmlFor="node-enabled" className="text-sm">
+          Enabled
+        </Label>
+        <Switch
+          id="node-enabled"
+          checked={selectedNode.data.enabled !== false}
+          onCheckedChange={(checked) => handleChange('enabled', checked ? undefined : false)}
+        />
+      </div>
 
       <Separator />
 

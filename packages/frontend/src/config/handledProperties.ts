@@ -9,6 +9,7 @@ export const HANDLED_PROPERTIES = {
   common: [
     'id', // User-defined ID for referencing in templates
     'alias', // Always handled by common alias field
+    'enabled', // Handled by common enabled switch
     '_conditionId', // Internal property
   ],
 

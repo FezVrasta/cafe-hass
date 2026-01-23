@@ -1,5 +1,5 @@
 import { Handle, type NodeProps, Position } from '@xyflow/react';
-import { Zap } from 'lucide-react';
+import { Ban, Zap } from 'lucide-react';
 import { memo } from 'react';
 import { cn } from '@/lib/utils';
 import type { TriggerNodeData } from '@/store/flow-store';
@@ -14,6 +14,7 @@ export const TriggerNode = memo(function TriggerNode({ id, data, selected }: Tri
   const getExecutionStepNumber = useFlowStore((s) => s.getExecutionStepNumber);
   const isActive = activeNodeId === id;
   const stepNumber = getExecutionStepNumber(id);
+  const isDisabled = data.enabled === false;
 
   const platformLabels: Record<string, string> = {
     state: 'State Change',
@@ -122,12 +123,18 @@ export const TriggerNode = memo(function TriggerNode({ id, data, selected }: Tri
   return (
     <div
       className={cn(
-        'min-w-[180px] max-w-[300px] rounded-lg border-2 border-amber-400 bg-amber-50 px-4 py-3',
+        'relative min-w-[180px] max-w-[300px] rounded-lg border-2 border-amber-400 bg-amber-50 px-4 py-3',
         'transition-all duration-200',
         selected && 'ring-2 ring-amber-500 ring-offset-2',
-        isActive && 'node-active ring-4 ring-green-500'
+        isActive && 'node-active ring-4 ring-green-500',
+        isDisabled && 'border-dashed opacity-50 grayscale'
       )}
     >
+      {isDisabled && (
+        <div className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-gray-500 text-white shadow-sm">
+          <Ban className="h-3 w-3" />
+        </div>
+      )}
       <div className="mb-1 flex items-center gap-2">
         <div className="rounded bg-amber-200 p-1">
           <Zap className="h-4 w-4 text-amber-700" />
