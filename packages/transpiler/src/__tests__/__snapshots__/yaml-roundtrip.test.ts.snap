@@ -1347,10 +1347,10 @@ action:
         type: turn_off
         entity_id: 62f9263c0006b6f9acdf12a35139e095
       - parallel:
-          - - device_id: ad7a2c892d7118cbfcdc89d2e2b3323d
-              domain: cover
-              type: close
-              entity_id: 63bff85b1243e4da6edf77f186725bc6
+          - device_id: ad7a2c892d7118cbfcdc89d2e2b3323d
+            domain: cover
+            type: close
+            entity_id: 63bff85b1243e4da6edf77f186725bc6
           - - delay:
                 hours: 0
                 minutes: 0
@@ -1364,11 +1364,11 @@ action:
               target:
                 entity_id: input_boolean.zapfenstreich
               data: {}
-          - - metadata: {}
-              service: input_boolean.turn_off
-              target:
-                entity_id: input_boolean.gartenbeleuchtung
-              data: {}
+          - metadata: {}
+            service: input_boolean.turn_off
+            target:
+              entity_id: input_boolean.gartenbeleuchtung
+            data: {}
       - device_id: 38156e5e85c33bd4d2129e9c7a67c5af
         domain: switch
         type: turn_off
