@@ -1,0 +1,136 @@
+{
+  "types": {
+    "trigger": "触发器",
+    "condition": "条件",
+    "action": "动作",
+    "delay": "延迟",
+    "wait": "等待",
+    "set_variables": "设置变量",
+    "node": "节点"
+  },
+  "panel": {
+    "selectNode": "选择节点以编辑其属性",
+    "properties": "属性",
+    "nodeId": "节点ID：{{id}}",
+    "additionalProperties": "附加属性",
+    "addProperty": "添加属性",
+    "propertyName": "属性名称",
+    "type": "类型",
+    "value": "值"
+  },
+  "placeholders": {
+    "customProperty": "例如 my_custom_property",
+    "jsonArray": "[\"项目1\", \"项目2\"]",
+    "number": "123",
+    "enterValue": "输入值",
+    "jsonObject": "JSON对象",
+    "enterType": "输入 {{type}}",
+    "waitTemplate": "{{ is_state('sensor.x', 'on') }}"
+  },
+  "triggers": {
+    "platformLabel": "平台",
+    "platforms": {
+      "state": "状态变化",
+      "numeric_state": "数值状态",
+      "time": "时间",
+      "time_pattern": "时间模式",
+      "sun": "太阳",
+      "event": "事件",
+      "mqtt": "MQTT",
+      "webhook": "Webhook",
+      "zone": "区域",
+      "template": "模板",
+      "homeassistant": "Home Assistant",
+      "device": "设备",
+      "calendar": "日历",
+      "geo_location": "地理位置",
+      "tag": "标签",
+      "conversation": "对话",
+      "persistent_notification": "持久通知"
+    },
+    "dataTypes": {
+      "string": "文本",
+      "number": "数字",
+      "boolean": "布尔值",
+      "json": "数组（JSON）"
+    }
+  },
+  "conditions": {
+    "conditionLabel": "条件类型",
+    "types": {
+      "state": "状态",
+      "numeric_state": "数值状态",
+      "time": "时间",
+      "sun": "太阳",
+      "zone": "区域",
+      "template": "模板",
+      "device": "设备",
+      "trigger": "触发器",
+      "and": "与（全部）",
+      "or": "或（任一）",
+      "not": "非"
+    },
+    "nestedConditions": "嵌套条件",
+    "yes": "是",
+    "no": "否"
+  },
+  "actions": {
+    "serviceLabel": "服务"
+  },
+  "variables": {
+    "variableCount_one": "{{count}} 个变量",
+    "variableCount_other": "{{count}} 个变量"
+  },
+  "durationField": {
+    "label": "持续时间",
+    "description": "以小时、分钟、秒、毫秒指定持续时间",
+    "string": "字符串",
+    "object": "对象",
+    "placeholder": "00:00:05.500",
+    "hours": "小时",
+    "minutes": "分钟",
+    "seconds": "秒",
+    "milliseconds": "毫秒"
+  },
+  "responseVariableField": {
+    "label": "响应变量",
+    "optionalDescription": "此动作可以返回响应。启用以使用响应并输入将保存响应的变量名称。",
+    "requiredDescription": "此动作返回响应。输入将保存响应的变量名称。",
+    "useResponseVariable": "使用响应变量",
+    "placeholder": "例如 my_response",
+    "currentNodeWarning": "'current_node' 是状态机策略的保留名称。使用此名称可能导致意外行为。"
+  },
+  "serviceDataFields": {
+    "heading": "服务数据"
+  },
+  "setVariablesFields": {
+    "empty": "未定义变量。点击下方按钮添加一个。",
+    "variableLabel": "变量 {{index}}",
+    "name": "名称",
+    "namePlaceholder": "variable_name",
+    "value": "值",
+    "valueDescription": "值或Jinja2模板表达式",
+    "valuePlaceholder": "值或 {{ template }}",
+    "addVariable": "添加变量"
+  },
+  "wait": {
+    "waitsForNTrigger_one": "等待 {{count}} 个触发器",
+    "waitsForNTrigger_other": "等待 {{count}} 个触发器",
+    "timeoutLabel": "超时：",
+    "waitType": "等待类型",
+    "waitTypeDescription": "选择要等待的内容。",
+    "types": {
+      "template": "模板",
+      "triggers": "触发器"
+    },
+    "waitTemplate": "等待模板",
+    "waitTemplateDescription": "必须为真才能继续的模板条件",
+    "triggersHeading": "触发器",
+    "triggerLabel": "触发器 {{index}}：{{platform}}",
+    "triggerPlatformLabel": "平台",
+    "addTrigger": "添加触发器",
+    "timeoutDescription": "继续前的最大等待时间。留空则无限等待。",
+    "continueOnTimeout": "超时后继续",
+    "continueOnTimeoutDescription": "如果启用，超时后自动化继续。如果禁用，自动化停止。"
+  }
+}

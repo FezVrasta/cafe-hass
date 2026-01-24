@@ -1,0 +1,99 @@
+{
+  "save": {
+    "title": "保存自动化",
+    "titleUpdate": "更新自动化",
+    "description": "将此自动化保存到Home Assistant",
+    "descriptionUpdate": "在Home Assistant中更新此自动化",
+    "nameLabel": "自动化名称",
+    "descriptionLabel": "描述（可选）",
+    "nameConflict": "名称已存在。使用：\"{{suggestedName}}\"？"
+  },
+  "import": {
+    "title": "打开自动化",
+    "description": "从Home Assistant选择要编辑的自动化",
+    "descriptionFull": "打开现有自动化或创建新的",
+    "searchPlaceholder": "搜索自动化...",
+    "noAutomations": "未找到自动化",
+    "noConnection": "连接到Home Assistant以加载自动化",
+    "createNew": "新建",
+    "columns": {
+      "name": "名称",
+      "lastTriggered": "上次触发",
+      "enabled": "已启用",
+      "action": "操作"
+    },
+    "mode": "模式：{{mode}}",
+    "never": "从未",
+    "justNow": "刚刚",
+    "minutesAgo": "{{count}}分钟前",
+    "hoursAgo": "{{count}}小时前",
+    "daysAgo": "{{count}}天前",
+    "disabled": "已禁用",
+    "automationEnabled": "自动化已成功启用。",
+    "automationDisabled": "自动化已成功禁用。",
+    "updateStateFailed": "更新自动化状态失败",
+    "importAutomation": "导入自动化",
+    "openingWarning": "打开将替换您当前的自动化设计",
+    "discardTitle": "放弃当前流程？",
+    "discardDescription": "您当前的自动化有未保存的更改。创建或打开新的自动化将放弃这些更改。",
+    "confirmDiscard": "放弃并继续",
+    "importSuccess": "自动化 \"{{name}}\" 导入成功！",
+    "openedWarning": "自动化 \"{{name}}\" 已打开！",
+    "openedWarningDescription": "无法自动获取配置。您现在可以使用相同的名称创建新流程。",
+    "importFailed": "导入自动化失败：{{message}}",
+    "ID": "ID：{{id}}",
+    "otherArea": "其他区域",
+    "noArea": "无区域"
+  },
+  "importYaml": {
+    "title": "导入YAML自动化",
+    "description": "在下方粘贴您的Home Assistant自动化YAML。自动化可以是标准格式或状态机格式。",
+    "placeholder": "alias: 我的自动化\\ntrigger:\\n  - platform: state\\n    entity_id: sensor.example",
+    "importFailed": "导入失败",
+    "warnings": "警告",
+    "successLoading": "导入成功！正在加载流程...",
+    "tipLabel": "提示：",
+    "tipText": "如果您的自动化是使用C.A.F.E.创建的，节点位置将被保留。否则，节点将自动排列为可读布局。",
+    "importing": "正在导入...",
+    "import": "导入",
+    "errors": {
+      "parseError": "解析YAML失败：{{message}}",
+      "importError": "导入失败：{{message}}"
+    }
+  },
+  "settings": {
+    "title": "Home Assistant连接",
+    "description": "配置您的Home Assistant连接设置。",
+    "urlLabel": "Home Assistant URL",
+    "urlPlaceholder": "http://homeassistant.local:8123",
+    "urlHelp": "您的Home Assistant实例的URL",
+    "tokenLabel": "长期访问令牌",
+    "tokenPlaceholder": "eyJ0eXAiOiJKV1QiLCJhbGci...",
+    "tokenHelp": "在HA中创建：个人资料 → 长期访问令牌",
+    "testConnection": "测试连接",
+    "testing": "正在测试...",
+    "connected": "已连接！",
+    "disconnect": "断开连接",
+    "corsNote": "CORS说明",
+    "corsDescription": "要从浏览器连接，您可能需要在HA配置中添加CORS头。如果您从 https://fezvrasta.github.io/hass-cafe 连接，您的HA实例必须使用HTTPS。",
+    "tokenGuideLink": "如何创建长期访问令牌",
+    "apiRunning": "API正在运行。",
+    "errors": {
+      "missingFields": "请提供URL和令牌",
+      "unexpectedResponse": "意外的API响应",
+      "invalidToken": "令牌无效 - 认证失败",
+      "httpError": "HTTP {{status}}：{{statusText}}",
+      "corsError": "无法连接 - 检查URL和CORS设置",
+      "connectionFailed": "连接失败"
+    }
+  },
+  "error": {
+    "title": "意外错误",
+    "description": "应用程序发生意外错误。请查看以下详情。",
+    "refreshPrompt": "请尝试刷新页面。如果问题仍然存在，请考虑在我们的GitHub仓库上报告问题。"
+  },
+  "traceViewer": {
+    "saveAutomationFirst": "先保存自动化以查看追踪",
+    "noTracesFound": "未找到自动化追踪"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "trace": {
+    "heading": "Simulateur de trace",
+    "conditionOverrides": "Résultats des conditions (pour simulation)",
+    "random": "Aléatoire",
+    "true": "Vrai",
+    "false": "Faux",
+    "executionPath": "Chemin d'exécution"
+  }
+}

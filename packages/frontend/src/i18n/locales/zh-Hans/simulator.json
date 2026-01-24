@@ -1,0 +1,10 @@
+{
+  "trace": {
+    "heading": "追踪模拟器",
+    "conditionOverrides": "条件结果（用于模拟）",
+    "random": "随机",
+    "true": "真",
+    "false": "假",
+    "executionPath": "执行路径"
+  }
+}

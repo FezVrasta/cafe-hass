@@ -1,0 +1,123 @@
+{
+  "buttons": {
+    "save": "保存",
+    "saveAsCopy": "另存为副本",
+    "cancel": "取消",
+    "close": "关闭",
+    "delete": "删除",
+    "update": "更新",
+    "refresh": "刷新",
+    "copy": "复制",
+    "use": "使用",
+    "add": "添加",
+    "addTrigger": "添加触发器",
+    "openAutomation": "打开自动化",
+    "newAutomation": "新建自动化",
+    "importJson": "从JSON导入",
+    "importYaml": "从YAML导入",
+    "testConnection": "测试连接",
+    "disconnect": "断开连接"
+  },
+  "labels": {
+    "automationName": "自动化名称",
+    "properties": "属性",
+    "yaml": "YAML",
+    "debug": "调试",
+    "enabled": "已启用",
+    "alias": "别名（显示名称）",
+    "id": "ID",
+    "strategy": "策略",
+    "speed": "速度",
+    "quickHelp": "快速帮助",
+    "debugControls": "调试控制",
+    "addNode": "添加节点",
+    "yamlOutput": "YAML输出",
+    "automationTrace": "自动化追踪",
+    "selectTraceRun": "选择追踪运行：",
+    "traceDetails": "追踪详情：",
+    "trigger": "触发器：",
+    "duration": "持续时间：",
+    "lastStep": "最后步骤：",
+    "executionPath": "执行路径：",
+    "notApplicable": "不适用",
+    "device": "设备",
+    "triggerType": "触发器类型",
+    "entityId": "实体ID",
+    "warning": "警告",
+    "requiredAsterisk": "*"
+  },
+  "status": {
+    "connecting": "正在连接...",
+    "connected": "已连接",
+    "connectedTo": "已连接到 {{hostname}}",
+    "connectionError": "连接错误",
+    "saving": "正在保存...",
+    "updating": "正在更新...",
+    "testing": "正在测试...",
+    "loadingTraces": "正在加载追踪...",
+    "loadingTriggers": "正在加载触发器..."
+  },
+  "placeholders": {
+    "automationName": "自动化名称",
+    "optionalDisplayName": "可选显示名称",
+    "optionalUniqueId": "可选唯一ID",
+    "enterAutomationName": "输入自动化名称...",
+    "describeAutomation": "描述这个自动化的功能...",
+    "searchAutomations": "搜索自动化...",
+    "selectTrace": "选择追踪...",
+    "addNodesForYaml": "# 添加节点以查看YAML输出",
+    "selectDevice": "选择设备...",
+    "selectTriggerType": "选择触发器类型...",
+    "selectEntity": "选择实体...",
+    "selectEntities": "选择实体...",
+    "duration": "00:05:00",
+    "enterTemplate": "输入Jinja2模板...",
+    "jsonExample": "{ \"键\": \"值\" }",
+    "none": "无"
+  },
+  "help": {
+    "clickNodesToAdd": "点击节点以添加",
+    "dragToConnect": "拖动以连接",
+    "deleteToRemove": "删除以移除",
+    "backspaceDeleteKey": "退格键/删除键"
+  },
+  "titles": {
+    "appName": "C.A.F.E.",
+    "appFullName": "复杂自动化流程编辑器",
+    "settings": "设置",
+    "updateAutomation": "在Home Assistant中更新自动化",
+    "saveAutomation": "将自动化保存到Home Assistant",
+    "exportJson": "导出流程为JSON",
+    "clickToConfigure": "点击配置Home Assistant连接"
+  },
+  "strategy": {
+    "auto": "自动",
+    "native": "原生",
+    "stateMachine": "状态机"
+  },
+  "defaults": {
+    "newAutomation": "新建自动化"
+  },
+  "boolean": {
+    "true": "真",
+    "false": "假"
+  },
+  "combobox": {
+    "select": "选择...",
+    "noOptions": "未找到选项。"
+  },
+  "dynamicField": {
+    "enabled": "已启用",
+    "disabled": "已禁用",
+    "selectItems": "选择项目...",
+    "itemsSelected": "已选择 {{count}} 项",
+    "selectEntities": "选择实体...",
+    "selectEntity": "选择实体...",
+    "formatHMS": "格式：时:分:秒",
+    "enterValue": "输入 {{name}}..."
+  },
+  "deviceSelector": {
+    "enterId": "手动输入设备ID",
+    "noDevices": "未找到设备。请手动输入设备ID或检查您的Home Assistant连接。"
+  }
+}

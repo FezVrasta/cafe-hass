@@ -1,0 +1,50 @@
+{
+  "common": {
+    "failedToCopy": "复制失败"
+  },
+  "validation": {
+    "emptyAutomation": "无法保存空自动化。请至少添加一个触发器和一个动作节点。",
+    "noTrigger": "自动化必须至少有一个触发器节点。请从节点面板添加触发器。",
+    "noAction": "自动化必须至少有一个动作节点。请从节点面板添加动作。",
+    "validationFailed": "验证失败：{{errors}}",
+    "transpileFailed": "将流程转译为自动化配置失败",
+    "noAutomationId": "未设置自动化ID。使用 saveAutomation() 创建新自动化。"
+  },
+  "connection": {
+    "noConnection": "没有可用的Home Assistant连接",
+    "noAuth": "未配置REST API认证",
+    "authFailed": "令牌无效 - 认证失败",
+    "corsError": "无法连接 - 检查URL和CORS设置",
+    "connectionLost": "连接丢失",
+    "reconnectFailed": "重新连接失败",
+    "notConnected": "Home Assistant未连接",
+    "noMethod": "未找到可用的Home Assistant连接方法",
+    "unexpectedResponse": "意外的API响应",
+    "connectionFailed": "连接失败"
+  },
+  "api": {
+    "httpError": "HTTP {{status}}：{{statusText}}",
+    "createFailed": "创建自动化失败：{{message}}",
+    "updateFailed": "更新自动化失败：{{message}}",
+    "deleteFailed": "删除自动化失败：{{message}}",
+    "importFailed": "导入自动化失败：{{message}}",
+    "unknownError": "未知错误",
+    "transpileFailed": "转译失败",
+    "loadDeviceTriggersFailed": "加载设备触发器失败：",
+    "loadTriggerCapabilitiesFailed": "加载触发器功能失败："
+  },
+  "properties": {
+    "addFailed": "添加属性失败"
+  },
+  "form": {
+    "nameRequired": "自动化名称为必填项",
+    "urlTokenRequired": "请提供URL和令牌"
+  },
+  "import": {
+    "fileReadFailed": "导入流程失败。请检查文件格式。",
+    "parseFailed": "解析自动化配置失败"
+  },
+  "yaml": {
+    "staleWarning": "显示上次有效的YAML - 修复错误以更新"
+  }
+}

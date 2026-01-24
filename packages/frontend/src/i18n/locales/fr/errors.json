@@ -1,0 +1,50 @@
+{
+  "common": {
+    "failedToCopy": "Échec de la copie"
+  },
+  "validation": {
+    "emptyAutomation": "Impossible d'enregistrer une automatisation vide. Veuillez ajouter au moins un déclencheur et un nœud d'action.",
+    "noTrigger": "L'automatisation doit avoir au moins un nœud déclencheur. Veuillez ajouter un déclencheur depuis la palette de nœuds.",
+    "noAction": "L'automatisation doit avoir au moins un nœud d'action. Veuillez ajouter une action depuis la palette de nœuds.",
+    "validationFailed": "Validation échouée : {{errors}}",
+    "transpileFailed": "Échec de la transpilation du flux en configuration d'automatisation",
+    "noAutomationId": "Aucun ID d'automatisation défini. Utilisez saveAutomation() pour les nouvelles automatisations."
+  },
+  "connection": {
+    "noConnection": "Aucune connexion Home Assistant disponible",
+    "noAuth": "Aucune authentification configurée pour l'API REST",
+    "authFailed": "Jeton invalide - authentification échouée",
+    "corsError": "Impossible de se connecter - vérifiez l'URL et les paramètres CORS",
+    "connectionLost": "Connexion perdue",
+    "reconnectFailed": "Reconnexion échouée",
+    "notConnected": "Home Assistant n'est pas connecté",
+    "noMethod": "Aucune méthode de connexion Home Assistant fonctionnelle trouvée",
+    "unexpectedResponse": "Réponse API inattendue",
+    "connectionFailed": "Connexion échouée"
+  },
+  "api": {
+    "httpError": "HTTP {{status}} : {{statusText}}",
+    "createFailed": "Échec de la création de l'automatisation : {{message}}",
+    "updateFailed": "Échec de la mise à jour de l'automatisation : {{message}}",
+    "deleteFailed": "Échec de la suppression de l'automatisation : {{message}}",
+    "importFailed": "Échec de l'importation de l'automatisation : {{message}}",
+    "unknownError": "Erreur inconnue",
+    "transpileFailed": "Échec de la transpilation",
+    "loadDeviceTriggersFailed": "Échec du chargement des déclencheurs d'appareil :",
+    "loadTriggerCapabilitiesFailed": "Échec du chargement des capacités du déclencheur :"
+  },
+  "properties": {
+    "addFailed": "Échec de l'ajout de la propriété"
+  },
+  "form": {
+    "nameRequired": "Le nom de l'automatisation est requis",
+    "urlTokenRequired": "Veuillez fournir l'URL et le jeton"
+  },
+  "import": {
+    "fileReadFailed": "Échec de l'importation du flux. Veuillez vérifier le format du fichier.",
+    "parseFailed": "Échec de l'analyse de la configuration de l'automatisation"
+  },
+  "yaml": {
+    "staleWarning": "Affichage du dernier YAML valide - corrigez les erreurs pour mettre à jour"
+  }
+}
