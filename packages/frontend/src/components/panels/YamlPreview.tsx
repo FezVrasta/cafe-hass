@@ -1,6 +1,6 @@
 import { FlowTranspiler } from '@cafe/transpiler';
 import { Check, Copy } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -15,20 +15,30 @@ import { useFlowStore } from '@/store/flow-store';
 import { copyToClipboard } from '@/utils/copy-to-clipboard';
 import { YamlEditor } from './YamlEditor';
 
+interface CachedYaml {
+  yaml: string;
+  strategy: string | null;
+}
+
 export function YamlPreview() {
   const nodes = useFlowStore((s) => s.nodes);
   const toFlowGraph = useFlowStore((s) => s.toFlowGraph);
   const [copied, setCopied] = useState(false);
   const [forceStrategy, setForceStrategy] = useState<'auto' | 'native' | 'state-machine'>('auto');
 
+  // Cache the last valid YAML to display when transpilation fails
+  const lastValidYamlRef = useRef<CachedYaml | null>(null);
+
   // Compute YAML from nodes (canvas → YAML)
-  const { yaml, errors, warnings, strategy } = useMemo(() => {
+  const { yaml, errors, warnings, strategy, isStale } = useMemo(() => {
     if (nodes.length === 0) {
+      lastValidYamlRef.current = null;
       return {
         yaml: '# Add nodes to see YAML output',
         warnings: [],
         errors: [],
         strategy: null,
+        isStale: false,
       };
     }
     try {
@@ -38,25 +48,36 @@ export function YamlPreview() {
         forceStrategy: forceStrategy === 'auto' ? undefined : forceStrategy,
       });
       if (!result.success) {
+        // Transpilation failed - use cached YAML if available
+        const cached = lastValidYamlRef.current;
         return {
-          yaml: '',
+          yaml: cached?.yaml || '',
           warnings: [],
           errors: result.errors || ['Unknown error'],
-          strategy: null,
+          strategy: cached?.strategy || null,
+          isStale: !!cached,
         };
       }
+      // Success - cache the valid YAML
+      const validYaml = result.yaml || '';
+      const validStrategy = result.output?.strategy || null;
+      lastValidYamlRef.current = { yaml: validYaml, strategy: validStrategy };
       return {
-        yaml: result.yaml || '',
+        yaml: validYaml,
         warnings: result.warnings,
         errors: [],
-        strategy: result.output?.strategy || null,
+        strategy: validStrategy,
+        isStale: false,
       };
     } catch (error) {
+      // Exception - use cached YAML if available
+      const cached = lastValidYamlRef.current;
       return {
-        yaml: '',
+        yaml: cached?.yaml || '',
         warnings: [],
         errors: [error instanceof Error ? error.message : 'Transpilation failed'],
-        strategy: null,
+        strategy: cached?.strategy || null,
+        isStale: !!cached,
       };
     }
   }, [nodes, toFlowGraph, forceStrategy]);
@@ -93,7 +114,7 @@ export function YamlPreview() {
             variant="ghost"
             size="sm"
             onClick={handleCopy}
-            disabled={!yaml || errors.length > 0}
+            disabled={!yaml}
             className={cn(
               'h-7 w-7 p-0',
               copied ? 'bg-green-100 text-green-600 hover:bg-green-100' : 'text-muted-foreground'
@@ -114,7 +135,11 @@ export function YamlPreview() {
       )}
 
       <div className="min-h-0 flex-1">
-        <YamlEditor yaml={yaml} errors={errors} warnings={warnings} />
+        <YamlEditor
+          yaml={yaml}
+          errors={errors}
+          warnings={isStale ? ['Showing last valid YAML - fix errors to update', ...warnings] : warnings}
+        />
       </div>
     </div>
   );
