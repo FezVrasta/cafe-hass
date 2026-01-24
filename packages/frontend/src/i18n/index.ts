@@ -2,10 +2,12 @@ import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 
 import en from './locales/en';
+import it from './locales/it';
 
 export const defaultNS = 'common';
 export const resources = {
   en,
+  it,
 } as const;
 
 i18n.use(initReactI18next).init({

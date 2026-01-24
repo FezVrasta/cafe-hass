@@ -1,0 +1,50 @@
+{
+  "common": {
+    "failedToCopy": "Copia fallita"
+  },
+  "validation": {
+    "emptyAutomation": "Impossibile salvare un'automazione vuota. Aggiungi almeno un trigger e un nodo azione.",
+    "noTrigger": "L'automazione deve avere almeno un nodo trigger. Aggiungi un trigger dalla palette dei nodi.",
+    "noAction": "L'automazione deve avere almeno un nodo azione. Aggiungi un'azione dalla palette dei nodi.",
+    "validationFailed": "Validazione fallita: {{errors}}",
+    "transpileFailed": "Impossibile transpilare il flow in configurazione automazione",
+    "noAutomationId": "Nessun ID automazione impostato. Usa saveAutomation() per nuove automazioni."
+  },
+  "connection": {
+    "noConnection": "Nessuna connessione Home Assistant disponibile",
+    "noAuth": "Nessuna autenticazione configurata per l'API REST",
+    "authFailed": "Token non valido - autenticazione fallita",
+    "corsError": "Impossibile connettersi - verifica URL e impostazioni CORS",
+    "connectionLost": "Connessione persa",
+    "reconnectFailed": "Riconnessione fallita",
+    "notConnected": "Home Assistant non è connesso",
+    "noMethod": "Nessun metodo di connessione Home Assistant funzionante trovato",
+    "unexpectedResponse": "Risposta API inattesa",
+    "connectionFailed": "Connessione fallita"
+  },
+  "api": {
+    "httpError": "HTTP {{status}}: {{statusText}}",
+    "createFailed": "Impossibile creare l'automazione: {{message}}",
+    "updateFailed": "Impossibile aggiornare l'automazione: {{message}}",
+    "deleteFailed": "Impossibile eliminare l'automazione: {{message}}",
+    "importFailed": "Impossibile importare l'automazione: {{message}}",
+    "unknownError": "Errore sconosciuto",
+    "transpileFailed": "Transpilazione fallita",
+    "loadDeviceTriggersFailed": "Impossibile caricare i trigger del dispositivo:",
+    "loadTriggerCapabilitiesFailed": "Impossibile caricare le capacità del trigger:"
+  },
+  "properties": {
+    "addFailed": "Impossibile aggiungere la proprietà"
+  },
+  "form": {
+    "nameRequired": "Il nome dell'automazione è obbligatorio",
+    "urlTokenRequired": "Fornisci sia URL che token"
+  },
+  "import": {
+    "fileReadFailed": "Impossibile importare il flow. Verifica il formato del file.",
+    "parseFailed": "Impossibile analizzare la configurazione dell'automazione"
+  },
+  "yaml": {
+    "staleWarning": "Mostrando l'ultimo YAML valido - correggi gli errori per aggiornare"
+  }
+}

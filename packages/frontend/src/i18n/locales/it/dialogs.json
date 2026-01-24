@@ -1,0 +1,99 @@
+{
+  "save": {
+    "title": "Salva Automazione",
+    "titleUpdate": "Aggiorna Automazione",
+    "description": "Salva questa automazione in Home Assistant",
+    "descriptionUpdate": "Aggiorna questa automazione in Home Assistant",
+    "nameLabel": "Nome Automazione",
+    "descriptionLabel": "Descrizione (Opzionale)",
+    "nameConflict": "Il nome esiste già. Usare: \"{{suggestedName}}\"?"
+  },
+  "import": {
+    "title": "Apri Automazione",
+    "description": "Seleziona un'automazione da Home Assistant da modificare",
+    "descriptionFull": "Apri un'automazione esistente o creane una nuova",
+    "searchPlaceholder": "Cerca automazioni...",
+    "noAutomations": "Nessuna automazione trovata",
+    "noConnection": "Connettiti a Home Assistant per caricare le automazioni",
+    "createNew": "Crea Nuova",
+    "columns": {
+      "name": "Nome",
+      "lastTriggered": "Ultimo Trigger",
+      "enabled": "Abilitato",
+      "action": "Azione"
+    },
+    "mode": "Modalità: {{mode}}",
+    "never": "Mai",
+    "justNow": "Adesso",
+    "minutesAgo": "{{count}}m fa",
+    "hoursAgo": "{{count}}h fa",
+    "daysAgo": "{{count}}g fa",
+    "disabled": "Disabilitato",
+    "automationEnabled": "Automazione abilitata con successo.",
+    "automationDisabled": "Automazione disabilitata con successo.",
+    "updateStateFailed": "Impossibile aggiornare lo stato dell'automazione",
+    "importAutomation": "Importa automazione",
+    "openingWarning": "L'apertura sostituirà il design dell'automazione corrente",
+    "discardTitle": "Scartare il flow corrente?",
+    "discardDescription": "L'automazione corrente ha modifiche non salvate. Creare o aprire una nuova automazione scarterà queste modifiche.",
+    "confirmDiscard": "Scarta e Continua",
+    "importSuccess": "Automazione \"{{name}}\" importata con successo!",
+    "openedWarning": "Automazione \"{{name}}\" aperta!",
+    "openedWarningDescription": "Impossibile recuperare la configurazione automaticamente. Ora puoi creare un nuovo flow con lo stesso nome.",
+    "importFailed": "Impossibile importare l'automazione: {{message}}",
+    "ID": "ID: {{id}}",
+    "otherArea": "Altra Area",
+    "noArea": "Nessuna Area"
+  },
+  "importYaml": {
+    "title": "Importa Automazione YAML",
+    "description": "Incolla il tuo YAML di automazione Home Assistant qui sotto. L'automazione può essere in formato standard o formato macchina a stati.",
+    "placeholder": "alias: La Mia Automazione\\ntrigger:\\n  - platform: state\\n    entity_id: sensor.esempio",
+    "importFailed": "Importazione Fallita",
+    "warnings": "Avvisi",
+    "successLoading": "Importato con successo! Caricamento flow...",
+    "tipLabel": "Suggerimento:",
+    "tipText": "Se l'automazione è stata creata con C.A.F.E., le posizioni dei nodi saranno preservate. Altrimenti, i nodi saranno disposti automaticamente in un layout leggibile.",
+    "importing": "Importazione...",
+    "import": "Importa",
+    "errors": {
+      "parseError": "Impossibile analizzare YAML: {{message}}",
+      "importError": "Impossibile importare: {{message}}"
+    }
+  },
+  "settings": {
+    "title": "Connessione Home Assistant",
+    "description": "Configura le impostazioni di connessione a Home Assistant.",
+    "urlLabel": "URL Home Assistant",
+    "urlPlaceholder": "http://homeassistant.local:8123",
+    "urlHelp": "L'URL della tua istanza Home Assistant",
+    "tokenLabel": "Token di Accesso a Lunga Durata",
+    "tokenPlaceholder": "eyJ0eXAiOiJKV1QiLCJhbGci...",
+    "tokenHelp": "Creane uno in HA: Profilo → Token di Accesso a Lunga Durata",
+    "testConnection": "Testa Connessione",
+    "testing": "Test in corso...",
+    "connected": "Connesso!",
+    "disconnect": "Disconnetti",
+    "corsNote": "Nota CORS",
+    "corsDescription": "Per connetterti da un browser, potrebbe essere necessario aggiungere gli header CORS alla tua configurazione HA. Se ti connetti da https://fezvrasta.github.io/hass-cafe, la tua istanza HA deve essere sotto HTTPS.",
+    "tokenGuideLink": "Come creare un Token di Accesso a Lunga Durata",
+    "apiRunning": "API in esecuzione.",
+    "errors": {
+      "missingFields": "Fornisci sia URL che token",
+      "unexpectedResponse": "Risposta API inattesa",
+      "invalidToken": "Token non valido - autenticazione fallita",
+      "httpError": "HTTP {{status}}: {{statusText}}",
+      "corsError": "Impossibile connettersi - verifica URL e impostazioni CORS",
+      "connectionFailed": "Connessione fallita"
+    }
+  },
+  "error": {
+    "title": "Errore Inatteso",
+    "description": "Si è verificato un errore inatteso nell'applicazione. Vedi i dettagli qui sotto.",
+    "refreshPrompt": "Prova ad aggiornare la pagina. Se il problema persiste, considera di segnalare il problema sul nostro repository GitHub."
+  },
+  "traceViewer": {
+    "saveAutomationFirst": "Salva prima l'automazione per visualizzare le tracce",
+    "noTracesFound": "Nessuna traccia di automazione trovata"
+  }
+}

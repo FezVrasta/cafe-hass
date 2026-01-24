@@ -1,0 +1,6 @@
+{
+  "simulation": {
+    "simulatingExecution": "Simulazione esecuzione...",
+    "showingTraceExecution": "Mostrando esecuzione traccia ({{steps}} passi)"
+  }
+}
