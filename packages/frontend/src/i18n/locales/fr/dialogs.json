@@ -1,0 +1,99 @@
+{
+  "save": {
+    "title": "Enregistrer l'automatisation",
+    "titleUpdate": "Mettre à jour l'automatisation",
+    "description": "Enregistrer cette automatisation dans Home Assistant",
+    "descriptionUpdate": "Mettre à jour cette automatisation dans Home Assistant",
+    "nameLabel": "Nom de l'automatisation",
+    "descriptionLabel": "Description (Optionnel)",
+    "nameConflict": "Le nom existe déjà. Utiliser : \"{{suggestedName}}\" ?"
+  },
+  "import": {
+    "title": "Ouvrir l'automatisation",
+    "description": "Sélectionner une automatisation de Home Assistant à modifier",
+    "descriptionFull": "Ouvrir une automatisation existante ou en créer une nouvelle",
+    "searchPlaceholder": "Rechercher des automatisations...",
+    "noAutomations": "Aucune automatisation trouvée",
+    "noConnection": "Connectez-vous à Home Assistant pour charger les automatisations",
+    "createNew": "Créer nouveau",
+    "columns": {
+      "name": "Nom",
+      "lastTriggered": "Dernier déclenchement",
+      "enabled": "Activé",
+      "action": "Action"
+    },
+    "mode": "Mode : {{mode}}",
+    "never": "Jamais",
+    "justNow": "À l'instant",
+    "minutesAgo": "Il y a {{count}}m",
+    "hoursAgo": "Il y a {{count}}h",
+    "daysAgo": "Il y a {{count}}j",
+    "disabled": "Désactivé",
+    "automationEnabled": "Automatisation activée avec succès.",
+    "automationDisabled": "Automatisation désactivée avec succès.",
+    "updateStateFailed": "Échec de la mise à jour de l'état de l'automatisation",
+    "importAutomation": "Importer l'automatisation",
+    "openingWarning": "L'ouverture remplacera votre conception d'automatisation actuelle",
+    "discardTitle": "Abandonner le flux actuel ?",
+    "discardDescription": "Votre automatisation actuelle a des modifications non enregistrées. Créer ou ouvrir une nouvelle automatisation abandonnera ces modifications.",
+    "confirmDiscard": "Abandonner et continuer",
+    "importSuccess": "Automatisation \"{{name}}\" importée avec succès !",
+    "openedWarning": "Automatisation \"{{name}}\" ouverte !",
+    "openedWarningDescription": "Impossible de récupérer la configuration automatiquement. Vous pouvez maintenant créer un nouveau flux avec le même nom.",
+    "importFailed": "Échec de l'importation de l'automatisation : {{message}}",
+    "ID": "ID : {{id}}",
+    "otherArea": "Autre zone",
+    "noArea": "Aucune zone"
+  },
+  "importYaml": {
+    "title": "Importer l'automatisation YAML",
+    "description": "Collez votre YAML d'automatisation Home Assistant ci-dessous. L'automatisation peut être au format standard ou au format machine à états.",
+    "placeholder": "alias: Mon Automatisation\\ntrigger:\\n  - platform: state\\n    entity_id: sensor.exemple",
+    "importFailed": "Échec de l'importation",
+    "warnings": "Avertissements",
+    "successLoading": "Importé avec succès ! Chargement du flux...",
+    "tipLabel": "Conseil :",
+    "tipText": "Si votre automatisation a été créée avec C.A.F.E., les positions des nœuds seront préservées. Sinon, les nœuds seront automatiquement arrangés dans une disposition lisible.",
+    "importing": "Importation...",
+    "import": "Importer",
+    "errors": {
+      "parseError": "Échec de l'analyse YAML : {{message}}",
+      "importError": "Échec de l'importation : {{message}}"
+    }
+  },
+  "settings": {
+    "title": "Connexion Home Assistant",
+    "description": "Configurez vos paramètres de connexion Home Assistant.",
+    "urlLabel": "URL Home Assistant",
+    "urlPlaceholder": "http://homeassistant.local:8123",
+    "urlHelp": "L'URL de votre instance Home Assistant",
+    "tokenLabel": "Jeton d'accès longue durée",
+    "tokenPlaceholder": "eyJ0eXAiOiJKV1QiLCJhbGci...",
+    "tokenHelp": "Créez-en un dans HA : Profil → Jetons d'accès longue durée",
+    "testConnection": "Tester la connexion",
+    "testing": "Test en cours...",
+    "connected": "Connecté !",
+    "disconnect": "Déconnecter",
+    "corsNote": "Note CORS",
+    "corsDescription": "Pour vous connecter depuis un navigateur, vous devrez peut-être ajouter des en-têtes CORS à votre configuration HA. Si vous vous connectez depuis https://fezvrasta.github.io/hass-cafe, votre instance HA doit être sous HTTPS.",
+    "tokenGuideLink": "Comment créer un jeton d'accès longue durée",
+    "apiRunning": "API en cours d'exécution.",
+    "errors": {
+      "missingFields": "Veuillez fournir l'URL et le jeton",
+      "unexpectedResponse": "Réponse API inattendue",
+      "invalidToken": "Jeton invalide - authentification échouée",
+      "httpError": "HTTP {{status}} : {{statusText}}",
+      "corsError": "Impossible de se connecter - vérifiez l'URL et les paramètres CORS",
+      "connectionFailed": "Connexion échouée"
+    }
+  },
+  "error": {
+    "title": "Erreur inattendue",
+    "description": "Une erreur inattendue s'est produite dans l'application. Veuillez voir les détails ci-dessous.",
+    "refreshPrompt": "Veuillez essayer d'actualiser la page. Si le problème persiste, envisagez de signaler le problème sur notre dépôt GitHub."
+  },
+  "traceViewer": {
+    "saveAutomationFirst": "Enregistrez d'abord l'automatisation pour voir les traces",
+    "noTracesFound": "Aucune trace d'automatisation trouvée"
+  }
+}

@@ -1,0 +1,123 @@
+{
+  "buttons": {
+    "save": "Enregistrer",
+    "saveAsCopy": "Enregistrer comme copie",
+    "cancel": "Annuler",
+    "close": "Fermer",
+    "delete": "Supprimer",
+    "update": "Mettre à jour",
+    "refresh": "Actualiser",
+    "copy": "Copier",
+    "use": "Utiliser",
+    "add": "Ajouter",
+    "addTrigger": "Ajouter un déclencheur",
+    "openAutomation": "Ouvrir l'automatisation",
+    "newAutomation": "Nouvelle automatisation",
+    "importJson": "Importer depuis JSON",
+    "importYaml": "Importer depuis YAML",
+    "testConnection": "Tester la connexion",
+    "disconnect": "Déconnecter"
+  },
+  "labels": {
+    "automationName": "Nom de l'automatisation",
+    "properties": "Propriétés",
+    "yaml": "YAML",
+    "debug": "Débogage",
+    "enabled": "Activé",
+    "alias": "Alias (Nom d'affichage)",
+    "id": "ID",
+    "strategy": "Stratégie",
+    "speed": "Vitesse",
+    "quickHelp": "Aide rapide",
+    "debugControls": "Contrôles de débogage",
+    "addNode": "Ajouter un nœud",
+    "yamlOutput": "Sortie YAML",
+    "automationTrace": "Trace d'automatisation",
+    "selectTraceRun": "Sélectionner l'exécution de trace :",
+    "traceDetails": "Détails de la trace :",
+    "trigger": "Déclencheur :",
+    "duration": "Durée :",
+    "lastStep": "Dernière étape :",
+    "executionPath": "Chemin d'exécution :",
+    "notApplicable": "N/A",
+    "device": "Appareil",
+    "triggerType": "Type de déclencheur",
+    "entityId": "ID d'entité",
+    "warning": "Avertissement",
+    "requiredAsterisk": "*"
+  },
+  "status": {
+    "connecting": "Connexion en cours...",
+    "connected": "Connecté",
+    "connectedTo": "Connecté à {{hostname}}",
+    "connectionError": "Erreur de connexion",
+    "saving": "Enregistrement...",
+    "updating": "Mise à jour...",
+    "testing": "Test en cours...",
+    "loadingTraces": "Chargement des traces...",
+    "loadingTriggers": "Chargement des déclencheurs..."
+  },
+  "placeholders": {
+    "automationName": "Nom de l'automatisation",
+    "optionalDisplayName": "Nom d'affichage optionnel",
+    "optionalUniqueId": "ID unique optionnel",
+    "enterAutomationName": "Entrer le nom de l'automatisation...",
+    "describeAutomation": "Décrivez ce que fait cette automatisation...",
+    "searchAutomations": "Rechercher des automatisations...",
+    "selectTrace": "Sélectionner une trace...",
+    "addNodesForYaml": "# Ajoutez des nœuds pour voir la sortie YAML",
+    "selectDevice": "Sélectionner un appareil...",
+    "selectTriggerType": "Sélectionner le type de déclencheur...",
+    "selectEntity": "Sélectionner une entité...",
+    "selectEntities": "Sélectionner des entités...",
+    "duration": "00:05:00",
+    "enterTemplate": "Entrer un modèle Jinja2...",
+    "jsonExample": "{ \"clé\": \"valeur\" }",
+    "none": "Aucun"
+  },
+  "help": {
+    "clickNodesToAdd": "Cliquez sur les nœuds pour les ajouter",
+    "dragToConnect": "Glissez pour connecter",
+    "deleteToRemove": "Supprimez pour retirer",
+    "backspaceDeleteKey": "Touche Retour arrière/Suppr"
+  },
+  "titles": {
+    "appName": "C.A.F.E.",
+    "appFullName": "Complex Automation Flow Editor",
+    "settings": "Paramètres",
+    "updateAutomation": "Mettre à jour l'automatisation dans Home Assistant",
+    "saveAutomation": "Enregistrer l'automatisation dans Home Assistant",
+    "exportJson": "Exporter le flux en JSON",
+    "clickToConfigure": "Cliquez pour configurer la connexion Home Assistant"
+  },
+  "strategy": {
+    "auto": "Auto",
+    "native": "Natif",
+    "stateMachine": "Machine à états"
+  },
+  "defaults": {
+    "newAutomation": "Nouvelle automatisation"
+  },
+  "boolean": {
+    "true": "Vrai",
+    "false": "Faux"
+  },
+  "combobox": {
+    "select": "Sélectionner...",
+    "noOptions": "Aucune option trouvée."
+  },
+  "dynamicField": {
+    "enabled": "Activé",
+    "disabled": "Désactivé",
+    "selectItems": "Sélectionner des éléments...",
+    "itemsSelected": "{{count}} éléments sélectionnés",
+    "selectEntities": "Sélectionner des entités...",
+    "selectEntity": "Sélectionner une entité...",
+    "formatHMS": "Format : HH:MM:SS",
+    "enterValue": "Entrer {{name}}..."
+  },
+  "deviceSelector": {
+    "enterId": "Entrer l'ID de l'appareil manuellement",
+    "noDevices": "Aucun appareil trouvé. Entrez l'ID de l'appareil manuellement ou vérifiez votre connexion Home Assistant."
+  }
+}

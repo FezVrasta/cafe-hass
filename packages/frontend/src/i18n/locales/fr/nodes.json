@@ -1,0 +1,136 @@
+{
+  "types": {
+    "trigger": "Déclencheur",
+    "condition": "Condition",
+    "action": "Action",
+    "delay": "Délai",
+    "wait": "Attendre",
+    "set_variables": "Définir les variables",
+    "node": "Nœud"
+  },
+  "panel": {
+    "selectNode": "Sélectionnez un nœud pour modifier ses propriétés",
+    "properties": "Propriétés",
+    "nodeId": "ID du nœud : {{id}}",
+    "additionalProperties": "Propriétés supplémentaires",
+    "addProperty": "Ajouter une propriété",
+    "propertyName": "Nom de la propriété",
+    "type": "Type",
+    "value": "Valeur"
+  },
+  "placeholders": {
+    "customProperty": "ex. ma_propriete_personnalisee",
+    "jsonArray": "[\"element1\", \"element2\"]",
+    "number": "123",
+    "enterValue": "Entrer la valeur",
+    "jsonObject": "Objet JSON",
+    "enterType": "Entrer {{type}}",
+    "waitTemplate": "{{ is_state('sensor.x', 'on') }}"
+  },
+  "triggers": {
+    "platformLabel": "Plateforme",
+    "platforms": {
+      "state": "Changement d'état",
+      "numeric_state": "État numérique",
+      "time": "Heure",
+      "time_pattern": "Modèle horaire",
+      "sun": "Soleil",
+      "event": "Événement",
+      "mqtt": "MQTT",
+      "webhook": "Webhook",
+      "zone": "Zone",
+      "template": "Modèle",
+      "homeassistant": "Home Assistant",
+      "device": "Appareil",
+      "calendar": "Calendrier",
+      "geo_location": "Géolocalisation",
+      "tag": "Tag",
+      "conversation": "Conversation",
+      "persistent_notification": "Notification persistante"
+    },
+    "dataTypes": {
+      "string": "Texte",
+      "number": "Nombre",
+      "boolean": "Booléen",
+      "json": "Tableau (JSON)"
+    }
+  },
+  "conditions": {
+    "conditionLabel": "Type de condition",
+    "types": {
+      "state": "État",
+      "numeric_state": "État numérique",
+      "time": "Heure",
+      "sun": "Soleil",
+      "zone": "Zone",
+      "template": "Modèle",
+      "device": "Appareil",
+      "trigger": "Déclencheur",
+      "and": "ET (Tous)",
+      "or": "OU (N'importe lequel)",
+      "not": "NON"
+    },
+    "nestedConditions": "Conditions imbriquées",
+    "yes": "Oui",
+    "no": "Non"
+  },
+  "actions": {
+    "serviceLabel": "Service"
+  },
+  "variables": {
+    "variableCount_one": "{{count}} variable",
+    "variableCount_other": "{{count}} variables"
+  },
+  "durationField": {
+    "label": "Durée",
+    "description": "Spécifiez la durée en heures, minutes, secondes, millisecondes",
+    "string": "Chaîne",
+    "object": "Objet",
+    "placeholder": "00:00:05.500",
+    "hours": "Heures",
+    "minutes": "Minutes",
+    "seconds": "Secondes",
+    "milliseconds": "Millisecondes"
+  },
+  "responseVariableField": {
+    "label": "Variable de réponse",
+    "optionalDescription": "Cette action peut retourner une réponse. Activez pour utiliser la réponse et entrez le nom de la variable où elle sera enregistrée.",
+    "requiredDescription": "Cette action retourne une réponse. Entrez le nom de la variable où elle sera enregistrée.",
+    "useResponseVariable": "Utiliser la variable de réponse",
+    "placeholder": "ex. ma_reponse",
+    "currentNodeWarning": "'current_node' est réservé pour la stratégie machine à états. Utiliser ce nom peut causer un comportement inattendu."
+  },
+  "serviceDataFields": {
+    "heading": "Données du service"
+  },
+  "setVariablesFields": {
+    "empty": "Aucune variable définie. Cliquez sur le bouton ci-dessous pour en ajouter une.",
+    "variableLabel": "Variable {{index}}",
+    "name": "Nom",
+    "namePlaceholder": "nom_variable",
+    "value": "Valeur",
+    "valueDescription": "Valeur ou expression de modèle Jinja2",
+    "valuePlaceholder": "valeur ou {{ modele }}",
+    "addVariable": "Ajouter une variable"
+  },
+  "wait": {
+    "waitsForNTrigger_one": "Attend {{count}} déclencheur",
+    "waitsForNTrigger_other": "Attend {{count}} déclencheurs",
+    "timeoutLabel": "Délai d'attente :",
+    "waitType": "Type d'attente",
+    "waitTypeDescription": "Choisissez ce qu'il faut attendre.",
+    "types": {
+      "template": "Modèle",
+      "triggers": "Déclencheurs"
+    },
+    "waitTemplate": "Modèle d'attente",
+    "waitTemplateDescription": "Condition de modèle qui doit être vraie pour continuer",
+    "triggersHeading": "Déclencheurs",
+    "triggerLabel": "Déclencheur {{index}} : {{platform}}",
+    "triggerPlatformLabel": "Plateforme",
+    "addTrigger": "Ajouter un déclencheur",
+    "timeoutDescription": "Temps maximum d'attente avant de continuer. Laissez vide pour attendre indéfiniment.",
+    "continueOnTimeout": "Continuer à l'expiration",
+    "continueOnTimeoutDescription": "Si activé, l'automatisation continue quand le délai expire. Si désactivé, l'automatisation s'arrête."
+  }
+}
