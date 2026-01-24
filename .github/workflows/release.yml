@@ -42,36 +42,24 @@ jobs:
           ls -la custom_components/cafe/www/ || echo "www directory missing!"
           ls -la custom_components/cafe/www/assets/ || echo "assets directory missing!"
 
-      - name: Get version
-        id: version
-        run: echo "version=$(jq -r .version custom_components/cafe/manifest.json)" >> $GITHUB_OUTPUT
-
       - name: Create release archives
         run: |
-          VERSION="${{ steps.version.outputs.version }}"
-
-          # Create versioned zip with cafe folder (for manual installation)
-          cd custom_components
-          zip -r ../cafe-${VERSION}.zip cafe -x "*.DS_Store" "*/.DS_Store"
-
-          # Create alternative tar.gz 
-          tar -czf ../cafe-${VERSION}.tar.gz --exclude="*.DS_Store" cafe
-          cd ..
-
-          # Create HACS-compatible zip (files at root level, no cafe/ folder)
+          # Create zip with content at root (for HACS)
           cd custom_components/cafe
-          zip -r ../../hacs.zip . -x "*.DS_Store" "*/.DS_Store"
+          zip -r ../../cafe.zip . -x "*.DS_Store" "*/.DS_Store"
+
+          # Create alternative tar.gz with content at root
+          tar -czf ../../cafe.tar.gz --exclude="*.DS_Store" .
           cd ../..
 
-          echo "Created archives for version ${VERSION}:"
+          echo "Created archives:"
           ls -la *.zip *.tar.gz
 
       - name: Upload Release Assets
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            cafe-${{ steps.version.outputs.version }}.zip
-            cafe-${{ steps.version.outputs.version }}.tar.gz
-            hacs.zip
+            cafe.zip
+            cafe.tar.gz
           tag_name: ${{ github.ref_name }}
           token: ${{ secrets.GITHUB_TOKEN }}

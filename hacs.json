@@ -2,7 +2,7 @@
   "name": "C.A.F.E.",
   "render_readme": true,
   "homeassistant": "2024.1.0",
-  "content_in_root": false,
+  "content_in_root": true,
   "zip_release": true,
-  "filename": "hacs.zip"
+  "filename": "cafe.zip"
 }
