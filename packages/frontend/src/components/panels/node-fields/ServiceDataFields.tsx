@@ -122,9 +122,7 @@ export function ServiceDataFields({
               <Label className="font-medium text-muted-foreground text-xs">
                 {fieldLabel}
                 {field.required && (
-                  <span className="ml-0.5 text-destructive">
-                    {t('labels.requiredAsterisk')}
-                  </span>
+                  <span className="ml-0.5 text-destructive">{t('labels.requiredAsterisk')}</span>
                 )}
               </Label>
             </div>

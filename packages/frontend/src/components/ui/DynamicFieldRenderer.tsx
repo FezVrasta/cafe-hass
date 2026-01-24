@@ -416,9 +416,7 @@ export function DynamicFieldRenderer({
     <div className="space-y-2">
       <Label className="font-medium text-muted-foreground text-xs">
         {label}
-        {required && (
-          <span className="ml-1 text-destructive">{t('labels.requiredAsterisk')}</span>
-        )}
+        {required && <span className="ml-1 text-destructive">{t('labels.requiredAsterisk')}</span>}
       </Label>
       {renderField()}
       {description && <p className="text-muted-foreground text-xs">{description}</p>}
