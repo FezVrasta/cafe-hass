@@ -610,6 +610,8 @@ export const useFlowStore = create<FlowState>((set, get) => ({
 
   toFlowGraph: (): FlowGraph => {
     const state = get();
+    const nodeIds = new Set(state.nodes.map((n) => n.id));
+
     return {
       id: state.flowId,
       name: state.flowName,
@@ -638,14 +640,17 @@ export const useFlowStore = create<FlowState>((set, get) => ({
           data: nodeData as FlowNode['data'],
         };
       }) as FlowNode[],
-      edges: state.edges.map((e) => ({
-        id: e.id,
-        source: e.source,
-        target: e.target,
-        sourceHandle: e.sourceHandle,
-        targetHandle: e.targetHandle,
-        label: typeof e.label === 'string' ? e.label : undefined,
-      })) as FlowEdge[],
+      // Filter out orphaned edges that reference deleted nodes
+      edges: state.edges
+        .filter((e) => nodeIds.has(e.source) && nodeIds.has(e.target))
+        .map((e) => ({
+          id: e.id,
+          source: e.source,
+          target: e.target,
+          sourceHandle: e.sourceHandle,
+          targetHandle: e.targetHandle,
+          label: typeof e.label === 'string' ? e.label : undefined,
+        })) as FlowEdge[],
       metadata: {
         mode: 'single',
         initial_state: true,
