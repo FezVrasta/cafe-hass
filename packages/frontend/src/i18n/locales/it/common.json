@@ -1,0 +1,123 @@
+{
+  "buttons": {
+    "save": "Salva",
+    "saveAsCopy": "Salva come copia",
+    "cancel": "Annulla",
+    "close": "Chiudi",
+    "delete": "Elimina",
+    "update": "Aggiorna",
+    "refresh": "Aggiorna",
+    "copy": "Copia",
+    "use": "Usa",
+    "add": "Aggiungi",
+    "addTrigger": "Aggiungi Trigger",
+    "openAutomation": "Apri Automazione",
+    "newAutomation": "Nuova Automazione",
+    "importJson": "Importa da JSON",
+    "importYaml": "Importa da YAML",
+    "testConnection": "Testa Connessione",
+    "disconnect": "Disconnetti"
+  },
+  "labels": {
+    "automationName": "Nome automazione",
+    "properties": "Proprietà",
+    "yaml": "YAML",
+    "debug": "Debug",
+    "enabled": "Abilitato",
+    "alias": "Alias (Nome visualizzato)",
+    "id": "ID",
+    "strategy": "Strategia",
+    "speed": "Velocità",
+    "quickHelp": "Guida rapida",
+    "debugControls": "Controlli Debug",
+    "addNode": "Aggiungi Nodo",
+    "yamlOutput": "Output YAML",
+    "automationTrace": "Traccia Automazione",
+    "selectTraceRun": "Seleziona Esecuzione Traccia:",
+    "traceDetails": "Dettagli Traccia:",
+    "trigger": "Trigger:",
+    "duration": "Durata:",
+    "lastStep": "Ultimo Step:",
+    "executionPath": "Percorso Esecuzione:",
+    "notApplicable": "N/D",
+    "device": "Dispositivo",
+    "triggerType": "Tipo Trigger",
+    "entityId": "ID Entità",
+    "warning": "Attenzione",
+    "requiredAsterisk": "*"
+  },
+  "status": {
+    "connecting": "Connessione in corso...",
+    "connected": "Connesso",
+    "connectedTo": "Connesso a {{hostname}}",
+    "connectionError": "Errore di Connessione",
+    "saving": "Salvataggio...",
+    "updating": "Aggiornamento...",
+    "testing": "Test in corso...",
+    "loadingTraces": "Caricamento tracce...",
+    "loadingTriggers": "Caricamento trigger..."
+  },
+  "placeholders": {
+    "automationName": "Nome automazione",
+    "optionalDisplayName": "Nome visualizzato opzionale",
+    "optionalUniqueId": "ID univoco opzionale",
+    "enterAutomationName": "Inserisci nome automazione...",
+    "describeAutomation": "Descrivi cosa fa questa automazione...",
+    "searchAutomations": "Cerca automazioni...",
+    "selectTrace": "Seleziona una traccia...",
+    "addNodesForYaml": "# Aggiungi nodi per vedere l'output YAML",
+    "selectDevice": "Seleziona dispositivo...",
+    "selectTriggerType": "Seleziona tipo trigger...",
+    "selectEntity": "Seleziona entità...",
+    "selectEntities": "Seleziona entità...",
+    "duration": "00:05:00",
+    "enterTemplate": "Inserisci template Jinja2...",
+    "jsonExample": "{ \"chiave\": \"valore\" }",
+    "none": "Nessuno"
+  },
+  "help": {
+    "clickNodesToAdd": "Clicca sui nodi per aggiungerli",
+    "dragToConnect": "Trascina per connettere",
+    "deleteToRemove": "Elimina per rimuovere",
+    "backspaceDeleteKey": "Tasto Backspace/Canc"
+  },
+  "titles": {
+    "appName": "C.A.F.E.",
+    "appFullName": "Complex Automation Flow Editor",
+    "settings": "Impostazioni",
+    "updateAutomation": "Aggiorna automazione in Home Assistant",
+    "saveAutomation": "Salva automazione in Home Assistant",
+    "exportJson": "Esporta flow come JSON",
+    "clickToConfigure": "Clicca per configurare la connessione a Home Assistant"
+  },
+  "strategy": {
+    "auto": "Auto",
+    "native": "Nativo",
+    "stateMachine": "Macchina a Stati"
+  },
+  "defaults": {
+    "newAutomation": "Nuova Automazione"
+  },
+  "boolean": {
+    "true": "Vero",
+    "false": "Falso"
+  },
+  "combobox": {
+    "select": "Seleziona...",
+    "noOptions": "Nessuna opzione trovata."
+  },
+  "dynamicField": {
+    "enabled": "Abilitato",
+    "disabled": "Disabilitato",
+    "selectItems": "Seleziona elementi...",
+    "itemsSelected": "{{count}} elementi selezionati",
+    "selectEntities": "Seleziona entità...",
+    "selectEntity": "Seleziona entità...",
+    "formatHMS": "Formato: HH:MM:SS",
+    "enterValue": "Inserisci {{name}}..."
+  },
+  "deviceSelector": {
+    "enterId": "Inserisci ID dispositivo manualmente",
+    "noDevices": "Nessun dispositivo trovato. Inserisci l'ID dispositivo manualmente o verifica la connessione a Home Assistant."
+  }
+}

@@ -1,0 +1,136 @@
+{
+  "types": {
+    "trigger": "Trigger",
+    "condition": "Condizione",
+    "action": "Azione",
+    "delay": "Ritardo",
+    "wait": "Attendi",
+    "set_variables": "Imposta Variabili",
+    "node": "Nodo"
+  },
+  "panel": {
+    "selectNode": "Seleziona un nodo per modificarne le proprietà",
+    "properties": "Proprietà",
+    "nodeId": "ID Nodo: {{id}}",
+    "additionalProperties": "Proprietà Aggiuntive",
+    "addProperty": "Aggiungi Proprietà",
+    "propertyName": "Nome Proprietà",
+    "type": "Tipo",
+    "value": "Valore"
+  },
+  "placeholders": {
+    "customProperty": "es. mia_proprieta_custom",
+    "jsonArray": "[\"elemento1\", \"elemento2\"]",
+    "number": "123",
+    "enterValue": "Inserisci valore",
+    "jsonObject": "Oggetto JSON",
+    "enterType": "Inserisci {{type}}",
+    "waitTemplate": "{{ is_state('sensor.x', 'on') }}"
+  },
+  "triggers": {
+    "platformLabel": "Piattaforma",
+    "platforms": {
+      "state": "Cambio Stato",
+      "numeric_state": "Stato Numerico",
+      "time": "Orario",
+      "time_pattern": "Pattern Orario",
+      "sun": "Sole",
+      "event": "Evento",
+      "mqtt": "MQTT",
+      "webhook": "Webhook",
+      "zone": "Zona",
+      "template": "Template",
+      "homeassistant": "Home Assistant",
+      "device": "Dispositivo",
+      "calendar": "Calendario",
+      "geo_location": "Geo Localizzazione",
+      "tag": "Tag",
+      "conversation": "Conversazione",
+      "persistent_notification": "Notifica Persistente"
+    },
+    "dataTypes": {
+      "string": "Testo",
+      "number": "Numero",
+      "boolean": "Booleano",
+      "json": "Array (JSON)"
+    }
+  },
+  "conditions": {
+    "conditionLabel": "Tipo Condizione",
+    "types": {
+      "state": "Stato",
+      "numeric_state": "Stato Numerico",
+      "time": "Orario",
+      "sun": "Sole",
+      "zone": "Zona",
+      "template": "Template",
+      "device": "Dispositivo",
+      "trigger": "Trigger",
+      "and": "AND (Tutti)",
+      "or": "OR (Qualsiasi)",
+      "not": "NOT"
+    },
+    "nestedConditions": "Condizioni Annidate",
+    "yes": "Sì",
+    "no": "No"
+  },
+  "actions": {
+    "serviceLabel": "Servizio"
+  },
+  "variables": {
+    "variableCount_one": "{{count}} variabile",
+    "variableCount_other": "{{count}} variabili"
+  },
+  "durationField": {
+    "label": "Durata",
+    "description": "Specifica la durata in ore, minuti, secondi, millisecondi",
+    "string": "Stringa",
+    "object": "Oggetto",
+    "placeholder": "00:00:05.500",
+    "hours": "Ore",
+    "minutes": "Minuti",
+    "seconds": "Secondi",
+    "milliseconds": "Millisecondi"
+  },
+  "responseVariableField": {
+    "label": "Variabile Risposta",
+    "optionalDescription": "Questa azione può restituire una risposta. Abilita per usare la risposta e inserisci il nome della variabile in cui verrà salvata.",
+    "requiredDescription": "Questa azione restituisce una risposta. Inserisci il nome della variabile in cui verrà salvata.",
+    "useResponseVariable": "Usa Variabile Risposta",
+    "placeholder": "es. mia_risposta",
+    "currentNodeWarning": "'current_node' è riservato per la strategia macchina a stati. Usare questo nome potrebbe causare comportamenti imprevisti."
+  },
+  "serviceDataFields": {
+    "heading": "Dati Servizio"
+  },
+  "setVariablesFields": {
+    "empty": "Nessuna variabile definita. Clicca il pulsante qui sotto per aggiungerne una.",
+    "variableLabel": "Variabile {{index}}",
+    "name": "Nome",
+    "namePlaceholder": "nome_variabile",
+    "value": "Valore",
+    "valueDescription": "Valore o espressione template Jinja2",
+    "valuePlaceholder": "valore o {{ template }}",
+    "addVariable": "Aggiungi Variabile"
+  },
+  "wait": {
+    "waitsForNTrigger_one": "Attende {{count}} trigger",
+    "waitsForNTrigger_other": "Attende {{count}} trigger",
+    "timeoutLabel": "Timeout:",
+    "waitType": "Tipo Attesa",
+    "waitTypeDescription": "Scegli cosa attendere.",
+    "types": {
+      "template": "Template",
+      "triggers": "Trigger"
+    },
+    "waitTemplate": "Template Attesa",
+    "waitTemplateDescription": "Condizione template che deve essere vera per continuare",
+    "triggersHeading": "Trigger",
+    "triggerLabel": "Trigger {{index}}: {{platform}}",
+    "triggerPlatformLabel": "Piattaforma",
+    "addTrigger": "Aggiungi Trigger",
+    "timeoutDescription": "Tempo massimo di attesa prima di continuare. Lascia vuoto per attendere indefinitamente.",
+    "continueOnTimeout": "Continua al Timeout",
+    "continueOnTimeoutDescription": "Se abilitato, l'automazione continua quando scade il timeout. Se disabilitato, l'automazione si ferma."
+  }
+}
