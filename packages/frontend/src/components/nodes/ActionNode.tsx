@@ -70,7 +70,10 @@ export const ActionNode = memo(function ActionNode({ id, data, selected }: Actio
 
       <div className="space-y-0.5 text-green-700 text-xs">
         <div className="font-medium">
-          <span className="opacity-60">{domain}.</span>
+          <span className="opacity-60">
+            {domain}
+            {'.'}
+          </span>
           {serviceName}
         </div>
         {targetDisplay && <div className="truncate opacity-75">{targetDisplay}</div>}

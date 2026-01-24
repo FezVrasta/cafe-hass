@@ -1,5 +1,6 @@
 import type { FlowNode } from '@cafe/shared';
 import { Plus, Trash2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { FormField } from '@/components/forms/FormField';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,6 +33,7 @@ export function PropertyEditor({
   onChange,
   onDelete,
 }: PropertyEditorProps) {
+  const { t } = useTranslation(['common', 'nodes', 'errors']);
   const handlePropertyAdd = (key: string, value: unknown) => {
     onChange(key, value);
   };
@@ -55,7 +57,7 @@ export function PropertyEditor({
     try {
       editor.handleAdd();
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Failed to add property');
+      alert(error instanceof Error ? error.message : t('errors:properties.addFailed'));
     }
   };
 
@@ -63,7 +65,9 @@ export function PropertyEditor({
     <div className="space-y-3">
       <div className="border-t pt-3">
         <div className="flex items-center justify-between">
-          <Label className="font-medium text-muted-foreground text-xs">Additional Properties</Label>
+          <Label className="font-medium text-muted-foreground text-xs">
+            {t('nodes:panel.additionalProperties')}
+          </Label>
           <Button
             variant="ghost"
             size="sm"
@@ -71,7 +75,7 @@ export function PropertyEditor({
             className="h-6 px-2 text-xs"
           >
             <Plus className="mr-1 h-3 w-3" />
-            Add
+            {t('buttons.add')}
           </Button>
         </div>
       </div>
@@ -79,16 +83,16 @@ export function PropertyEditor({
       {/* Add new property form */}
       {editor.state.isAdding && (
         <div className="space-y-2 rounded border p-3">
-          <FormField label="Property Name" required>
+          <FormField label={t('nodes:panel.propertyName')} required>
             <Input
               type="text"
               value={editor.state.key}
               onChange={(e) => editor.setKey(e.target.value)}
-              placeholder="e.g., my_custom_property"
+              placeholder={t('nodes:placeholders.customProperty')}
             />
           </FormField>
 
-          <FormField label="Type">
+          <FormField label={t('nodes:panel.type')}>
             <Select
               value={editor.state.type}
               onValueChange={(value: PropertyType) => editor.setType(value)}
@@ -97,15 +101,15 @@ export function PropertyEditor({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="string">Text</SelectItem>
-                <SelectItem value="number">Number</SelectItem>
-                <SelectItem value="boolean">Boolean</SelectItem>
-                <SelectItem value="array">Array (JSON)</SelectItem>
+                <SelectItem value="string">{t('nodes:triggers.dataTypes.string')}</SelectItem>
+                <SelectItem value="number">{t('nodes:triggers.dataTypes.number')}</SelectItem>
+                <SelectItem value="boolean">{t('nodes:triggers.dataTypes.boolean')}</SelectItem>
+                <SelectItem value="array">{t('nodes:triggers.dataTypes.json')}</SelectItem>
               </SelectContent>
             </Select>
           </FormField>
 
-          <FormField label="Value">
+          <FormField label={t('nodes:panel.value')}>
             {editor.state.type === 'boolean' ? (
               <div className="flex items-center space-x-2">
                 <Switch
@@ -113,14 +117,14 @@ export function PropertyEditor({
                   onCheckedChange={(checked) => editor.setValue(checked ? 'true' : 'false')}
                 />
                 <Label className="text-sm">
-                  {editor.state.value === 'true' ? 'True' : 'False'}
+                  {editor.state.value === 'true' ? t('boolean.true') : t('boolean.false')}
                 </Label>
               </div>
             ) : editor.state.type === 'array' ? (
               <Textarea
                 value={editor.state.value}
                 onChange={(e) => editor.setValue(e.target.value)}
-                placeholder='["item1", "item2"]'
+                placeholder={t('nodes:placeholders.jsonArray')}
                 className="font-mono"
                 rows={2}
               />
@@ -129,17 +133,21 @@ export function PropertyEditor({
                 type={editor.state.type === 'number' ? 'number' : 'text'}
                 value={editor.state.value}
                 onChange={(e) => editor.setValue(e.target.value)}
-                placeholder={editor.state.type === 'number' ? '123' : 'Enter value'}
+                placeholder={
+                  editor.state.type === 'number'
+                    ? t('nodes:placeholders.number')
+                    : t('nodes:placeholders.enterValue')
+                }
               />
             )}
           </FormField>
 
           <div className="flex justify-end gap-2">
             <Button variant="ghost" size="sm" onClick={editor.cancelAdding}>
-              Cancel
+              {t('buttons.cancel')}
             </Button>
             <Button size="sm" onClick={handleAdd}>
-              Add Property
+              {t('nodes:panel.addProperty')}
             </Button>
           </div>
         </div>
@@ -170,6 +178,8 @@ interface PropertyDisplayProps {
  * Component for displaying and editing a single property.
  */
 function PropertyDisplay({ name, value, onChange, onDelete }: PropertyDisplayProps) {
+  const { t } = useTranslation(['common', 'nodes']);
+
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
@@ -188,8 +198,8 @@ function PropertyDisplay({ name, value, onChange, onDelete }: PropertyDisplayPro
 
       {typeof value === 'boolean' ? (
         <div className="flex items-center space-x-2">
-          <Switch checked={value as boolean} onCheckedChange={(checked) => onChange(checked)} />
-          <Label className="text-sm">{value ? 'True' : 'False'}</Label>
+          <Switch checked={value} onCheckedChange={(checked) => onChange(checked)} />
+          <Label className="text-sm">{value ? t('boolean.true') : t('boolean.false')}</Label>
         </div>
       ) : Array.isArray(value) ? (
         <Textarea
@@ -204,7 +214,7 @@ function PropertyDisplay({ name, value, onChange, onDelete }: PropertyDisplayPro
           }}
           className="font-mono"
           rows={Math.min(value.length + 1, 4)}
-          placeholder="JSON array"
+          placeholder={t('nodes:placeholders.jsonArray')}
         />
       ) : typeof value === 'object' ? (
         <Textarea
@@ -219,7 +229,7 @@ function PropertyDisplay({ name, value, onChange, onDelete }: PropertyDisplayPro
           }}
           className="font-mono"
           rows={4}
-          placeholder="JSON object"
+          placeholder={t('nodes:placeholders.jsonObject')}
         />
       ) : (
         <Input
@@ -237,7 +247,9 @@ function PropertyDisplay({ name, value, onChange, onDelete }: PropertyDisplayPro
               onChange(newValue);
             }
           }}
-          placeholder={`Enter ${typeof value}`}
+          placeholder={t('nodes:placeholders.enterType', {
+            type: typeof value,
+          })}
         />
       )}
     </div>

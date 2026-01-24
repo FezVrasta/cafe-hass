@@ -13,6 +13,7 @@ import {
   useReactFlow,
 } from '@xyflow/react';
 import { type DragEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { DeletableEdge } from '@/components/edges';
 import {
   ActionNode,
@@ -42,6 +43,7 @@ const edgeTypes: EdgeTypes = {
 };
 
 export function FlowCanvas() {
+  const { t } = useTranslation(['common', 'debug']);
   const isDarkMode = useDarkMode();
   const {
     nodes,
@@ -274,7 +276,7 @@ export function FlowCanvas() {
           >
             <div className="flex items-center gap-2 font-medium text-green-800 text-sm dark:text-green-200">
               <div className="h-2 w-2 animate-pulse rounded-full bg-green-500" />
-              Simulating execution...
+              {t('debug:simulation.simulatingExecution')}
             </div>
           </Panel>
         )}
@@ -286,7 +288,7 @@ export function FlowCanvas() {
           >
             <div className="flex items-center gap-2 font-medium text-orange-800 text-sm dark:text-orange-200">
               <div className="h-2 w-2 rounded-full bg-orange-500" />
-              Showing trace execution ({traceExecutionPath.length} steps)
+              {t('debug:simulation.showingTraceExecution', { steps: traceExecutionPath.length })}
             </div>
           </Panel>
         )}

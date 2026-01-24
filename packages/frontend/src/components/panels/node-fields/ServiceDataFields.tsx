@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { FormField } from '@/components/forms/FormField';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -32,13 +33,16 @@ export function ServiceDataFields({
   currentData,
   onChange,
 }: ServiceDataFieldsProps) {
+  const { t } = useTranslation(['common', 'nodes']);
   if (Object.keys(serviceFields).length === 0) {
     return null;
   }
 
   return (
     <div className="mt-3 flex flex-col gap-3 border-t pt-3">
-      <h4 className="mb-3 font-semibold text-muted-foreground text-xs">Service Data</h4>
+      <h4 className="mb-3 font-semibold text-muted-foreground text-xs">
+        {t('nodes:serviceDataFields.heading')}
+      </h4>
       {Object.entries(serviceFields).map(([fieldName, field]) => {
         const selector = field.selector || {};
         const selectorType = Object.keys(selector)[0];
@@ -91,10 +95,10 @@ export function ServiceDataFields({
                 onValueChange={(value) => onChange(fieldName, value === '__NONE__' ? '' : value)}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="None" />
+                  <SelectValue placeholder={t('placeholders.none')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__NONE__">None</SelectItem>
+                  <SelectItem value="__NONE__">{t('placeholders.none')}</SelectItem>
                   {config.options?.map((opt) => (
                     <SelectItem key={opt} value={opt}>
                       {opt}
@@ -117,11 +121,12 @@ export function ServiceDataFields({
               />
               <Label className="font-medium text-muted-foreground text-xs">
                 {fieldLabel}
-                {field.required && <span className="ml-0.5 text-destructive">*</span>}
+                {field.required && (
+                  <span className="ml-0.5 text-destructive">
+                    {t('labels.requiredAsterisk')}
+                  </span>
+                )}
               </Label>
-              {field.description && (
-                <p className="text-muted-foreground text-xs">{field.description}</p>
-              )}
             </div>
           );
         }

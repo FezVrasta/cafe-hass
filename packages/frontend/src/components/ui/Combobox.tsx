@@ -2,6 +2,7 @@
 
 import { Check, ChevronsUpDown } from 'lucide-react';
 import * as React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import {
   Command,
@@ -30,17 +31,19 @@ interface ComboboxProps {
   renderOption?: (option: ComboboxOption) => JSX.Element;
   renderValue?: (option: ComboboxOption | undefined) => JSX.Element | null;
 }
+
 export function Combobox({
   options,
   value,
   onChange,
-  placeholder = 'Select...',
+  placeholder,
   className,
   buttonClassName,
   disabled = false,
   renderOption,
   renderValue,
 }: ComboboxProps) {
+  const { t } = useTranslation(['common']);
   const [open, setOpen] = React.useState(false);
 
   const selected = options.find((opt) => opt.value === value);
@@ -55,15 +58,19 @@ export function Combobox({
           className={cn('flex w-full justify-between', buttonClassName)}
           disabled={disabled}
         >
-          {selected ? (renderValue ? renderValue(selected) : selected.label) : placeholder}
+          {selected
+            ? renderValue
+              ? renderValue(selected)
+              : selected.label
+            : placeholder || t('combobox.select')}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className={cn('w-[286px] p-0', className)}>
         <Command>
-          <CommandInput placeholder={placeholder} className="h-9" />
+          <CommandInput placeholder={placeholder || t('combobox.select')} className="h-9" />
           <CommandList>
-            <CommandEmpty>No options found.</CommandEmpty>
+            <CommandEmpty>{t('combobox.noOptions')}</CommandEmpty>
             <CommandGroup>
               {options.map((option) => (
                 <CommandItem

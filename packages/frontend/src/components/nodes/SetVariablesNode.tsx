@@ -1,4 +1,5 @@
 import { Handle, type NodeProps, Position } from '@xyflow/react';
+import { t } from 'i18next';
 import { Ban, Variable } from 'lucide-react';
 import { memo } from 'react';
 import { cn } from '@/lib/utils';
@@ -57,7 +58,7 @@ export const SetVariablesNode = memo(function SetVariablesNode({
 
       <div className="text-cyan-700 text-xs">
         <div className="font-medium opacity-75">
-          {variableCount} variable{variableCount !== 1 ? 's' : ''}
+          {t('nodes:variables.variableCount', { count: variableCount })}
         </div>
       </div>
 

@@ -1,0 +1,136 @@
+{
+  "types": {
+    "trigger": "Trigger",
+    "condition": "Condition",
+    "action": "Action",
+    "delay": "Delay",
+    "wait": "Wait for",
+    "set_variables": "Set Variables",
+    "node": "Node"
+  },
+  "panel": {
+    "selectNode": "Select a node to edit its properties",
+    "properties": "Properties",
+    "nodeId": "Node ID: {{id}}",
+    "additionalProperties": "Additional Properties",
+    "addProperty": "Add Property",
+    "propertyName": "Property Name",
+    "type": "Type",
+    "value": "Value"
+  },
+  "placeholders": {
+    "customProperty": "e.g., my_custom_property",
+    "jsonArray": "[\"item1\", \"item2\"]",
+    "number": "123",
+    "enterValue": "Enter value",
+    "jsonObject": "JSON object",
+    "enterType": "Enter {{type}}",
+    "waitTemplate": "{{ is_state('sensor.x', 'on') }}"
+  },
+  "triggers": {
+    "platformLabel": "Platform",
+    "platforms": {
+      "state": "State Change",
+      "numeric_state": "Numeric State",
+      "time": "Time",
+      "time_pattern": "Time Pattern",
+      "sun": "Sun",
+      "event": "Event",
+      "mqtt": "MQTT",
+      "webhook": "Webhook",
+      "zone": "Zone",
+      "template": "Template",
+      "homeassistant": "Home Assistant",
+      "device": "Device",
+      "calendar": "Calendar",
+      "geo_location": "Geo Location",
+      "tag": "Tag",
+      "conversation": "Conversation",
+      "persistent_notification": "Persistent Notification"
+    },
+    "dataTypes": {
+      "string": "Text",
+      "number": "Number",
+      "boolean": "Boolean",
+      "json": "Array (JSON)"
+    }
+  },
+  "conditions": {
+    "conditionLabel": "Condition Type",
+    "types": {
+      "state": "State",
+      "numeric_state": "Numeric State",
+      "time": "Time",
+      "sun": "Sun",
+      "zone": "Zone",
+      "template": "Template",
+      "device": "Device",
+      "trigger": "Trigger",
+      "and": "AND (All)",
+      "or": "OR (Any)",
+      "not": "NOT"
+    },
+    "nestedConditions": "Nested Conditions",
+    "yes": "Yes",
+    "no": "No"
+  },
+  "actions": {
+    "serviceLabel": "Service"
+  },
+  "variables": {
+    "variableCount_one": "{{count}} variable",
+    "variableCount_other": "{{count}} variables"
+  },
+  "durationField": {
+    "label": "Duration",
+    "description": "Specify duration in hours, minutes, seconds, milliseconds",
+    "string": "String",
+    "object": "Object",
+    "placeholder": "00:00:05.500",
+    "hours": "Hours",
+    "minutes": "Minutes",
+    "seconds": "Seconds",
+    "milliseconds": "Milliseconds"
+  },
+  "responseVariableField": {
+    "label": "Response Variable",
+    "optionalDescription": "This action can return a response. Enable to use the response and enter the name of a variable the response will be saved in.",
+    "requiredDescription": "This action returns a response. Enter the name of a variable the response will be saved in.",
+    "useResponseVariable": "Use Response Variable",
+    "placeholder": "e.g. my_response",
+    "currentNodeWarning": "'current_node' is reserved for the state-machine strategy. Using this name may cause unexpected behavior."
+  },
+  "serviceDataFields": {
+    "heading": "Service Data"
+  },
+  "setVariablesFields": {
+    "empty": "No variables defined. Click the button below to add one.",
+    "variableLabel": "Variable {{index}}",
+    "name": "Name",
+    "namePlaceholder": "variable_name",
+    "value": "Value",
+    "valueDescription": "Value or Jinja2 template expression",
+    "valuePlaceholder": "value or {{ template }}",
+    "addVariable": "Add Variable"
+  },
+  "wait": {
+    "waitsForNTrigger_one": "Waits for {{count}} trigger",
+    "waitsForNTrigger_other": "Waits for {{count}} triggers",
+    "timeoutLabel": "Timeout:",
+    "waitType": "Wait Type",
+    "waitTypeDescription": "Choose what to wait for.",
+    "types": {
+      "template": "Template",
+      "triggers": "Triggers"
+    },
+    "waitTemplate": "Wait Template",
+    "waitTemplateDescription": "Template condition that must be true to continue",
+    "triggersHeading": "Triggers",
+    "triggerLabel": "Trigger {{index}}: {{platform}}",
+    "triggerPlatformLabel": "Platform",
+    "addTrigger": "Add Trigger",
+    "timeoutDescription": "Maximum time to wait before continuing. Leave empty to wait indefinitely.",
+    "continueOnTimeout": "Continue on Timeout",
+    "continueOnTimeoutDescription": "If enabled, the automation continues when timeout expires. If disabled, the automation stops."
+  }
+}

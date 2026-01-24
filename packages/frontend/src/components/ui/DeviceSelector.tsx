@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FormField } from '@/components/forms/FormField';
 import { Input } from '@/components/ui/input';
 import {
@@ -25,10 +26,11 @@ interface DeviceSelectorProps {
 export function DeviceSelector({
   value,
   onChange,
-  label = 'Device',
+  label = '',
   required = false,
-  placeholder = 'Select device...',
+  placeholder = '',
 }: DeviceSelectorProps) {
+  const { t } = useTranslation(['common']);
   const { hass } = useHass();
   const [inputValue, setInputValue] = useState(value);
 
@@ -55,11 +57,13 @@ export function DeviceSelector({
   };
 
   return (
-    <FormField label={label} required={required}>
+    <FormField label={label || t('labels.device')} required={required}>
       {hasDevices ? (
         <Select value={value} onValueChange={onChange}>
           <SelectTrigger className={isUnknownDevice ? 'font-mono text-red-600' : undefined}>
-            <SelectValue placeholder={placeholder}>{getDisplayValue()}</SelectValue>
+            <SelectValue placeholder={placeholder || t('placeholders.selectDevice')}>
+              {getDisplayValue()}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             {Object.values(devices).map((device) => (
@@ -78,11 +82,9 @@ export function DeviceSelector({
               setInputValue(e.target.value);
               onChange(e.target.value);
             }}
-            placeholder="Enter device ID manually"
+            placeholder={t('deviceSelector.enterId')}
           />
-          <p className="text-muted-foreground text-xs">
-            No devices found. Enter device ID manually or check your Home Assistant connection.
-          </p>
+          <p className="text-muted-foreground text-xs">{t('deviceSelector.noDevices')}</p>
         </>
       )}
     </FormField>

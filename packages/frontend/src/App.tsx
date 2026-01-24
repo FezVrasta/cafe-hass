@@ -16,6 +16,7 @@ import {
 
 import { useEffect, useState } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
+import { useTranslation } from 'react-i18next';
 import { Toaster } from 'sonner';
 import './index.css';
 import { FlowCanvas } from '@/components/canvas/FlowCanvas';
@@ -52,11 +53,14 @@ import { cn } from '@/lib/utils';
 import { version } from '../../../custom_components/cafe/manifest.json';
 import { useHass } from './contexts/HassContext';
 import { useDarkMode } from './hooks/useDarkMode';
+import { useLanguage } from './hooks/useLanguage';
 import { useFlowStore } from './store/flow-store';
 
 type RightPanelTab = 'properties' | 'yaml' | 'simulator';
 
 function App() {
+  const { t } = useTranslation(['common', 'errors', 'dialogs']);
+
   // Sidebar toggle button handler
   const handleSidebarToggle = () => {
     window.parent.postMessage({ type: 'CAFE_TOGGLE_SIDEBAR' }, '*');
@@ -95,6 +99,9 @@ function App() {
   const forceSettingsOpen = actualIsRemote && (config.url === '' || config.token === '');
   const isDark = useDarkMode();
 
+  // Sync language with Home Assistant
+  useLanguage();
+
   useEffect(() => {
     document.body.classList.toggle('dark', isDark);
   }, [isDark]);
@@ -123,7 +130,7 @@ function App() {
         fromFlowGraph(graph);
       } catch (error) {
         console.error('Failed to import:', error);
-        alert('Failed to import flow. Please check the file format.');
+        alert(t('errors:import.fileReadFailed'));
       }
     };
     input.click();
@@ -144,21 +151,21 @@ function App() {
   const getConnectionStatus = () => {
     if (actualIsLoading) {
       return {
-        label: 'Connecting...',
+        label: t('status.connecting'),
         className: 'bg-blue-100 text-blue-700',
         icon: <Loader2 className="h-3 w-3 animate-spin" />,
       };
     }
     if (actualConnectionError) {
       return {
-        label: 'Connection Error',
+        label: t('status.connectionError'),
         className: 'bg-red-100 text-red-700',
         icon: <AlertCircle className="h-3 w-3" />,
       };
     }
     if (actualIsRemote && hass?.connected) {
       return {
-        label: 'Connected',
+        label: t('status.connected'),
         className: 'bg-green-100 text-green-700',
         icon: <Wifi className="h-3 w-3" />,
       };
@@ -181,12 +188,10 @@ function App() {
         <Dialog open={true} onOpenChange={reloadApp}>
           <DialogContent className="flex w-[90vw] max-w-full flex-col">
             <DialogHeader>
-              <DialogTitle>Unexpected Error</DialogTitle>
+              <DialogTitle>{t('dialogs:error.title')}</DialogTitle>
             </DialogHeader>
 
-            <DialogDescription>
-              An unexpected error occurred in the application. Please see the details below.
-            </DialogDescription>
+            <DialogDescription>{t('dialogs:error.description')}</DialogDescription>
 
             <div className="space-y-4">
               <pre className="max-h-60 overflow-auto rounded bg-red-100 p-4 text-red-800 text-sm">
@@ -194,11 +199,8 @@ function App() {
                 <br />
                 {error.stack}
               </pre>
-              <div>
-                Please try refreshing the page. If the problem persists, consider reporting the
-                issue on our GitHub repository.
-              </div>
-              <Button onClick={reloadApp}>Refresh</Button>
+              <div>{t('dialogs:error.refreshPrompt')}</div>
+              <Button onClick={reloadApp}>{t('buttons.refresh')}</Button>
             </div>
           </DialogContent>
         </Dialog>
@@ -223,9 +225,10 @@ function App() {
               ) : (
                 <h1
                   className="whitespace-nowrap font-bold text-foreground text-lg"
-                  title="Complex Automation Flow Editor"
+                  title={t('titles.appFullName')}
                 >
-                  ☕ C.A.F.E.
+                  {'☕ '}
+                  {t('titles.appName')}
                 </h1>
               )}
               <Input
@@ -233,7 +236,7 @@ function App() {
                 value={flowName}
                 onChange={(e) => setFlowName(e.target.value)}
                 className="min-w-32 max-w-96 flex-1"
-                placeholder="Automation name"
+                placeholder={t('placeholders.automationName')}
               />
             </div>
 
@@ -245,7 +248,7 @@ function App() {
                     'flex cursor-pointer items-center gap-1.5 transition-opacity hover:opacity-80',
                     status.className
                   )}
-                  title="Click to configure Home Assistant connection"
+                  title={t('titles.clickToConfigure')}
                   variant="outline"
                 >
                   {status.icon}
@@ -258,7 +261,7 @@ function App() {
                   onClick={() => setSettingsOpen(true)}
                   variant="ghost"
                   size="icon"
-                  title="Settings"
+                  title={t('titles.settings')}
                 >
                   <Settings className="h-5 w-5" />
                 </Button>
@@ -276,7 +279,7 @@ function App() {
                   className="rounded-r-none"
                 >
                   <FolderOpenDotIcon className="mr-2 h-4 w-4" />
-                  Open Automation
+                  {t('buttons.openAutomation')}
                 </Button>
 
                 {/* Dropdown Toggle */}
@@ -289,15 +292,15 @@ function App() {
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onClick={reset}>
                       <DiamondPlus className="mr-2 size-4" />
-                      New Automation
+                      {t('buttons.newAutomation')}
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={handleImport}>
                       <FileUp className="mr-2 h-4 w-4" />
-                      Import from JSON
+                      {t('buttons.importJson')}
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setImportYamlOpen(true)}>
                       <FileCode className="mr-2 h-4 w-4" />
-                      Import from YAML
+                      {t('buttons.importYaml')}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -307,11 +310,7 @@ function App() {
                 onClick={() => setSaveDialogOpen(true)}
                 variant={hasUnsavedChanges ? 'default' : 'ghost'}
                 size="icon"
-                title={
-                  automationId
-                    ? 'Update automation in Home Assistant'
-                    : 'Save automation to Home Assistant'
-                }
+                title={automationId ? t('titles.updateAutomation') : t('titles.saveAutomation')}
                 disabled={isSaving}
               >
                 {isSaving ? (
@@ -325,7 +324,7 @@ function App() {
                 onClick={handleExport}
                 variant="ghost"
                 size="icon"
-                title="Export flow as JSON"
+                title={t('titles.exportJson')}
               >
                 <FileDown className="h-5 w-5" />
               </Button>
@@ -338,12 +337,14 @@ function App() {
             <aside className="flex w-56 flex-col border-border border-r bg-card">
               <NodePalette />
               <div className="border-t p-4">
-                <h4 className="mb-2 font-medium text-muted-foreground text-xs">Quick Help</h4>
+                <h4 className="mb-2 font-medium text-muted-foreground text-xs">
+                  {t('labels.quickHelp')}
+                </h4>
                 <ul className="space-y-1 text-muted-foreground text-xs">
-                  <li>Click nodes to add</li>
-                  <li>Drag to connect</li>
-                  <li>Delete to remove</li>
-                  <li>Backspace/Delete key</li>
+                  <li>{t('help.clickNodesToAdd')}</li>
+                  <li>{t('help.dragToConnect')}</li>
+                  <li>{t('help.deleteToRemove')}</li>
+                  <li>{t('help.backspaceDeleteKey')}</li>
                 </ul>
               </div>
 
@@ -351,7 +352,7 @@ function App() {
                 <div className="flex items-center gap-4">
                   {actualIsRemote && config.url && (
                     <span className="text-green-600 text-xs">
-                      Connected to {new URL(config.url).hostname}
+                      {t('status.connectedTo', { hostname: new URL(config.url).hostname })}
                     </span>
                   )}
                   {actualConnectionError && (
@@ -359,7 +360,9 @@ function App() {
                   )}
                 </div>
                 <div className="text-muted-foreground text-xs">
-                  <span>C.A.F.E. v{version}</span>
+                  <span>
+                    {t('titles.appName')} {`v${version}`}
+                  </span>
                 </div>
               </div>
             </aside>
@@ -383,9 +386,9 @@ function App() {
                 className="flex min-h-0 flex-1 flex-col"
               >
                 <TabsList className="grid w-full grid-cols-3 rounded-none border-b">
-                  <TabsTrigger value="properties">Properties</TabsTrigger>
-                  <TabsTrigger value="yaml">YAML</TabsTrigger>
-                  <TabsTrigger value="simulator">Debug</TabsTrigger>
+                  <TabsTrigger value="properties">{t('labels.properties')}</TabsTrigger>
+                  <TabsTrigger value="yaml">{t('labels.yaml')}</TabsTrigger>
+                  <TabsTrigger value="simulator">{t('labels.debug')}</TabsTrigger>
                 </TabsList>
 
                 <div className="flex flex-1 flex-col overflow-hidden">
@@ -400,7 +403,7 @@ function App() {
                       {/* Shared Speed Control */}
                       <div className="border-b p-4">
                         <h4 className="mb-2 font-medium text-muted-foreground text-xs">
-                          Debug Controls
+                          {t('labels.debugControls')}
                         </h4>
                         <SpeedControl speed={simulationSpeed} onSpeedChange={setSimulationSpeed} />
                       </div>

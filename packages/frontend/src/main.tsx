@@ -1,7 +1,9 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import { I18nextProvider } from 'react-i18next';
 import App from './App';
 import { HassProvider } from './contexts/HassContext';
+import i18n from './i18n';
 import { logger } from './lib/logger';
 import type { HomeAssistant } from './types/hass';
 
@@ -64,9 +66,11 @@ function renderApp() {
 
       root.render(
         <React.StrictMode>
-          <HassProvider externalHass={parentHass}>
-            <App />
-          </HassProvider>
+          <I18nextProvider i18n={i18n}>
+            <HassProvider externalHass={parentHass}>
+              <App />
+            </HassProvider>
+          </I18nextProvider>
         </React.StrictMode>
       );
     };
@@ -79,9 +83,11 @@ function renderApp() {
     const root = ReactDOM.createRoot(rootElement);
     root.render(
       <React.StrictMode>
-        <HassProvider forceMode="remote">
-          <App />
-        </HassProvider>
+        <I18nextProvider i18n={i18n}>
+          <HassProvider forceMode="remote">
+            <App />
+          </HassProvider>
+        </I18nextProvider>
       </React.StrictMode>
     );
   }

@@ -3,6 +3,7 @@ import { useReactFlow } from '@xyflow/react';
 import { dump as yamlDump } from 'js-yaml';
 import { ArrowDown, ArrowUp, ArrowUpDown, DiamondPlus, Download, Search } from 'lucide-react';
 import React, { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -54,6 +55,7 @@ type SortColumn = 'name' | 'lastTriggered' | 'enabled';
 type SortDirection = 'asc' | 'desc';
 
 export function AutomationImportDialog({ isOpen, onClose }: AutomationImportDialogProps) {
+  const { t } = useTranslation(['common', 'dialogs', 'errors']);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortColumn, setSortColumn] = useState<SortColumn | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
@@ -184,12 +186,14 @@ export function AutomationImportDialog({ isOpen, onClose }: AutomationImportDial
     const groups: Record<string, HaAutomation[]> = {};
     for (const automation of sortedAutomations) {
       const areaId = entityIdToAreaId[automation.entity_id];
-      const areaName = areaId ? areaIdToName[areaId] || 'Other Area' : 'No Area';
+      const areaName = areaId
+        ? areaIdToName[areaId] || t('dialogs:import.otherArea')
+        : t('dialogs:import.noArea');
       if (!groups[areaName]) groups[areaName] = [];
       groups[areaName].push(automation);
     }
     return groups;
-  }, [sortedAutomations, entityIdToAreaId, areaIdToName]);
+  }, [sortedAutomations, entityIdToAreaId, areaIdToName, t]);
 
   const handleSort = (column: SortColumn) => {
     if (sortColumn === column) {
@@ -221,7 +225,7 @@ export function AutomationImportDialog({ isOpen, onClose }: AutomationImportDial
       const api = getHomeAssistantAPI(hass, hassConfig);
 
       if (!api.isConnected()) {
-        throw new Error('No Home Assistant connection available');
+        throw new Error(t('errors:connection.noConnection'));
       }
 
       // Get automation configuration with fallbacks
@@ -246,7 +250,7 @@ export function AutomationImportDialog({ isOpen, onClose }: AutomationImportDial
         const result = await transpiler.fromYaml(yamlString);
 
         if (!result.success) {
-          throw new Error(result.errors?.join('\n') || 'Failed to parse automation configuration');
+          throw new Error(result.errors?.join('\n') || t('errors:import.parseFailed'));
         }
 
         if (result.graph) {
@@ -266,7 +270,9 @@ export function AutomationImportDialog({ isOpen, onClose }: AutomationImportDial
         setAutomationId(automationId);
 
         toast.success(
-          `Automation "${automation.attributes.friendly_name || automationId}" imported successfully!`
+          t('dialogs:import.importSuccess', {
+            name: automation.attributes.friendly_name || automationId,
+          })
         );
       } else {
         // Set the automation ID so that if user creates a flow, it will update instead of create new
@@ -274,10 +280,11 @@ export function AutomationImportDialog({ isOpen, onClose }: AutomationImportDial
         setAutomationId(automationId);
 
         toast.warning(
-          `Automation "${automation.attributes.friendly_name || automationId}" opened!`,
+          t('dialogs:import.openedWarning', {
+            name: automation.attributes.friendly_name || automationId,
+          }),
           {
-            description:
-              'Could not fetch configuration automatically. You can now create a new flow with the same name.',
+            description: t('dialogs:import.openedWarningDescription'),
           }
         );
       }
@@ -285,12 +292,12 @@ export function AutomationImportDialog({ isOpen, onClose }: AutomationImportDial
       onClose();
     } catch (error) {
       console.error('C.A.F.E.: Failed to open automation:', error);
-      toast.error(`Failed to import automation: ${(error as Error).message}`);
+      toast.error(t('dialogs:import.importFailed', { message: (error as Error).message }));
     }
   };
 
   const formatLastTriggered = (timestamp?: string) => {
-    if (!timestamp) return 'Never';
+    if (!timestamp) return t('dialogs:import.never');
     const date = new Date(timestamp);
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
@@ -298,10 +305,10 @@ export function AutomationImportDialog({ isOpen, onClose }: AutomationImportDial
     const diffHours = Math.floor(diffMins / 60);
     const diffDays = Math.floor(diffHours / 24);
 
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
+    if (diffMins < 1) return t('dialogs:import.justNow');
+    if (diffMins < 60) return t('dialogs:import.minutesAgo', { count: diffMins });
+    if (diffHours < 24) return t('dialogs:import.hoursAgo', { count: diffHours });
+    if (diffDays < 7) return t('dialogs:import.daysAgo', { count: diffDays });
     return date.toLocaleDateString();
   };
 
@@ -313,21 +320,21 @@ export function AutomationImportDialog({ isOpen, onClose }: AutomationImportDial
         <DialogHeader className="space-y-3">
           <div className="flex items-center justify-between pr-8">
             <div>
-              <DialogTitle>Open Automation</DialogTitle>
-              <DialogDescription>Open an existing automation or create a new one</DialogDescription>
+              <DialogTitle>{t('dialogs:import.title')}</DialogTitle>
+              <DialogDescription>{t('dialogs:import.descriptionFull')}</DialogDescription>
             </div>
             <Button
               onClick={() => {
                 confirmAction(() => {
                   reset();
-                  setFlowName('New Automation');
+                  setFlowName(t('defaults.newAutomation'));
                   onClose();
                 });
               }}
               className="bg-green-600 hover:bg-green-700"
             >
               <DiamondPlus className="mr-2 h-4 w-4" />
-              Create New
+              {t('dialogs:import.createNew')}
             </Button>
           </div>
         </DialogHeader>
@@ -338,7 +345,7 @@ export function AutomationImportDialog({ isOpen, onClose }: AutomationImportDial
             <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform text-muted-foreground" />
             <Input
               type="text"
-              placeholder="Search automations..."
+              placeholder={t('dialogs:import.searchPlaceholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
@@ -353,24 +360,27 @@ export function AutomationImportDialog({ isOpen, onClose }: AutomationImportDial
                     onClick={() => handleSort('name')}
                     className="flex-1 cursor-pointer whitespace-nowrap border-b bg-muted px-3 py-2 text-left font-semibold text-muted-foreground text-xs hover:bg-muted/80"
                   >
-                    Name{getSortIcon('name')}
+                    {t('dialogs:import.columns.name')}
+                    {getSortIcon('name')}
                   </button>
                   <button
                     type="button"
                     onClick={() => handleSort('lastTriggered')}
                     className="w-[120px] cursor-pointer whitespace-nowrap border-b bg-muted px-3 py-2 text-left font-semibold text-muted-foreground text-xs hover:bg-muted/80"
                   >
-                    Last Triggered{getSortIcon('lastTriggered')}
+                    {t('dialogs:import.columns.lastTriggered')}
+                    {getSortIcon('lastTriggered')}
                   </button>
                   <button
                     type="button"
                     onClick={() => handleSort('enabled')}
                     className="w-[80px] cursor-pointer whitespace-nowrap border-b bg-muted px-3 py-2 text-center font-semibold text-muted-foreground text-xs hover:bg-muted/80"
                   >
-                    Enabled{getSortIcon('enabled')}
+                    {t('dialogs:import.columns.enabled')}
+                    {getSortIcon('enabled')}
                   </button>
                   <div className="w-[60px] border-b bg-muted px-3 py-2 text-center font-semibold text-muted-foreground text-xs">
-                    Action
+                    {t('dialogs:import.columns.action')}
                   </div>
                 </div>
               </div>
@@ -436,11 +446,11 @@ export function AutomationImportDialog({ isOpen, onClose }: AutomationImportDial
                             </div>
                           )}
                         <div className="mt-1 truncate text-muted-foreground text-xs">
-                          ID: {automation.entity_id}
+                          {t('dialogs:import.ID', { id: automation.attributes.id || '' })}
                         </div>
                         {automation.attributes.mode && (
                           <div className="text-muted-foreground text-xs">
-                            Mode: {automation.attributes.mode}
+                            {t('dialogs:import.mode', { mode: automation.attributes.mode })}
                           </div>
                         )}
                       </div>
@@ -450,7 +460,9 @@ export function AutomationImportDialog({ isOpen, onClose }: AutomationImportDial
                             {formatLastTriggered(automation.attributes.last_triggered)}
                           </span>
                         ) : (
-                          <span className="text-muted-foreground text-xs">Never</span>
+                          <span className="text-muted-foreground text-xs">
+                            {t('dialogs:import.never')}
+                          </span>
                         )}
                       </div>
                       <div className="w-[80px] px-3 py-2 text-center align-top">
@@ -461,13 +473,19 @@ export function AutomationImportDialog({ isOpen, onClose }: AutomationImportDial
                               const api = getHomeAssistantAPI(hass, hassConfig);
                               await api.setAutomationState(automation.entity_id, checked);
                               toast.success(
-                                `Automation ${checked ? 'enabled' : 'disabled'} successfully.`
+                                checked
+                                  ? t('dialogs:import.automationEnabled')
+                                  : t('dialogs:import.automationDisabled')
                               );
                             } catch {
-                              toast.error('Failed to update automation state');
+                              toast.error(t('dialogs:import.updateStateFailed'));
                             }
                           }}
-                          aria-label={automation.state === 'on' ? 'Enabled' : 'Disabled'}
+                          aria-label={
+                            automation.state === 'on'
+                              ? t('dialogs:import.columns.enabled')
+                              : t('dialogs:import.disabled')
+                          }
                         />
                       </div>
                       <div className="w-[60px] px-3 py-2 text-center align-top">
@@ -475,7 +493,7 @@ export function AutomationImportDialog({ isOpen, onClose }: AutomationImportDial
                           size="icon"
                           variant="ghost"
                           onClick={() => confirmAction(() => handleImportAutomation(automation))}
-                          title="Import automation"
+                          title={t('dialogs:import.importAutomation')}
                         >
                           <Download className="h-4 w-4" />
                         </Button>
@@ -505,14 +523,14 @@ export function AutomationImportDialog({ isOpen, onClose }: AutomationImportDial
                   ) && (
                     <div className="flex">
                       <div className="flex-1 py-8 text-center text-muted-foreground">
-                        No automations found.
+                        {t('dialogs:import.noAutomations')}
                       </div>
                     </div>
                   )}
                 {automations.length === 0 && (
                   <div className="flex">
                     <div className="flex-1 py-8 text-center text-muted-foreground">
-                      No automations found.
+                      {t('dialogs:import.noAutomations')}
                     </div>
                   </div>
                 )}
@@ -524,11 +542,9 @@ export function AutomationImportDialog({ isOpen, onClose }: AutomationImportDial
         {/* Footer */}
         <div className="border-t bg-muted/20 p-6">
           <div className="flex items-center justify-between">
-            <p className="text-muted-foreground text-sm">
-              Opening will replace your current automation design
-            </p>
+            <p className="text-muted-foreground text-sm">{t('dialogs:import.openingWarning')}</p>
             <Button onClick={onClose} variant="ghost">
-              Cancel
+              {t('buttons.cancel')}
             </Button>
           </div>
         </div>
@@ -538,18 +554,15 @@ export function AutomationImportDialog({ isOpen, onClose }: AutomationImportDial
       <Dialog open={showConfirmDialog} onOpenChange={handleCancelConfirm}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Discard current flow?</DialogTitle>
-            <DialogDescription>
-              Your current automation has unsaved changes. Creating or opening a new automation will
-              discard these changes.
-            </DialogDescription>
+            <DialogTitle>{t('dialogs:import.discardTitle')}</DialogTitle>
+            <DialogDescription>{t('dialogs:import.discardDescription')}</DialogDescription>
           </DialogHeader>
           <div className="flex justify-end gap-2 pt-4">
             <Button variant="outline" onClick={handleCancelConfirm}>
-              Cancel
+              {t('buttons.cancel')}
             </Button>
             <Button variant="destructive" onClick={handleConfirm}>
-              Discard & Continue
+              {t('dialogs:import.confirmDiscard')}
             </Button>
           </div>
         </DialogContent>

@@ -1,0 +1,123 @@
+{
+  "buttons": {
+    "save": "Save",
+    "saveAsCopy": "Save as Copy",
+    "cancel": "Cancel",
+    "close": "Close",
+    "delete": "Delete",
+    "update": "Update",
+    "refresh": "Refresh",
+    "copy": "Copy",
+    "use": "Use",
+    "add": "Add",
+    "addTrigger": "Add Trigger",
+    "openAutomation": "Open Automation",
+    "newAutomation": "New Automation",
+    "importJson": "Import from JSON",
+    "importYaml": "Import from YAML",
+    "testConnection": "Test Connection",
+    "disconnect": "Disconnect"
+  },
+  "labels": {
+    "automationName": "Automation name",
+    "properties": "Properties",
+    "yaml": "YAML",
+    "debug": "Debug",
+    "enabled": "Enabled",
+    "alias": "Alias (Display Name)",
+    "id": "ID",
+    "strategy": "Strategy",
+    "speed": "Speed",
+    "quickHelp": "Quick Help",
+    "debugControls": "Debug Controls",
+    "addNode": "Add Node",
+    "yamlOutput": "YAML Output",
+    "automationTrace": "Automation Trace",
+    "selectTraceRun": "Select Trace Run:",
+    "traceDetails": "Trace Details:",
+    "trigger": "Trigger:",
+    "duration": "Duration:",
+    "lastStep": "Last Step:",
+    "executionPath": "Execution Path:",
+    "notApplicable": "N/A",
+    "device": "Device",
+    "triggerType": "Trigger Type",
+    "entityId": "Entity ID",
+    "warning": "Warning",
+    "requiredAsterisk": "*"
+  },
+  "status": {
+    "connecting": "Connecting...",
+    "connected": "Connected",
+    "connectedTo": "Connected to {{hostname}}",
+    "connectionError": "Connection Error",
+    "saving": "Saving...",
+    "updating": "Updating...",
+    "testing": "Testing...",
+    "loadingTraces": "Loading traces...",
+    "loadingTriggers": "Loading triggers..."
+  },
+  "placeholders": {
+    "automationName": "Automation name",
+    "optionalDisplayName": "Optional display name",
+    "optionalUniqueId": "Optional unique ID",
+    "enterAutomationName": "Enter automation name...",
+    "describeAutomation": "Describe what this automation does...",
+    "searchAutomations": "Search automations...",
+    "selectTrace": "Select a trace...",
+    "addNodesForYaml": "# Add nodes to see YAML output",
+    "selectDevice": "Select device...",
+    "selectTriggerType": "Select trigger type...",
+    "selectEntity": "Select entity...",
+    "selectEntities": "Select entities...",
+    "duration": "00:05:00",
+    "enterTemplate": "Enter Jinja2 template...",
+    "jsonExample": "{ \"key\": \"value\" }",
+    "none": "None"
+  },
+  "help": {
+    "clickNodesToAdd": "Click nodes to add",
+    "dragToConnect": "Drag to connect",
+    "deleteToRemove": "Delete to remove",
+    "backspaceDeleteKey": "Backspace/Delete key"
+  },
+  "titles": {
+    "appName": "C.A.F.E.",
+    "appFullName": "Complex Automation Flow Editor",
+    "settings": "Settings",
+    "updateAutomation": "Update automation in Home Assistant",
+    "saveAutomation": "Save automation to Home Assistant",
+    "exportJson": "Export flow as JSON",
+    "clickToConfigure": "Click to configure Home Assistant connection"
+  },
+  "strategy": {
+    "auto": "Auto",
+    "native": "Native",
+    "stateMachine": "State Machine"
+  },
+  "defaults": {
+    "newAutomation": "New Automation"
+  },
+  "boolean": {
+    "true": "True",
+    "false": "False"
+  },
+  "combobox": {
+    "select": "Select...",
+    "noOptions": "No options found."
+  },
+  "dynamicField": {
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "selectItems": "Select items...",
+    "itemsSelected": "{{count}} items selected",
+    "selectEntities": "Select entities...",
+    "selectEntity": "Select entity...",
+    "formatHMS": "Format: HH:MM:SS",
+    "enterValue": "Enter {{name}}..."
+  },
+  "deviceSelector": {
+    "enterId": "Enter device ID manually",
+    "noDevices": "No devices found. Enter device ID manually or check your Home Assistant connection."
+  }
+}

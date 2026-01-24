@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { EntitySelector } from '@/components/ui/EntitySelector';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -60,6 +61,7 @@ export function DynamicFieldRenderer({
   domain,
   translations = {},
 }: DynamicFieldRendererProps) {
+  const { t } = useTranslation(['common']);
   // Extract common properties
   const name = field.name;
   const required = field.required ?? false;
@@ -160,7 +162,7 @@ export function DynamicFieldRenderer({
           <div className="flex items-center space-x-2">
             <Switch checked={booleanValue} onCheckedChange={onChange} />
             <span className="text-muted-foreground text-sm">
-              {booleanValue ? 'Enabled' : 'Disabled'}
+              {booleanValue ? t('dynamicField.enabled') : t('dynamicField.disabled')}
             </span>
           </div>
         );
@@ -213,12 +215,12 @@ export function DynamicFieldRenderer({
                   <SelectValue>
                     {values.length === 0 ? (
                       <span className="text-muted-foreground">
-                        {placeholder || 'Select items...'}
+                        {placeholder || t('dynamicField.selectItems')}
                       </span>
                     ) : values.length === 1 ? (
                       options.find((o) => o.value === values[0])?.label || values[0]
                     ) : (
-                      `${values.length} items selected`
+                      t('dynamicField.itemsSelected', { count: values.length })
                     )}
                   </SelectValue>
                 </SelectTrigger>
@@ -267,7 +269,7 @@ export function DynamicFieldRenderer({
                           onClick={() => onChange(values.filter((v) => v !== val))}
                           className="hover:text-destructive"
                         >
-                          ×
+                          {'×'}
                         </button>
                       </span>
                     );
@@ -313,7 +315,7 @@ export function DynamicFieldRenderer({
               value={values}
               onChange={onChange}
               entities={entities}
-              placeholder={placeholder || 'Select entities...'}
+              placeholder={placeholder || t('dynamicField.selectEntities')}
             />
           );
         }
@@ -323,7 +325,7 @@ export function DynamicFieldRenderer({
             value={stringValue}
             onChange={onChange}
             entities={entities}
-            placeholder={placeholder || 'Select entity...'}
+            placeholder={placeholder || t('dynamicField.selectEntity')}
           />
         );
       }
@@ -334,7 +336,7 @@ export function DynamicFieldRenderer({
           <Textarea
             value={stringValue}
             onChange={(e) => onChange(e.target.value)}
-            placeholder={placeholder || 'Enter Jinja2 template...'}
+            placeholder={placeholder || t('placeholders.enterTemplate')}
             className="font-mono text-sm"
             rows={4}
             required={required}
@@ -348,9 +350,9 @@ export function DynamicFieldRenderer({
             type="text"
             value={stringValue}
             onChange={(e) => onChange(e.target.value)}
-            placeholder={placeholder || '00:05:00'}
+            placeholder={placeholder || t('placeholders.duration')}
             pattern="^\d{2}:\d{2}:\d{2}$"
-            title="Format: HH:MM:SS"
+            title={t('dynamicField.formatHMS')}
             required={required}
           />
         );
@@ -367,7 +369,7 @@ export function DynamicFieldRenderer({
                 onChange(e.target.value);
               }
             }}
-            placeholder={placeholder || '{ "key": "value" }'}
+            placeholder={placeholder || t('placeholders.jsonExample')}
             className="font-mono text-sm"
             rows={4}
             required={required}
@@ -403,7 +405,7 @@ export function DynamicFieldRenderer({
             type="text"
             value={stringValue}
             onChange={(e) => onChange(e.target.value)}
-            placeholder={placeholder || `Enter ${name}...`}
+            placeholder={placeholder || t('dynamicField.enterValue', { name })}
             required={required}
           />
         );
@@ -414,7 +416,9 @@ export function DynamicFieldRenderer({
     <div className="space-y-2">
       <Label className="font-medium text-muted-foreground text-xs">
         {label}
-        {required && <span className="ml-1 text-destructive">*</span>}
+        {required && (
+          <span className="ml-1 text-destructive">{t('labels.requiredAsterisk')}</span>
+        )}
       </Label>
       {renderField()}
       {description && <p className="text-muted-foreground text-xs">{description}</p>}

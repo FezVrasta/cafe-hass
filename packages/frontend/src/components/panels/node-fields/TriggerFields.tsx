@@ -1,5 +1,6 @@
 import type { FlowNode, TriggerPlatform } from '@cafe/shared';
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FormField } from '@/components/forms/FormField';
 import { DynamicFieldRenderer } from '@/components/ui/DynamicFieldRenderer';
 import {
@@ -26,6 +27,7 @@ interface TriggerFieldsProps {
  * Extracts trigger rendering logic from PropertyPanel.
  */
 export function TriggerFields({ node, onChange, entities }: TriggerFieldsProps) {
+  const { t } = useTranslation(['nodes']);
   const platform = getNodeDataString(node, 'platform', 'state');
   const deviceId = getNodeDataString(node, 'device_id');
 
@@ -56,24 +58,30 @@ export function TriggerFields({ node, onChange, entities }: TriggerFieldsProps) 
 
   return (
     <>
-      <FormField label="Platform" required>
+      <FormField label={t('nodes:triggers.platformLabel')} required>
         <Select value={effectivePlatform} onValueChange={handlePlatformChange}>
           <SelectTrigger>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="state">State Change</SelectItem>
-            <SelectItem value="numeric_state">Numeric State</SelectItem>
-            <SelectItem value="time">Time</SelectItem>
-            <SelectItem value="time_pattern">Time Pattern</SelectItem>
-            <SelectItem value="sun">Sun</SelectItem>
-            <SelectItem value="event">Event</SelectItem>
-            <SelectItem value="mqtt">MQTT</SelectItem>
-            <SelectItem value="webhook">Webhook</SelectItem>
-            <SelectItem value="zone">Zone</SelectItem>
-            <SelectItem value="template">Template</SelectItem>
-            <SelectItem value="homeassistant">Home Assistant</SelectItem>
-            <SelectItem value="device">Device</SelectItem>
+            <SelectItem value="state">{t('nodes:triggers.platforms.state')}</SelectItem>
+            <SelectItem value="numeric_state">
+              {t('nodes:triggers.platforms.numeric_state')}
+            </SelectItem>
+            <SelectItem value="time">{t('nodes:triggers.platforms.time')}</SelectItem>
+            <SelectItem value="time_pattern">
+              {t('nodes:triggers.platforms.time_pattern')}
+            </SelectItem>
+            <SelectItem value="sun">{t('nodes:triggers.platforms.sun')}</SelectItem>
+            <SelectItem value="event">{t('nodes:triggers.platforms.event')}</SelectItem>
+            <SelectItem value="mqtt">{t('nodes:triggers.platforms.mqtt')}</SelectItem>
+            <SelectItem value="webhook">{t('nodes:triggers.platforms.webhook')}</SelectItem>
+            <SelectItem value="zone">{t('nodes:triggers.platforms.zone')}</SelectItem>
+            <SelectItem value="template">{t('nodes:triggers.platforms.template')}</SelectItem>
+            <SelectItem value="homeassistant">
+              {t('nodes:triggers.platforms.homeassistant')}
+            </SelectItem>
+            <SelectItem value="device">{t('nodes:triggers.platforms.device')}</SelectItem>
           </SelectContent>
         </Select>
       </FormField>

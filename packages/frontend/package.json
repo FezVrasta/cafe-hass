@@ -33,10 +33,12 @@
     "cmdk": "^1.1.1",
     "custom-card-helpers": "^1.9.0",
     "home-assistant-js-websocket": "^9.6.0",
+    "i18next": "^25.8.0",
     "lucide-react": "^0.460.0",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
     "react-error-boundary": "^6.0.3",
+    "react-i18next": "^16.5.3",
     "sonner": "^2.0.7",
     "tailwind-merge": "^2.5.0",
     "zustand": "^5.0.0"
