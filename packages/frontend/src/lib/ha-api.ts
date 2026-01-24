@@ -348,37 +348,10 @@ export class HomeAssistantAPI {
    */
   async getAutomationConfigWithFallback(
     automationId: string,
-    alias?: string
+    _alias?: string
   ): Promise<AutomationConfig | null> {
     try {
-      // Method 1: Try to get from automation trace (most reliable WebSocket method)
-      if (this.hass?.connection) {
-        const config = await this.getAutomationConfigFromTrace(automationId);
-        if (config) {
-          return config as AutomationConfig;
-        }
-      }
-
-      // Method 2: Try to get from automation config list (REST API)
-      // Note: This may not work if /api/config/automation/config doesn't exist
-
-      let config = await this.getAutomationConfig(automationId);
-
-      if (config) {
-        return config;
-      }
-
-      // Method 3: Try to find by alias if provided
-      if (alias) {
-        const configs = await this.getAutomationConfigs();
-        config = configs.find((cfg) => cfg.alias === alias) || null;
-        if (config) {
-          return config;
-        }
-      }
-
-      console.warn(`C.A.F.E.: Could not find automation config for: ${automationId}`);
-      return null;
+      return await this.getAutomationConfig(automationId);
     } catch (error) {
       console.error('C.A.F.E.: Failed to get automation config with fallback:', error);
       return null;
