@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FormField } from '@/components/forms/FormField';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -13,12 +14,8 @@ export interface DurationFieldProps {
   fieldKey?: string; // e.g. 'delay' or 'timeout'
 }
 
-export function DurationField({
-  label = 'Duration',
-  description,
-  value,
-  onChange,
-}: DurationFieldProps) {
+export function DurationField({ label, description, value, onChange }: DurationFieldProps) {
+  const { t } = useTranslation(['common', 'nodes']);
   const isString = typeof value === 'string';
   const obj = !isString && typeof value === 'object' && value !== null ? value : {};
   const [useString, setUseString] = useState(isString);
@@ -72,25 +69,25 @@ export function DurationField({
 
   return (
     <FormField
-      label={label}
-      description={description || 'Specify duration in hours, minutes, seconds, milliseconds'}
+      label={label ?? t('nodes:durationField.label')}
+      description={description || t('nodes:durationField.description')}
     >
       <div className="flex flex-col gap-2">
         <div className="mb-2 flex items-center gap-2">
-          <span className="text-muted-foreground text-xs">String</span>
+          <span className="text-muted-foreground text-xs">{t('nodes:durationField.string')}</span>
           <Switch checked={useString} onCheckedChange={handleToggle} />
-          <span className="text-muted-foreground text-xs">Object</span>
+          <span className="text-muted-foreground text-xs">{t('nodes:durationField.object')}</span>
         </div>
         {useString ? (
           <Input
             type="text"
             value={isString ? value : ''}
             onChange={(e) => onChange(e.target.value)}
-            placeholder="00:00:05.500"
+            placeholder={t('nodes:durationField.placeholder')}
           />
         ) : (
           <div className="flex gap-2">
-            <FormField label="Hours">
+            <FormField label={t('nodes:durationField.hours')}>
               <Input
                 type="number"
                 min={0}
@@ -99,7 +96,7 @@ export function DurationField({
                 placeholder="0"
               />
             </FormField>
-            <FormField label="Minutes">
+            <FormField label={t('nodes:durationField.minutes')}>
               <Input
                 type="number"
                 min={0}
@@ -108,7 +105,7 @@ export function DurationField({
                 placeholder="0"
               />
             </FormField>
-            <FormField label="Seconds">
+            <FormField label={t('nodes:durationField.seconds')}>
               <Input
                 type="number"
                 min={0}
@@ -117,7 +114,7 @@ export function DurationField({
                 placeholder="0"
               />
             </FormField>
-            <FormField label="Milliseconds">
+            <FormField label={t('nodes:durationField.milliseconds')}>
               <Input
                 type="number"
                 min={0}

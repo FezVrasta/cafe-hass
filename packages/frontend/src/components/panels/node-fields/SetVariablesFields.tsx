@@ -1,5 +1,6 @@
 import type { SetVariablesNode } from '@cafe/shared';
 import { Plus, Trash2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { FormField } from '@/components/forms/FormField';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +17,7 @@ interface SetVariablesFieldsProps {
  * Allows defining one or more variable names and their values.
  */
 export function SetVariablesFields({ node, onChange }: SetVariablesFieldsProps) {
+  const { t } = useTranslation(['nodes']);
   const variables = getNodeDataObject<Record<string, unknown>>(node, 'variables', {});
   const variableEntries = Object.entries(variables);
 
@@ -59,15 +61,13 @@ export function SetVariablesFields({ node, onChange }: SetVariablesFieldsProps) 
   return (
     <div className="space-y-4">
       {variableEntries.length === 0 ? (
-        <p className="text-muted-foreground text-sm">
-          No variables defined. Click the button below to add one.
-        </p>
+        <p className="text-muted-foreground text-sm">{t('nodes:setVariablesFields.empty')}</p>
       ) : (
         variableEntries.map(([key, value], index) => (
           <div key={`${key}-${index}`} className="rounded-lg border border-border bg-muted/30 p-3">
             <div className="mb-2 flex items-center justify-between">
               <span className="font-medium text-muted-foreground text-xs">
-                Variable {index + 1}
+                {t('nodes:setVariablesFields.variableLabel', { index: index + 1 })}
               </span>
               <Button
                 variant="ghost"
@@ -80,20 +80,23 @@ export function SetVariablesFields({ node, onChange }: SetVariablesFieldsProps) 
             </div>
 
             <div className="space-y-3">
-              <FormField label="Name">
+              <FormField label={t('nodes:setVariablesFields.name')}>
                 <Input
                   value={key}
                   onChange={(e) => handleKeyChange(key, e.target.value)}
-                  placeholder="variable_name"
+                  placeholder={t('nodes:setVariablesFields.namePlaceholder')}
                   className="font-mono text-sm"
                 />
               </FormField>
 
-              <FormField label="Value" description="Value or Jinja2 template expression">
+              <FormField
+                label={t('nodes:setVariablesFields.value')}
+                description={t('nodes:setVariablesFields.valueDescription')}
+              >
                 <Textarea
                   value={String(value ?? '')}
                   onChange={(e) => handleValueChange(key, e.target.value)}
-                  placeholder="value or {{ template }}"
+                  placeholder={t('nodes:setVariablesFields.valuePlaceholder')}
                   className="font-mono text-sm"
                 />
               </FormField>
@@ -104,7 +107,7 @@ export function SetVariablesFields({ node, onChange }: SetVariablesFieldsProps) 
 
       <Button variant="outline" onClick={handleAddVariable} className="w-full gap-2" size="sm">
         <Plus className="h-4 w-4" />
-        Add Variable
+        {t('nodes:setVariablesFields.addVariable')}
       </Button>
     </div>
   );

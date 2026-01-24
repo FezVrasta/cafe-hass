@@ -1,5 +1,6 @@
 import { Clock, History, Play, RotateCcw, Square } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import {
@@ -16,6 +17,7 @@ import { cn } from '@/lib/utils';
 import { useFlowStore } from '@/store/flow-store';
 
 export function AutomationTraceViewer() {
+  const { t } = useTranslation(['common', 'dialogs']);
   const { hass } = useHass();
   const {
     automationId,
@@ -151,7 +153,7 @@ export function AutomationTraceViewer() {
       const duration = endTime.getTime() - startTime.getTime();
       return `${(duration / 1000).toFixed(1)}s`;
     } catch {
-      return 'N/A';
+      return t('labels.notApplicable');
     }
   };
 
@@ -159,10 +161,10 @@ export function AutomationTraceViewer() {
     return (
       <div className="h-full space-y-4 p-4">
         <div className="flex items-center justify-between">
-          <h3 className="font-semibold text-foreground text-sm">Automation Trace</h3>
+          <h3 className="font-semibold text-foreground text-sm">{t('labels.automationTrace')}</h3>
         </div>
         <div className="text-center text-muted-foreground text-sm">
-          Save the automation first to view traces
+          {t('dialogs:traceViewer.saveAutomationFirst')}
         </div>
       </div>
     );
@@ -171,7 +173,7 @@ export function AutomationTraceViewer() {
   return (
     <div className="h-full space-y-4 p-4">
       <div className="flex items-center justify-between">
-        <h3 className="font-semibold text-foreground text-sm">Automation Trace</h3>
+        <h3 className="font-semibold text-foreground text-sm">{t('labels.automationTrace')}</h3>
         <div className="flex gap-1">
           {isShowingTrace && !isAnimating && (
             <Button
@@ -228,15 +230,17 @@ export function AutomationTraceViewer() {
       </div>
 
       {traces.length === 0 && !isLoading && (
-        <div className="text-center text-muted-foreground text-sm">No automation traces found</div>
+        <div className="text-center text-muted-foreground text-sm">
+          {t('dialogs:traceViewer.noTracesFound')}
+        </div>
       )}
 
       {traces.length > 0 && (
         <div className="space-y-2">
-          <Label className="text-xs">Select Trace Run:</Label>
+          <Label className="text-xs">{t('labels.selectTraceRun')}</Label>
           <Select value={selectedTraceRunId} onValueChange={handleTraceSelection}>
             <SelectTrigger className="h-8">
-              <SelectValue placeholder="Select a trace..." />
+              <SelectValue placeholder={t('placeholders.selectTrace')} />
             </SelectTrigger>
             <SelectContent>
               {traces.map((trace) => (
@@ -245,7 +249,9 @@ export function AutomationTraceViewer() {
                     <Clock className="h-3 w-3" />
                     <span className="text-xs">{formatTimestamp(trace.timestamp.start)}</span>
                     <span className="text-muted-foreground text-xs">
-                      ({formatDuration(trace.timestamp.start, trace.timestamp.finish)})
+                      {'('}
+                      {formatDuration(trace.timestamp.start, trace.timestamp.finish)}
+                      {')'}
                     </span>
                     <span
                       className={cn(
@@ -268,18 +274,18 @@ export function AutomationTraceViewer() {
       {isShowingTrace && traceData && (
         <div className="space-y-2">
           <div className="border-t pt-2">
-            <Label className="text-xs">Trace Details:</Label>
+            <Label className="text-xs">{t('labels.traceDetails')}</Label>
             <div className="mt-1 space-y-1 text-xs">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Trigger:</span>
+                <span className="text-muted-foreground">{t('labels.trigger')}</span>
                 <span className="ml-2 truncate">{traceData.trigger}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Duration:</span>
+                <span className="text-muted-foreground">{t('labels.duration')}</span>
                 <span>{formatDuration(traceData.timestamp.start, traceData.timestamp.finish)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Last Step:</span>
+                <span className="text-muted-foreground">{t('labels.lastStep')}</span>
                 <span>{traceData.last_step}</span>
               </div>
             </div>
@@ -287,7 +293,7 @@ export function AutomationTraceViewer() {
 
           {traceExecutionPath.length > 0 && (
             <div className="border-t pt-2">
-              <Label className="text-xs">Execution Path:</Label>
+              <Label className="text-xs">{t('labels.executionPath')}</Label>
               <div className="mt-1 space-y-1">
                 {traceExecutionPath.map((nodeId, index) => (
                   <div
@@ -312,7 +318,7 @@ export function AutomationTraceViewer() {
       )}
 
       {isLoading && (
-        <div className="text-center text-muted-foreground text-sm">Loading traces...</div>
+        <div className="text-center text-muted-foreground text-sm">{t('status.loadingTraces')}</div>
       )}
     </div>
   );

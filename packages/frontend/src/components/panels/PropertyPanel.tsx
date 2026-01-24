@@ -1,6 +1,7 @@
 import type { FlowNode } from '@cafe/shared';
 import { Trash2 } from 'lucide-react';
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FormField } from '@/components/forms/FormField';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,6 +20,7 @@ import { PropertyEditor } from './PropertyEditor';
  * Reduced from 1,248 lines to ~80 lines by extracting components and logic.
  */
 export function PropertyPanel() {
+  const { t } = useTranslation(['common', 'nodes']);
   const selectedNodeId = useFlowStore((s) => s.selectedNodeId);
   const nodes = useFlowStore((s) => s.nodes);
   const updateNodeData = useFlowStore((s) => s.updateNodeData);
@@ -73,9 +75,7 @@ export function PropertyPanel() {
 
   if (!selectedNode) {
     return (
-      <div className="p-4 text-center text-slate-500 text-sm">
-        Select a node to edit its properties
-      </div>
+      <div className="p-4 text-center text-slate-500 text-sm">{t('nodes:panel.selectNode')}</div>
     );
   }
 
@@ -93,9 +93,10 @@ export function PropertyPanel() {
       <div className="flex items-center justify-between">
         <h3 className="font-semibold text-foreground text-sm">
           {selectedNode.type
-            ? selectedNode.type.charAt(0).toUpperCase() + selectedNode.type.slice(1)
-            : 'Node'}{' '}
-          Properties
+            ? // @ts-expect-error -- TS cannot infer that type exists here
+              t(`nodes:types.${selectedNode.type}`)
+            : t('nodes:types.node')}{' '}
+          {t('nodes:panel.properties')}
         </h3>
         <Button
           variant="ghost"
@@ -107,23 +108,23 @@ export function PropertyPanel() {
         </Button>
       </div>
 
-      <FormField label="Alias (Display Name)">
+      <FormField label={t('labels.alias')}>
         <Input
           type="text"
           value={typeof selectedNode.data.alias === 'string' ? selectedNode.data.alias : ''}
           onChange={(e) => handleChange('alias', e.target.value)}
-          placeholder="Optional display name"
+          placeholder={t('placeholders.optionalDisplayName')}
         />
       </FormField>
 
       {/* ID field - not applicable for action nodes */}
       {selectedNode.type !== 'action' && (
-        <FormField label="ID">
+        <FormField label={t('labels.id')}>
           <Input
             type="text"
             value={typeof selectedNode.data.id === 'string' ? selectedNode.data.id : ''}
             onChange={(e) => handleChange('id', e.target.value || undefined)}
-            placeholder="Optional unique ID"
+            placeholder={t('placeholders.optionalUniqueId')}
             className="font-mono"
           />
         </FormField>
@@ -132,7 +133,7 @@ export function PropertyPanel() {
       {/* Enabled toggle */}
       <div className="flex items-center justify-between">
         <Label htmlFor="node-enabled" className="text-sm">
-          Enabled
+          {t('labels.enabled')}
         </Label>
         <Switch
           id="node-enabled"
@@ -159,7 +160,9 @@ export function PropertyPanel() {
       />
 
       {/* Node ID footer */}
-      <div className="pt-2 text-muted-foreground text-xs">Node ID: {selectedNode.id}</div>
+      <div className="pt-2 text-muted-foreground text-xs">
+        {t('nodes:panel.nodeId', { id: selectedNode.id })}
+      </div>
     </div>
   );
 }

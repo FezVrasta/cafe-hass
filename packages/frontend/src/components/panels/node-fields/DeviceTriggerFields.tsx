@@ -1,5 +1,6 @@
 import type { FlowNode } from '@cafe/shared';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FormField } from '@/components/forms/FormField';
 import { DeviceSelector } from '@/components/ui/DeviceSelector';
 import { DynamicFieldRenderer } from '@/components/ui/DynamicFieldRenderer';
@@ -27,6 +28,7 @@ interface DeviceTriggerFieldsProps {
  * Moved from PropertyPanel and updated to use new hooks.
  */
 export function DeviceTriggerFields({ node, onChange, entities }: DeviceTriggerFieldsProps) {
+  const { t } = useTranslation(['common', 'nodes', 'errors']);
   const { getDeviceTriggers, getTriggerCapabilities } = useDeviceAutomation();
   // DeviceSelector handles device registry internally
   const { translations } = useTranslations();
@@ -53,13 +55,13 @@ export function DeviceTriggerFields({ node, onChange, entities }: DeviceTriggerF
         setAvailableDeviceTriggers(triggers);
       })
       .catch((error) => {
-        console.error('Failed to load device triggers:', error);
+        console.error(t('errors:api.loadDeviceTriggersFailed'), error);
         setAvailableDeviceTriggers([]);
       })
       .finally(() => {
         setLoadingTriggers(false);
       });
-  }, [deviceId, getDeviceTriggers]);
+  }, [deviceId, getDeviceTriggers, t]);
 
   // Fetch capabilities when trigger type is selected
   useEffect(() => {
@@ -83,10 +85,10 @@ export function DeviceTriggerFields({ node, onChange, entities }: DeviceTriggerF
         setTriggerCapabilities(capabilities.extra_fields || []);
       })
       .catch((error) => {
-        console.error('Failed to load trigger capabilities:', error);
+        console.error(t('errors:api.loadTriggerCapabilitiesFailed'), error);
         setTriggerCapabilities([]);
       });
-  }, [deviceId, selectedTriggerType, domain, availableDeviceTriggers, getTriggerCapabilities]);
+  }, [deviceId, selectedTriggerType, domain, availableDeviceTriggers, getTriggerCapabilities, t]);
 
   return (
     <>
@@ -94,14 +96,14 @@ export function DeviceTriggerFields({ node, onChange, entities }: DeviceTriggerF
       <DeviceSelector
         value={deviceId}
         onChange={(val) => onChange('device_id', val)}
-        label="Device"
+        label={t('labels.device')}
         required
-        placeholder="Select device..."
+        placeholder={t('placeholders.selectDevice')}
       />
 
       {/* Trigger type selector - show dropdown if API data available, otherwise show as text */}
       {deviceId && availableDeviceTriggers.length > 0 ? (
-        <FormField label="Trigger Type" required>
+        <FormField label={t('labels.triggerType')} required>
           <Select
             value={selectedTriggerType}
             onValueChange={(value) => {
@@ -114,7 +116,7 @@ export function DeviceTriggerFields({ node, onChange, entities }: DeviceTriggerF
             }}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Select trigger type..." />
+              <SelectValue placeholder={t('placeholders.selectTriggerType')} />
             </SelectTrigger>
             <SelectContent>
               {/* Deduplicate triggers by domain+type since multiple entities can have the same trigger type */}
@@ -122,7 +124,7 @@ export function DeviceTriggerFields({ node, onChange, entities }: DeviceTriggerF
                 new Map(availableDeviceTriggers.map((t) => [`${t.domain}-${t.type}`, t])).values()
               ).map((trigger) => (
                 <SelectItem key={`${trigger.domain}-${trigger.type}`} value={trigger.type}>
-                  {trigger.type} ({trigger.domain})
+                  {`${trigger.type} (${trigger.domain})`}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -135,7 +137,7 @@ export function DeviceTriggerFields({ node, onChange, entities }: DeviceTriggerF
           <FormField label="Trigger Type">
             <div className="truncate rounded-md border bg-muted px-3 py-2 font-mono text-sm">
               {selectedTriggerType}
-              {domain && <span className="text-muted-foreground"> ({domain})</span>}
+              {domain && <span className="text-muted-foreground"> {`(${domain})`}</span>}
             </div>
           </FormField>
         )
@@ -143,7 +145,7 @@ export function DeviceTriggerFields({ node, onChange, entities }: DeviceTriggerF
 
       {/* Entity ID - show if present and no API data */}
       {deviceId && entityId && availableDeviceTriggers.length === 0 && (
-        <FormField label="Entity ID">
+        <FormField label={t('labels.entityId')}>
           <div className="truncate rounded-md border bg-muted px-3 py-2 font-mono text-sm">
             {entityId}
           </div>
@@ -151,7 +153,9 @@ export function DeviceTriggerFields({ node, onChange, entities }: DeviceTriggerF
       )}
 
       {/* Loading state */}
-      {loadingTriggers && <div className="text-muted-foreground text-sm">Loading triggers...</div>}
+      {loadingTriggers && (
+        <div className="text-muted-foreground text-sm">{t('status.loadingTriggers')}</div>
+      )}
 
       {/* Dynamic fields from capabilities API */}
       {triggerCapabilities.map((field) => (

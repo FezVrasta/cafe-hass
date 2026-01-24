@@ -1,4 +1,5 @@
 import { Handle, type NodeProps, Position } from '@xyflow/react';
+import { t } from 'i18next';
 import { Ban, GitBranch } from 'lucide-react';
 import { memo } from 'react';
 import { cn } from '@/lib/utils';
@@ -76,16 +77,51 @@ export const ConditionNode = memo(function ConditionNode({
             {Array.isArray(data.entity_id) ? data.entity_id.join(', ') : data.entity_id}
           </div>
         )}
-        {data.state && <div className="opacity-75">= {data.state}</div>}
-        {data.above !== undefined && <div className="opacity-75">&gt; {data.above}</div>}
-        {data.below !== undefined && <div className="opacity-75">&lt; {data.below}</div>}
-        {data.after && <div className="opacity-75">after: {data.after}</div>}
-        {data.before && <div className="opacity-75">before: {data.before}</div>}
-        {data.zone && <div className="opacity-75">zone: {data.zone}</div>}
-        {data.attribute && <div className="opacity-75">attr: {data.attribute}</div>}
+        {data.state && (
+          <div className="opacity-75">
+            {'= '}
+            {data.state}
+          </div>
+        )}
+        {data.above !== undefined && (
+          <div className="opacity-75">
+            {'> '}
+            {data.above}
+          </div>
+        )}
+        {data.below !== undefined && (
+          <div className="opacity-75">
+            {'< '}
+            {data.below}
+          </div>
+        )}
+        {data.after && (
+          <div className="opacity-75">
+            {'after: '}
+            {data.after}
+          </div>
+        )}
+        {data.before && (
+          <div className="opacity-75">
+            {'before: '}
+            {data.before}
+          </div>
+        )}
+        {data.zone && (
+          <div className="opacity-75">
+            {'zone: '}
+            {data.zone}
+          </div>
+        )}
+        {data.attribute && (
+          <div className="opacity-75">
+            {'attr: '}
+            {data.attribute}
+          </div>
+        )}
         {data.for && (
           <div className="opacity-75">
-            for:{' '}
+            {'for: '}
             {typeof data.for === 'string'
               ? data.for
               : `${data.for.hours || 0}h ${data.for.minutes || 0}m ${data.for.seconds || 0}s`}
@@ -93,18 +129,25 @@ export const ConditionNode = memo(function ConditionNode({
         )}
         {data.template && (
           <div className="truncate font-mono text-[10px] opacity-75">
-            {data.template.slice(0, 30)}...
+            {data.template.slice(0, 30)}
+            {'...'}
           </div>
         )}
         {data.value_template && (
           <div className="truncate font-mono text-[10px] opacity-75">
-            {data.value_template.slice(0, 30)}...
+            {data.value_template.slice(0, 30)}
+            {'...'}
           </div>
         )}
-        {typeof data.id === 'string' && <div className="opacity-75">id: {data.id}</div>}
+        {typeof data.id === 'string' && (
+          <div className="opacity-75">
+            {'id: '}
+            {data.id}
+          </div>
+        )}
         {Array.isArray(data.conditions) && data.conditions.length > 0 && (
           <div className="opacity-75">
-            {data.conditions.length} nested condition{data.conditions.length !== 1 ? 's' : ''}
+            {t('nodes:conditions.nestedConditions', { count: data.conditions.length })}
           </div>
         )}
 
@@ -129,10 +172,10 @@ export const ConditionNode = memo(function ConditionNode({
 
       {/* Labels for handles */}
       <div className="absolute top-[30%] right-[-40px] -translate-y-1/2 transform rounded border border-green-200 bg-white px-1 py-0.5 font-medium text-[10px] text-green-700 shadow-sm">
-        Yes
+        {t('nodes:conditions.yes')}
       </div>
       <div className="absolute top-[70%] right-[-36px] -translate-y-1/2 transform rounded border border-red-200 bg-white px-1 py-0.5 font-medium text-[10px] text-red-700 shadow-sm">
-        No
+        {t('nodes:conditions.no')}
       </div>
     </div>
   );

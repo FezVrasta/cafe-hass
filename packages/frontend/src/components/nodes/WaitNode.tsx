@@ -1,6 +1,7 @@
 import { Handle, type NodeProps, Position } from '@xyflow/react';
 import { Ban, Hourglass } from 'lucide-react';
 import { memo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import type { WaitNodeData } from '@/store/flow-store';
 import { useFlowStore } from '@/store/flow-store';
@@ -11,6 +12,7 @@ interface WaitNodeProps extends NodeProps {
 }
 
 export const WaitNode = memo(function WaitNode({ id, data, selected }: WaitNodeProps) {
+  const { t } = useTranslation(['common', 'nodes']);
   const activeNodeId = useFlowStore((s) => s.activeNodeId);
   const getExecutionStepNumber = useFlowStore((s) => s.getExecutionStepNumber);
   const isActive = activeNodeId === id;
@@ -56,15 +58,20 @@ export const WaitNode = memo(function WaitNode({ id, data, selected }: WaitNodeP
       <div className="space-y-0.5 text-orange-700 text-xs">
         {data.wait_template && (
           <div className="truncate font-mono text-[10px] opacity-75">
-            {data.wait_template.slice(0, 30)}...
+            {data.wait_template.slice(0, 30)}
+            {'...'}
           </div>
         )}
         {data.wait_for_trigger && (
           <div className="truncate text-[10px] opacity-75">
-            Waits for {data.wait_for_trigger.length} trigger(s)
+            {t('nodes:wait.waitsForNTrigger', { count: data.wait_for_trigger.length })}
           </div>
         )}
-        {timeoutDisplay && <div className="opacity-75">Timeout: {timeoutDisplay}</div>}
+        {timeoutDisplay && (
+          <div className="opacity-75">
+            {t('nodes:wait.timeoutLabel')} {timeoutDisplay}
+          </div>
+        )}
       </div>
 
       <Handle

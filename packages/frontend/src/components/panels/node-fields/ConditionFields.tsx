@@ -1,4 +1,5 @@
 import type { ConditionType, FlowNode } from '@cafe/shared';
+import { useTranslation } from 'react-i18next';
 import { FormField } from '@/components/forms/FormField';
 import { ConditionGroupEditor } from '@/components/panels/node-fields/ConditionGroupEditor';
 import { DynamicFieldRenderer } from '@/components/ui/DynamicFieldRenderer';
@@ -31,6 +32,7 @@ interface ConditionFieldsProps {
  * Uses a config-based approach similar to TriggerFields for consistency.
  */
 export function ConditionFields({ node, onChange, entities }: ConditionFieldsProps) {
+  const { t } = useTranslation(['common', 'nodes']);
   const conditionType = getNodeDataString(node, 'condition', 'state') as ConditionType;
   const nodeData = node.data as Record<string, unknown>;
   const hasNestedConditions = Array.isArray(nodeData.conditions) && nodeData.conditions.length > 0;
@@ -97,23 +99,25 @@ export function ConditionFields({ node, onChange, entities }: ConditionFieldsPro
 
   return (
     <>
-      <FormField label="Condition Type" required>
+      <FormField label={t('nodes:conditions.conditionLabel')} required>
         <Select value={conditionType} onValueChange={handleConditionTypeChange}>
           <SelectTrigger>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="state">State</SelectItem>
-            <SelectItem value="numeric_state">Numeric State</SelectItem>
-            <SelectItem value="template">Template</SelectItem>
-            <SelectItem value="time">Time</SelectItem>
-            <SelectItem value="sun">Sun</SelectItem>
-            <SelectItem value="zone">Zone</SelectItem>
-            <SelectItem value="device">Device</SelectItem>
-            <SelectItem value="trigger">Trigger</SelectItem>
-            <SelectItem value="and">AND (All)</SelectItem>
-            <SelectItem value="or">OR (Any)</SelectItem>
-            <SelectItem value="not">NOT</SelectItem>
+            <SelectItem value="state">{t('nodes:conditions.types.state')}</SelectItem>
+            <SelectItem value="numeric_state">
+              {t('nodes:conditions.types.numeric_state')}
+            </SelectItem>
+            <SelectItem value="template">{t('nodes:conditions.types.template')}</SelectItem>
+            <SelectItem value="time">{t('nodes:conditions.types.time')}</SelectItem>
+            <SelectItem value="sun">{t('nodes:conditions.types.sun')}</SelectItem>
+            <SelectItem value="zone">{t('nodes:conditions.types.zone')}</SelectItem>
+            <SelectItem value="device">{t('nodes:conditions.types.device')}</SelectItem>
+            <SelectItem value="trigger">{t('nodes:conditions.types.trigger')}</SelectItem>
+            <SelectItem value="and">{t('nodes:conditions.types.and')}</SelectItem>
+            <SelectItem value="or">{t('nodes:conditions.types.or')}</SelectItem>
+            <SelectItem value="not">{t('nodes:conditions.types.not')}</SelectItem>
           </SelectContent>
         </Select>
       </FormField>
@@ -122,7 +126,7 @@ export function ConditionFields({ node, onChange, entities }: ConditionFieldsPro
 
       {/* Render nested conditions if they exist (for group types or when parsed from YAML with multiple conditions) */}
       {(isGroupType || hasNestedConditions) && (
-        <FormField label="Nested Conditions">
+        <FormField label={t('nodes:conditions.nestedConditions')}>
           <ConditionGroupEditor
             conditions={(nodeData.conditions as ConditionNodeData[]) || []}
             onChange={(conds) => onChange('conditions', conds)}

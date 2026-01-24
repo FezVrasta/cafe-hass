@@ -1,4 +1,5 @@
 import type React from 'react';
+import { useTranslation } from 'react-i18next';
 import { FormField } from '@/components/forms/FormField';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
@@ -21,21 +22,19 @@ export function ResponseVariableField({
   onChange,
   handleResponseVariableChange,
 }: ResponseVariableFieldProps) {
+  const { t } = useTranslation(['common', 'nodes']);
   const inputAndAlert = (
     <>
       <Input
         type="text"
         value={responseVariable ?? ''}
         onChange={handleResponseVariableChange}
-        placeholder="e.g. my_response"
+        placeholder={t('nodes:responseVariableField.placeholder')}
       />
       {responseVariable?.trim() === 'current_node' && (
         <Alert variant="destructive" className="mt-2 border-0 px-0">
-          <AlertTitle>Warning</AlertTitle>
-          <AlertDescription>
-            <code>current_node</code> is reserved for the state-machine strategy. Using this name
-            may cause unexpected behavior.
-          </AlertDescription>
+          <AlertTitle>{t('labels.warning')}</AlertTitle>
+          <AlertDescription>{t('nodes:responseVariableField.currentNodeWarning')}</AlertDescription>
         </Alert>
       )}
     </>
@@ -43,8 +42,8 @@ export function ResponseVariableField({
   if (response.optional) {
     return (
       <FormField
-        label="Response Variable"
-        description="This action can return a response. Enable to use the response and enter the name of a variable the response will be saved in."
+        label={t('nodes:responseVariableField.label')}
+        description={t('nodes:responseVariableField.optionalDescription')}
       >
         <div className="mb-2 flex items-center gap-3">
           <Switch
@@ -58,7 +57,7 @@ export function ResponseVariableField({
             id="response-variable-switch"
           />
           <label htmlFor="response-variable-switch" className="cursor-pointer select-none text-sm">
-            Use Response Variable
+            {t('nodes:responseVariableField.useResponseVariable')}
           </label>
         </div>
         {showResponseVariable && inputAndAlert}
@@ -67,8 +66,8 @@ export function ResponseVariableField({
   } else {
     return (
       <FormField
-        label="Response Variable"
-        description="This action returns a response. Enter the name of a variable the response will be saved in."
+        label={t('nodes:responseVariableField.label')}
+        description={t('nodes:responseVariableField.requiredDescription')}
       >
         {inputAndAlert}
       </FormField>

@@ -1,5 +1,6 @@
 import type { TriggerPlatform, WaitNode } from '@cafe/shared';
 import { Trash2Icon } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { FormField } from '@/components/forms/FormField';
 import { Button } from '@/components/ui/button';
 import { DynamicFieldRenderer } from '@/components/ui/DynamicFieldRenderer';
@@ -23,6 +24,7 @@ interface WaitFieldsProps {
 }
 
 export function WaitFields({ node, onChange }: WaitFieldsProps) {
+  const { t } = useTranslation(['nodes']);
   const waitTemplate = getNodeDataString(node, 'wait_template');
   const waitForTrigger = getNodeData<TriggerNodeData[]>(node, 'wait_for_trigger');
 
@@ -56,37 +58,32 @@ export function WaitFields({ node, onChange }: WaitFieldsProps) {
     onChange('wait_for_trigger', newTriggers);
   };
 
-  // Toggle between string and object for timeout
-  // removed unused handleTimeoutToggle
-
-  // removed unused handleTimeoutObjChange
-
   return (
     <>
-      <FormField label="Wait Type" description="Choose what to wait for.">
+      <FormField label={t('nodes:wait.waitType')} description={t('nodes:wait.waitTypeDescription')}>
         <Select value={waitType} onValueChange={handleWaitTypeChange}>
           <SelectTrigger>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="template">Template</SelectItem>
-            <SelectItem value="trigger">Triggers</SelectItem>
+            <SelectItem value="template">{t('nodes:wait.types.template')}</SelectItem>
+            <SelectItem value="trigger">{t('nodes:wait.types.triggers')}</SelectItem>
           </SelectContent>
         </Select>
       </FormField>
 
       {waitType === 'template' && (
         <FormField
-          label="Wait Template"
+          label={t('nodes:wait.waitTemplate')}
           required
-          description="Template condition that must be true to continue"
+          description={t('nodes:wait.waitTemplateDescription')}
         >
           <Textarea
             value={waitTemplate || ''}
             onChange={(e) => onChange('wait_template', e.target.value)}
             className="font-mono"
             rows={3}
-            placeholder="{{ is_state('sensor.x', 'on') }}"
+            placeholder={t('nodes:placeholders.waitTemplate')}
           />
         </FormField>
       )}
@@ -94,12 +91,12 @@ export function WaitFields({ node, onChange }: WaitFieldsProps) {
       {waitType === 'trigger' && (
         <div className="space-y-4">
           <div className="space-y-2">
-            <h3 className="font-medium">Triggers</h3>
+            <h3 className="font-medium">{t('nodes:wait.triggersHeading')}</h3>
             {waitForTrigger?.map((trigger, index) => (
               <div key={index} className="space-y-3 rounded-md border p-3">
                 <div className="flex items-center justify-between">
                   <p className="font-semibold text-sm capitalize">
-                    Trigger {index + 1}: {trigger.platform}
+                    {t('nodes:wait.triggerLabel', { index: index + 1, platform: trigger.platform })}
                   </p>
                   <Button
                     variant="ghost"
@@ -110,7 +107,7 @@ export function WaitFields({ node, onChange }: WaitFieldsProps) {
                     <Trash2Icon />
                   </Button>
                 </div>
-                <FormField label="Platform">
+                <FormField label={t('nodes:wait.triggerPlatformLabel', 'Platform')}>
                   <Select
                     value={trigger.platform}
                     onValueChange={(p) => handleTriggerChange(index, 'platform', p)}
@@ -140,22 +137,22 @@ export function WaitFields({ node, onChange }: WaitFieldsProps) {
             ))}
           </div>
           <Button onClick={addTrigger} variant="outline" size="sm">
-            Add Trigger
+            {t('nodes:wait.addTrigger')}
           </Button>
         </div>
       )}
 
       <DurationField
-        label="Timeout"
-        description="Maximum time to wait before continuing. Leave empty to wait indefinitely."
+        label={t('nodes:wait.timeoutLabel')}
+        description={t('nodes:wait.timeoutDescription')}
         value={node.data.timeout ?? ''}
         onChange={(val) => onChange('timeout', val || undefined)}
       />
 
       {node.data.timeout && (
         <FormField
-          label="Continue on Timeout"
-          description="If enabled, the automation continues when timeout expires. If disabled, the automation stops."
+          label={t('nodes:wait.continueOnTimeout')}
+          description={t('nodes:wait.continueOnTimeoutDescription')}
         >
           <Switch
             checked={node.data.continue_on_timeout ?? true}

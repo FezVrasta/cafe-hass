@@ -1,0 +1,50 @@
+{
+  "common": {
+    "failedToCopy": "Failed to copy"
+  },
+  "validation": {
+    "emptyAutomation": "Cannot save empty automation. Please add at least one trigger and one action node.",
+    "noTrigger": "Automation must have at least one trigger node. Please add a trigger from the node palette.",
+    "noAction": "Automation must have at least one action node. Please add an action from the node palette.",
+    "validationFailed": "Validation failed: {{errors}}",
+    "transpileFailed": "Failed to transpile flow to automation config",
+    "noAutomationId": "No automation ID set. Use saveAutomation() for new automations."
+  },
+  "connection": {
+    "noConnection": "No Home Assistant connection available",
+    "noAuth": "No authentication configured for REST API",
+    "authFailed": "Invalid token - authentication failed",
+    "corsError": "Cannot connect - check URL and CORS settings",
+    "connectionLost": "Connection lost",
+    "reconnectFailed": "Reconnection failed",
+    "notConnected": "Home Assistant is not connected",
+    "noMethod": "No working Home Assistant connection method found",
+    "unexpectedResponse": "Unexpected API response",
+    "connectionFailed": "Connection failed"
+  },
+  "api": {
+    "httpError": "HTTP {{status}}: {{statusText}}",
+    "createFailed": "Failed to create automation: {{message}}",
+    "updateFailed": "Failed to update automation: {{message}}",
+    "deleteFailed": "Failed to delete automation: {{message}}",
+    "importFailed": "Failed to import automation: {{message}}",
+    "unknownError": "Unknown error",
+    "transpileFailed": "Transpilation failed",
+    "loadDeviceTriggersFailed": "Failed to load device triggers:",
+    "loadTriggerCapabilitiesFailed": "Failed to load trigger capabilities:"
+  },
+  "properties": {
+    "addFailed": "Failed to add property"
+  },
+  "form": {
+    "nameRequired": "Automation name is required",
+    "urlTokenRequired": "Please provide both URL and token"
+  },
+  "import": {
+    "fileReadFailed": "Failed to import flow. Please check the file format.",
+    "parseFailed": "Failed to parse automation configuration"
+  },
+  "yaml": {
+    "staleWarning": "Showing last valid YAML - fix errors to update"
+  }
+}

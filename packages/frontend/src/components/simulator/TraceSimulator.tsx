@@ -2,6 +2,7 @@ import { FlowTranspiler } from '@cafe/transpiler';
 import type { Edge } from '@xyflow/react';
 import { Play, RotateCcw, Square } from 'lucide-react';
 import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import {
@@ -15,6 +16,7 @@ import { cn } from '@/lib/utils';
 import { useFlowStore } from '@/store/flow-store';
 
 export function TraceSimulator() {
+  const { t } = useTranslation(['simulator']);
   const {
     nodes,
     edges,
@@ -117,7 +119,7 @@ export function TraceSimulator() {
   return (
     <div className="h-full space-y-4 p-4">
       <div className="flex items-center justify-between">
-        <h3 className="font-semibold text-foreground text-sm">Trace Simulator</h3>
+        <h3 className="font-semibold text-foreground text-sm">{t('simulator:trace.heading')}</h3>
         <div className="flex gap-1">
           {!isSimulating ? (
             <Button
@@ -154,7 +156,7 @@ export function TraceSimulator() {
       {conditionNodes.length > 0 && (
         <div className="space-y-2">
           <Label className="font-medium text-muted-foreground text-xs">
-            Condition Outcomes (for simulation)
+            {t('simulator:trace.conditionOverrides')}
           </Label>
           <div className="space-y-2">
             {conditionNodes.map((node) => (
@@ -188,9 +190,9 @@ export function TraceSimulator() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="random">Random</SelectItem>
-                    <SelectItem value="true">True</SelectItem>
-                    <SelectItem value="false">False</SelectItem>
+                    <SelectItem value="random">{t('simulator:trace.random')}</SelectItem>
+                    <SelectItem value="true">{t('simulator:trace.true')}</SelectItem>
+                    <SelectItem value="false">{t('simulator:trace.false')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -202,7 +204,9 @@ export function TraceSimulator() {
       {/* Execution path */}
       {executionPath.length > 0 && (
         <div className="space-y-2">
-          <Label className="font-medium text-muted-foreground text-xs">Execution Path</Label>
+          <Label className="font-medium text-muted-foreground text-xs">
+            {t('simulator:trace.executionPath')}
+          </Label>
           <ol className="list-inside list-decimal space-y-1 text-xs">
             {executionPath.map((nodeId, i) => {
               const node = nodes.find((n) => n.id === nodeId);

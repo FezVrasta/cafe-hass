@@ -2,6 +2,7 @@ import { transpiler } from '@cafe/transpiler';
 import { useReactFlow } from '@xyflow/react';
 import { AlertCircle, CheckCircle, Upload } from 'lucide-react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
@@ -22,6 +23,7 @@ interface ImportYamlDialogProps {
 }
 
 export function ImportYamlDialog({ isOpen, onClose, onImportSuccess }: ImportYamlDialogProps) {
+  const { t } = useTranslation(['common', 'dialogs']);
   const [yamlText, setYamlText] = useState('');
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -88,11 +90,8 @@ export function ImportYamlDialog({ isOpen, onClose, onImportSuccess }: ImportYam
     <Dialog open={isOpen} onOpenChange={() => handleClose()}>
       <DialogContent className="flex max-h-[90vh] max-w-3xl flex-col">
         <DialogHeader>
-          <DialogTitle>Import YAML Automation</DialogTitle>
-          <DialogDescription>
-            Paste your Home Assistant automation YAML below. The automation can be in standard
-            format or state machine format.
-          </DialogDescription>
+          <DialogTitle>{t('dialogs:importYaml.title')}</DialogTitle>
+          <DialogDescription>{t('dialogs:importYaml.description')}</DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 space-y-4">
@@ -117,7 +116,7 @@ action:
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription className="font-medium">
-                Import Failed
+                {t('dialogs:importYaml.importFailed')}
                 <pre className="mt-1 whitespace-pre-wrap font-mono text-xs">{error}</pre>
               </AlertDescription>
             </Alert>
@@ -127,10 +126,12 @@ action:
             <Alert>
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                <p className="mb-1 font-medium">Warnings</p>
+                <p className="mb-1 font-medium">{t('dialogs:importYaml.warnings')}</p>
                 <ul className="space-y-1 text-xs">
                   {warnings.map((warning, i) => (
-                    <li key={`warning-${i}-${warning.slice(0, 20)}`}>• {warning}</li>
+                    <li key={`warning-${i}-${warning.slice(0, 20)}`}>
+                      {'•'} {warning}
+                    </li>
                   ))}
                 </ul>
               </AlertDescription>
@@ -140,26 +141,24 @@ action:
           {importing && !error && (
             <Alert>
               <CheckCircle className="h-4 w-4" />
-              <AlertDescription>Successfully imported! Loading flow...</AlertDescription>
+              <AlertDescription>{t('dialogs:importYaml.successLoading')}</AlertDescription>
             </Alert>
           )}
 
           <Alert>
             <AlertDescription className="text-xs">
-              <strong>Tip:</strong> If your automation was created with C.A.F.E., node positions
-              will be preserved. Otherwise, nodes will be automatically arranged in a readable
-              layout.
+              <strong>{t('dialogs:importYaml.tipLabel')}</strong> {t('dialogs:importYaml.tipText')}
             </AlertDescription>
           </Alert>
         </div>
 
         <div className="flex items-center justify-end gap-2 pt-4">
           <Button variant="outline" onClick={handleClose} disabled={importing}>
-            Cancel
+            {t('buttons.cancel')}
           </Button>
           <Button onClick={handleImport} disabled={!yamlText.trim() || importing}>
             <Upload className="mr-2 h-4 w-4" />
-            {importing ? 'Importing...' : 'Import'}
+            {importing ? t('dialogs:importYaml.importing') : t('dialogs:importYaml.import')}
           </Button>
         </div>
       </DialogContent>

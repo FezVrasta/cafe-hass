@@ -1,5 +1,6 @@
 import { AlertTriangle, Check, Copy, Loader2, Save } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
@@ -23,6 +24,7 @@ interface AutomationSaveDialogProps {
 }
 
 export function AutomationSaveDialog({ isOpen, onClose, onSaved }: AutomationSaveDialogProps) {
+  const { t } = useTranslation(['common', 'dialogs', 'errors']);
   const {
     flowName,
     flowDescription,
@@ -75,12 +77,12 @@ export function AutomationSaveDialog({ isOpen, onClose, onSaved }: AutomationSav
 
   const handleSave = async () => {
     if (!hass) {
-      setError('Home Assistant is not connected');
+      setError(t('errors:connection.notConnected'));
       return;
     }
 
     if (!flowName.trim()) {
-      setError('Automation name is required');
+      setError(t('errors:form.nameRequired'));
       return;
     }
 
@@ -101,7 +103,7 @@ export function AutomationSaveDialog({ isOpen, onClose, onSaved }: AutomationSav
       onSaved?.(resultId);
       onClose();
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+      const errorMessage = err instanceof Error ? err.message : t('errors:api.unknownError');
       setError(errorMessage);
     }
   };
@@ -126,7 +128,7 @@ export function AutomationSaveDialog({ isOpen, onClose, onSaved }: AutomationSav
 
   const handleSaveAsCopy = async () => {
     if (!hass) {
-      setError('Home Assistant is not connected');
+      setError(t('errors:connection.notConnected'));
       return;
     }
 
@@ -147,7 +149,7 @@ export function AutomationSaveDialog({ isOpen, onClose, onSaved }: AutomationSav
       onSaved?.(resultId);
       onClose();
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+      const errorMessage = err instanceof Error ? err.message : t('errors:api.unknownError');
       setError(errorMessage);
     }
   };
@@ -158,23 +160,21 @@ export function AutomationSaveDialog({ isOpen, onClose, onSaved }: AutomationSav
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Save className="h-5 w-5" />
-            {isUpdate ? 'Update Automation' : 'Save Automation'}
+            {isUpdate ? t('dialogs:save.titleUpdate') : t('dialogs:save.title')}
           </DialogTitle>
           <DialogDescription>
-            {isUpdate
-              ? 'Update this automation in Home Assistant'
-              : 'Save this automation to Home Assistant'}
+            {isUpdate ? t('dialogs:save.descriptionUpdate') : t('dialogs:save.description')}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="automation-name">Automation Name</Label>
+            <Label htmlFor="automation-name">{t('dialogs:save.nameLabel')}</Label>
             <Input
               id="automation-name"
               value={flowName}
               onChange={(e) => handleNameChange(e.target.value)}
-              placeholder="Enter automation name..."
+              placeholder={t('placeholders.enterAutomationName')}
               disabled={isSaving}
             />
           </div>
@@ -183,21 +183,21 @@ export function AutomationSaveDialog({ isOpen, onClose, onSaved }: AutomationSav
             <Alert>
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription className="flex items-center justify-between">
-                <span>Name already exists. Use: "{suggestedName}"?</span>
+                <span>{t('dialogs:save.nameConflict', { suggestedName })}</span>
                 <Button variant="outline" size="sm" onClick={useSuggestedName} disabled={isSaving}>
-                  Use
+                  {t('buttons.use')}
                 </Button>
               </AlertDescription>
             </Alert>
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="automation-description">Description (Optional)</Label>
+            <Label htmlFor="automation-description">{t('dialogs:save.descriptionLabel')}</Label>
             <Textarea
               id="automation-description"
               value={localDescription}
               onChange={(e) => setLocalDescription(e.target.value)}
-              placeholder="Describe what this automation does..."
+              placeholder={t('placeholders.describeAutomation')}
               rows={3}
               disabled={isSaving}
             />
@@ -212,7 +212,7 @@ export function AutomationSaveDialog({ isOpen, onClose, onSaved }: AutomationSav
 
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={handleClose} disabled={isSaving}>
-              Cancel
+              {t('buttons.cancel')}
             </Button>
             {isUpdate && (
               <Button
@@ -225,19 +225,19 @@ export function AutomationSaveDialog({ isOpen, onClose, onSaved }: AutomationSav
                 ) : (
                   <Copy className="mr-2 h-4 w-4" />
                 )}
-                Save as Copy
+                {t('buttons.saveAsCopy')}
               </Button>
             )}
             <Button onClick={handleSave} disabled={isSaving || !flowName.trim()}>
               {isSaving ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {isUpdate ? 'Updating...' : 'Saving...'}
+                  {isUpdate ? t('status.updating') : t('status.saving')}
                 </>
               ) : (
                 <>
                   <Check className="mr-2 h-4 w-4" />
-                  {isUpdate ? 'Update' : 'Save'}
+                  {isUpdate ? t('buttons.update') : t('buttons.save')}
                 </>
               )}
             </Button>

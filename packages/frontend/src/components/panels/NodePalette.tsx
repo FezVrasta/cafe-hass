@@ -1,21 +1,22 @@
 import { Clock, GitBranch, Hourglass, Play, Variable, Zap } from 'lucide-react';
 import { type DragEvent, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { cn, generateNodeId } from '@/lib/utils';
 import { useFlowStore } from '@/store/flow-store';
 
 export interface NodeTypeConfig {
   type: string;
-  label: string;
+  labelKey: string;
   icon: React.ComponentType<{ className?: string }>;
   color: string;
   defaultData: Record<string, unknown>;
 }
 
-export const nodeTypes: NodeTypeConfig[] = [
+export const nodeTypes = [
   {
     type: 'trigger',
-    label: 'Trigger',
+    labelKey: 'nodes:types.trigger',
     icon: Zap,
     color: 'bg-amber-100 border-amber-400 text-amber-700 hover:bg-amber-200',
     defaultData: {
@@ -25,7 +26,7 @@ export const nodeTypes: NodeTypeConfig[] = [
   },
   {
     type: 'condition',
-    label: 'Condition',
+    labelKey: 'nodes:types.condition',
     icon: GitBranch,
     color: 'bg-blue-100 border-blue-400 text-blue-700 hover:bg-blue-200',
     defaultData: {
@@ -35,7 +36,7 @@ export const nodeTypes: NodeTypeConfig[] = [
   },
   {
     type: 'action',
-    label: 'Action',
+    labelKey: 'nodes:types.action',
     icon: Play,
     color: 'bg-green-100 border-green-400 text-green-700 hover:bg-green-200',
     defaultData: {
@@ -44,7 +45,7 @@ export const nodeTypes: NodeTypeConfig[] = [
   },
   {
     type: 'delay',
-    label: 'Delay',
+    labelKey: 'nodes:types.delay',
     icon: Clock,
     color: 'bg-purple-100 border-purple-400 text-purple-700 hover:bg-purple-200',
     defaultData: {
@@ -53,7 +54,7 @@ export const nodeTypes: NodeTypeConfig[] = [
   },
   {
     type: 'wait',
-    label: 'Wait for',
+    labelKey: 'nodes:types.wait',
     icon: Hourglass,
     color: 'bg-orange-100 border-orange-400 text-orange-700 hover:bg-orange-200',
     defaultData: {
@@ -63,16 +64,17 @@ export const nodeTypes: NodeTypeConfig[] = [
   },
   {
     type: 'set_variables',
-    label: 'Set Variables',
+    labelKey: 'nodes:types.set_variables',
     icon: Variable,
     color: 'bg-cyan-100 border-cyan-400 text-cyan-700 hover:bg-cyan-200',
     defaultData: {
       variables: {},
     },
   },
-];
+] as const satisfies readonly NodeTypeConfig[];
 
 export function NodePalette() {
+  const { t } = useTranslation(['common', 'nodes']);
   const addNode = useFlowStore((s) => s.addNode);
   const nodes = useFlowStore((s) => s.nodes);
 
@@ -106,7 +108,7 @@ export function NodePalette() {
 
   return (
     <div className="space-y-2 p-4">
-      <h3 className="mb-3 font-semibold text-muted-foreground text-sm">Add Node</h3>
+      <h3 className="mb-3 font-semibold text-muted-foreground text-sm">{t('labels.addNode')}</h3>
       <div className="space-y-2">
         {nodeTypes.map((config) => (
           <Button
@@ -122,7 +124,7 @@ export function NodePalette() {
             )}
           >
             <config.icon className="h-4 w-4" />
-            <span className="font-medium text-sm">{config.label}</span>
+            <span className="font-medium text-sm">{t(config.labelKey)}</span>
           </Button>
         ))}
       </div>

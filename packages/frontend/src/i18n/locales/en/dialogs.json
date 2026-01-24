@@ -1,0 +1,99 @@
+{
+  "save": {
+    "title": "Save Automation",
+    "titleUpdate": "Update Automation",
+    "description": "Save this automation to Home Assistant",
+    "descriptionUpdate": "Update this automation in Home Assistant",
+    "nameLabel": "Automation Name",
+    "descriptionLabel": "Description (Optional)",
+    "nameConflict": "Name already exists. Use: \"{{suggestedName}}\"?"
+  },
+  "import": {
+    "title": "Open Automation",
+    "description": "Select an automation from Home Assistant to edit",
+    "descriptionFull": "Open an existing automation or create a new one",
+    "searchPlaceholder": "Search automations...",
+    "noAutomations": "No automations found",
+    "noConnection": "Connect to Home Assistant to load automations",
+    "createNew": "Create New",
+    "columns": {
+      "name": "Name",
+      "lastTriggered": "Last Triggered",
+      "enabled": "Enabled",
+      "action": "Action"
+    },
+    "mode": "Mode: {{mode}}",
+    "never": "Never",
+    "justNow": "Just now",
+    "minutesAgo": "{{count}}m ago",
+    "hoursAgo": "{{count}}h ago",
+    "daysAgo": "{{count}}d ago",
+    "disabled": "Disabled",
+    "automationEnabled": "Automation enabled successfully.",
+    "automationDisabled": "Automation disabled successfully.",
+    "updateStateFailed": "Failed to update automation state",
+    "importAutomation": "Import automation",
+    "openingWarning": "Opening will replace your current automation design",
+    "discardTitle": "Discard current flow?",
+    "discardDescription": "Your current automation has unsaved changes. Creating or opening a new automation will discard these changes.",
+    "confirmDiscard": "Discard & Continue",
+    "importSuccess": "Automation \"{{name}}\" imported successfully!",
+    "openedWarning": "Automation \"{{name}}\" opened!",
+    "openedWarningDescription": "Could not fetch configuration automatically. You can now create a new flow with the same name.",
+    "importFailed": "Failed to import automation: {{message}}",
+    "ID": "ID: {{id}}",
+    "otherArea": "Other Area",
+    "noArea": "No Area"
+  },
+  "importYaml": {
+    "title": "Import YAML Automation",
+    "description": "Paste your Home Assistant automation YAML below. The automation can be in standard format or state machine format.",
+    "placeholder": "alias: My Automation\\ntrigger:\\n  - platform: state\\n    entity_id: sensor.example",
+    "importFailed": "Import Failed",
+    "warnings": "Warnings",
+    "successLoading": "Successfully imported! Loading flow...",
+    "tipLabel": "Tip:",
+    "tipText": "If your automation was created with C.A.F.E., node positions will be preserved. Otherwise, nodes will be automatically arranged in a readable layout.",
+    "importing": "Importing...",
+    "import": "Import",
+    "errors": {
+      "parseError": "Failed to parse YAML: {{message}}",
+      "importError": "Failed to import: {{message}}"
+    }
+  },
+  "settings": {
+    "title": "Home Assistant Connection",
+    "description": "Configure your Home Assistant connection settings.",
+    "urlLabel": "Home Assistant URL",
+    "urlPlaceholder": "http://homeassistant.local:8123",
+    "urlHelp": "The URL of your Home Assistant instance",
+    "tokenLabel": "Long-Lived Access Token",
+    "tokenPlaceholder": "eyJ0eXAiOiJKV1QiLCJhbGci...",
+    "tokenHelp": "Create one in HA: Profile → Long-Lived Access Tokens",
+    "testConnection": "Test Connection",
+    "testing": "Testing...",
+    "connected": "Connected!",
+    "disconnect": "Disconnect",
+    "corsNote": "CORS Note",
+    "corsDescription": "To connect from a browser, you may need to add CORS headers to your HA config. If you are connecting from https://fezvrasta.github.io/hass-cafe, you need your HA instance to be under HTTPS.",
+    "tokenGuideLink": "How to create a Long-Lived Access Token",
+    "apiRunning": "API running.",
+    "errors": {
+      "missingFields": "Please provide both URL and token",
+      "unexpectedResponse": "Unexpected API response",
+      "invalidToken": "Invalid token - authentication failed",
+      "httpError": "HTTP {{status}}: {{statusText}}",
+      "corsError": "Cannot connect - check URL and CORS settings",
+      "connectionFailed": "Connection failed"
+    }
+  },
+  "error": {
+    "title": "Unexpected Error",
+    "description": "An unexpected error occurred in the application. Please see the details below.",
+    "refreshPrompt": "Please try refreshing the page. If the problem persists, consider reporting the issue on our GitHub repository."
+  },
+  "traceViewer": {
+    "saveAutomationFirst": "Save the automation first to view traces",
+    "noTracesFound": "No automation traces found"
+  }
+}

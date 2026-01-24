@@ -1,5 +1,6 @@
 import { AlertCircle, CheckCircle, ExternalLink, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
@@ -27,6 +28,7 @@ interface HassSettingsProps {
 type ConnectionStatus = 'idle' | 'testing' | 'success' | 'error';
 
 export function HassSettings({ isOpen, onClose, config, onSave }: HassSettingsProps) {
+  const { t } = useTranslation(['common', 'dialogs']);
   const [url, setUrl] = useState(config.url);
   const [token, setToken] = useState(config.token);
   const [status, setStatus] = useState<ConnectionStatus>('idle');
@@ -44,7 +46,7 @@ export function HassSettings({ isOpen, onClose, config, onSave }: HassSettingsPr
   const testConnection = async () => {
     if (!url || !token) {
       setStatus('error');
-      setErrorMessage('Please provide both URL and token');
+      setErrorMessage(t('dialogs:settings.errors.missingFields'));
       return;
     }
 
@@ -62,25 +64,32 @@ export function HassSettings({ isOpen, onClose, config, onSave }: HassSettingsPr
 
       if (response.ok) {
         const data = await response.json();
-        if (data.message === 'API running.') {
+        if (data.message === t('dialogs:settings.apiRunning')) {
           setStatus('success');
         } else {
           setStatus('error');
-          setErrorMessage('Unexpected API response');
+          setErrorMessage(t('dialogs:settings.errors.unexpectedResponse'));
         }
       } else if (response.status === 401) {
         setStatus('error');
-        setErrorMessage('Invalid token - authentication failed');
+        setErrorMessage(t('dialogs:settings.errors.invalidToken'));
       } else {
         setStatus('error');
-        setErrorMessage(`HTTP ${response.status}: ${response.statusText}`);
+        setErrorMessage(
+          t('dialogs:settings.errors.httpError', {
+            status: response.status,
+            statusText: response.statusText,
+          })
+        );
       }
     } catch (error) {
       setStatus('error');
       if (error instanceof TypeError && error.message.includes('fetch')) {
-        setErrorMessage('Cannot connect - check URL and CORS settings');
+        setErrorMessage(t('dialogs:settings.errors.corsError'));
       } else {
-        setErrorMessage(error instanceof Error ? error.message : 'Connection failed');
+        setErrorMessage(
+          error instanceof Error ? error.message : t('dialogs:settings.errors.connectionFailed')
+        );
       }
     }
   };
@@ -101,36 +110,34 @@ export function HassSettings({ isOpen, onClose, config, onSave }: HassSettingsPr
     <Dialog open={isOpen} onOpenChange={() => onClose()}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Home Assistant Connection</DialogTitle>
-          <DialogDescription>Configure your Home Assistant connection settings.</DialogDescription>
+          <DialogTitle>{t('dialogs:settings.title')}</DialogTitle>
+          <DialogDescription>{t('dialogs:settings.description')}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="url">Home Assistant URL</Label>
+            <Label htmlFor="url">{t('dialogs:settings.urlLabel')}</Label>
             <Input
               id="url"
               type="url"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
-              placeholder="http://homeassistant.local:8123"
+              placeholder={t('dialogs:settings.urlPlaceholder')}
             />
-            <p className="text-muted-foreground text-xs">The URL of your Home Assistant instance</p>
+            <p className="text-muted-foreground text-xs">{t('dialogs:settings.urlHelp')}</p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="token">Long-Lived Access Token</Label>
+            <Label htmlFor="token">{t('dialogs:settings.tokenLabel')}</Label>
             <Input
               id="token"
               type="password"
               value={token}
               onChange={(e) => setToken(e.target.value)}
-              placeholder="eyJ0eXAiOiJKV1QiLCJhbGci..."
+              placeholder={t('dialogs:settings.tokenPlaceholder')}
               className="font-mono text-sm"
             />
-            <p className="text-muted-foreground text-xs">
-              Create one in HA: Profile → Long-Lived Access Tokens
-            </p>
+            <p className="text-muted-foreground text-xs">{t('dialogs:settings.tokenHelp')}</p>
           </div>
 
           <div className="flex items-center gap-2">
@@ -138,17 +145,17 @@ export function HassSettings({ isOpen, onClose, config, onSave }: HassSettingsPr
               {status === 'testing' ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Testing...
+                  {t('dialogs:settings.testing')}
                 </>
               ) : (
-                'Test Connection'
+                t('dialogs:settings.testConnection')
               )}
             </Button>
 
             {status === 'success' && (
               <span className="flex items-center gap-1 text-green-600 text-sm">
                 <CheckCircle className="h-4 w-4" />
-                Connected!
+                {t('dialogs:settings.connected')}
               </span>
             )}
 
@@ -162,12 +169,8 @@ export function HassSettings({ isOpen, onClose, config, onSave }: HassSettingsPr
 
           <Alert>
             <AlertDescription>
-              <h4 className="mb-1 font-medium">CORS Note</h4>
-              <p className="mb-2 text-xs">
-                To connect from a browser, you may need to add CORS headers to your HA config. If
-                you are connecting from https://fezvrasta.github.io/hass-cafe, you need your HA
-                instance to be under HTTPS.
-              </p>
+              <h4 className="mb-1 font-medium">{t('dialogs:settings.corsNote')}</h4>
+              <p className="mb-2 text-xs">{t('dialogs:settings.corsDescription')}</p>
               <pre className="overflow-x-auto rounded bg-muted p-2 font-mono text-xs">
                 {`http:
   cors_allowed_origins:
@@ -184,21 +187,21 @@ export function HassSettings({ isOpen, onClose, config, onSave }: HassSettingsPr
               className="flex items-center gap-1"
             >
               <ExternalLink className="h-4 w-4" />
-              How to create a Long-Lived Access Token
+              {t('dialogs:settings.tokenGuideLink')}
             </a>
           </Button>
         </div>
 
         <div className="flex items-center justify-between pt-4">
           <Button variant="destructive" onClick={handleClear} size="sm">
-            Disconnect
+            {t('dialogs:settings.disconnect')}
           </Button>
           <div className="flex items-center gap-2">
             <Button variant="outline" onClick={onClose} size="sm">
-              Cancel
+              {t('buttons.cancel')}
             </Button>
             <Button onClick={handleSave} disabled={!url || !token} size="sm">
-              Save
+              {t('buttons.save')}
             </Button>
           </div>
         </div>

@@ -1,6 +1,7 @@
 import type { ConditionType } from '@cafe/shared';
 import { Plus, Trash2 } from 'lucide-react';
 import { memo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { DynamicFieldRenderer } from '@/components/ui/DynamicFieldRenderer';
 import {
@@ -28,20 +29,21 @@ interface ConditionGroupEditorProps {
 }
 
 const CONDITION_TYPES = [
-  { value: 'state', label: 'State' },
-  { value: 'numeric_state', label: 'Numeric State' },
-  { value: 'template', label: 'Template' },
-  { value: 'trigger', label: 'Trigger' },
-  { value: 'zone', label: 'Zone' },
-  { value: 'time', label: 'Time' },
-  { value: 'sun', label: 'Sun' },
-  { value: 'and', label: 'AND (All)' },
-  { value: 'or', label: 'OR (Any)' },
-  { value: 'not', label: 'NOT' },
-];
+  { value: 'state', labelKey: 'nodes:conditions.types.state' },
+  { value: 'numeric_state', labelKey: 'nodes:conditions.types.numeric_state' },
+  { value: 'template', labelKey: 'nodes:conditions.types.template' },
+  { value: 'trigger', labelKey: 'nodes:conditions.types.trigger' },
+  { value: 'zone', labelKey: 'nodes:conditions.types.zone' },
+  { value: 'time', labelKey: 'nodes:conditions.types.time' },
+  { value: 'sun', labelKey: 'nodes:conditions.types.sun' },
+  { value: 'and', labelKey: 'nodes:conditions.types.and' },
+  { value: 'or', labelKey: 'nodes:conditions.types.or' },
+  { value: 'not', labelKey: 'nodes:conditions.types.not' },
+] as const;
 
 /**
- * Renders fields for a condition type using the shared config from conditionFields.ts
+ * Renders fields for a condition type using the shared config from conditionFields.ts.
+ * Translations are handled using i18next.
  */
 function ConditionTypeFields({
   cond,
@@ -93,6 +95,7 @@ function ConditionCard({
 }) {
   const condType = (cond.condition || 'state') as ConditionType;
   const isGroup = isLogicalGroupType(condType);
+  const { t } = useTranslation(['common', 'nodes', 'panels']);
 
   const handleTypeChange = (val: string) => {
     onUpdate(getConditionDefaults(val as ConditionType) as ConditionNodeData);
@@ -109,7 +112,7 @@ function ConditionCard({
           <SelectContent>
             {CONDITION_TYPES.map((opt) => (
               <SelectItem key={opt.value} value={opt.value}>
-                {opt.label}
+                {t(opt.labelKey)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -146,6 +149,7 @@ export const ConditionGroupEditor = memo(function ConditionGroupEditor({
 }: ConditionGroupEditorProps) {
   const { hass } = useHass();
   const entities = hass ? Object.values(hass.states) : [];
+  const { t } = useTranslation(['common', 'nodes', 'panels']);
 
   const handleAdd = () => {
     onChange([...conditions, { condition: 'state', entity_id: '', state: '' }]);
@@ -162,7 +166,9 @@ export const ConditionGroupEditor = memo(function ConditionGroupEditor({
   return (
     <div className={cn('space-y-2', depth > 0 && 'border-muted border-l-2 pl-2')}>
       {conditions.length === 0 ? (
-        <p className="py-2 text-muted-foreground text-xs italic">No conditions added yet</p>
+        <p className="py-2 text-muted-foreground text-xs italic">
+          {t('panels:conditionGroupEditor.noConditions')}
+        </p>
       ) : (
         conditions.map((cond, idx) => (
           <ConditionCard
@@ -177,7 +183,7 @@ export const ConditionGroupEditor = memo(function ConditionGroupEditor({
       )}
       <Button size="sm" variant="outline" onClick={handleAdd} className="w-full">
         <Plus className="mr-1 h-4 w-4" />
-        Add Condition
+        {t('panels:conditionGroupEditor.addCondition')}
       </Button>
     </div>
   );
