@@ -1,0 +1,136 @@
+{
+  "types": {
+    "trigger": "Auslöser",
+    "condition": "Bedingung",
+    "action": "Aktion",
+    "delay": "Verzögerung",
+    "wait": "Warten auf",
+    "set_variables": "Variablen setzen",
+    "node": "Knoten"
+  },
+  "panel": {
+    "selectNode": "Wählen Sie einen Knoten, um seine Eigenschaften zu bearbeiten",
+    "properties": "Eigenschaften",
+    "nodeId": "Knoten-ID: {{id}}",
+    "additionalProperties": "Zusätzliche Eigenschaften",
+    "addProperty": "Eigenschaft hinzufügen",
+    "propertyName": "Eigenschaftsname",
+    "type": "Typ",
+    "value": "Wert"
+  },
+  "placeholders": {
+    "customProperty": "z.B. meine_benutzerdefinierte_eigenschaft",
+    "jsonArray": "[\"element1\", \"element2\"]",
+    "number": "123",
+    "enterValue": "Wert eingeben",
+    "jsonObject": "JSON-Objekt",
+    "enterType": "{{type}} eingeben",
+    "waitTemplate": "{{ is_state('sensor.x', 'on') }}"
+  },
+  "triggers": {
+    "platformLabel": "Plattform",
+    "platforms": {
+      "state": "Zustandsänderung",
+      "numeric_state": "Numerischer Zustand",
+      "time": "Zeit",
+      "time_pattern": "Zeitmuster",
+      "sun": "Sonne",
+      "event": "Ereignis",
+      "mqtt": "MQTT",
+      "webhook": "Webhook",
+      "zone": "Zone",
+      "template": "Vorlage",
+      "homeassistant": "Home Assistant",
+      "device": "Gerät",
+      "calendar": "Kalender",
+      "geo_location": "Geo-Standort",
+      "tag": "Tag",
+      "conversation": "Konversation",
+      "persistent_notification": "Dauerhafte Benachrichtigung"
+    },
+    "dataTypes": {
+      "string": "Text",
+      "number": "Zahl",
+      "boolean": "Wahrheitswert",
+      "json": "Array (JSON)"
+    }
+  },
+  "conditions": {
+    "conditionLabel": "Bedingungstyp",
+    "types": {
+      "state": "Zustand",
+      "numeric_state": "Numerischer Zustand",
+      "time": "Zeit",
+      "sun": "Sonne",
+      "zone": "Zone",
+      "template": "Vorlage",
+      "device": "Gerät",
+      "trigger": "Auslöser",
+      "and": "UND (Alle)",
+      "or": "ODER (Beliebige)",
+      "not": "NICHT"
+    },
+    "nestedConditions": "Verschachtelte Bedingungen",
+    "yes": "Ja",
+    "no": "Nein"
+  },
+  "actions": {
+    "serviceLabel": "Dienst"
+  },
+  "variables": {
+    "variableCount_one": "{{count}} Variable",
+    "variableCount_other": "{{count}} Variablen"
+  },
+  "durationField": {
+    "label": "Dauer",
+    "description": "Dauer in Stunden, Minuten, Sekunden, Millisekunden angeben",
+    "string": "Zeichenkette",
+    "object": "Objekt",
+    "placeholder": "00:00:05.500",
+    "hours": "Stunden",
+    "minutes": "Minuten",
+    "seconds": "Sekunden",
+    "milliseconds": "Millisekunden"
+  },
+  "responseVariableField": {
+    "label": "Antwortvariable",
+    "optionalDescription": "Diese Aktion kann eine Antwort zurückgeben. Aktivieren Sie, um die Antwort zu verwenden und geben Sie den Namen einer Variablen ein, in der die Antwort gespeichert wird.",
+    "requiredDescription": "Diese Aktion gibt eine Antwort zurück. Geben Sie den Namen einer Variablen ein, in der die Antwort gespeichert wird.",
+    "useResponseVariable": "Antwortvariable verwenden",
+    "placeholder": "z.B. meine_antwort",
+    "currentNodeWarning": "'current_node' ist für die Zustandsautomaten-Strategie reserviert. Die Verwendung dieses Namens kann unerwartetes Verhalten verursachen."
+  },
+  "serviceDataFields": {
+    "heading": "Dienstdaten"
+  },
+  "setVariablesFields": {
+    "empty": "Keine Variablen definiert. Klicken Sie auf die Schaltfläche unten, um eine hinzuzufügen.",
+    "variableLabel": "Variable {{index}}",
+    "name": "Name",
+    "namePlaceholder": "variablen_name",
+    "value": "Wert",
+    "valueDescription": "Wert oder Jinja2-Vorlagenausdruck",
+    "valuePlaceholder": "wert oder {{ vorlage }}",
+    "addVariable": "Variable hinzufügen"
+  },
+  "wait": {
+    "waitsForNTrigger_one": "Wartet auf {{count}} Auslöser",
+    "waitsForNTrigger_other": "Wartet auf {{count}} Auslöser",
+    "timeoutLabel": "Zeitüberschreitung:",
+    "waitType": "Wartetyp",
+    "waitTypeDescription": "Wählen Sie, worauf gewartet werden soll.",
+    "types": {
+      "template": "Vorlage",
+      "triggers": "Auslöser"
+    },
+    "waitTemplate": "Wartevorlage",
+    "waitTemplateDescription": "Vorlagenbedingung, die wahr sein muss, um fortzufahren",
+    "triggersHeading": "Auslöser",
+    "triggerLabel": "Auslöser {{index}}: {{platform}}",
+    "triggerPlatformLabel": "Plattform",
+    "addTrigger": "Auslöser hinzufügen",
+    "timeoutDescription": "Maximale Wartezeit vor dem Fortfahren. Leer lassen für unbegrenztes Warten.",
+    "continueOnTimeout": "Bei Zeitüberschreitung fortfahren",
+    "continueOnTimeoutDescription": "Wenn aktiviert, fährt die Automatisierung fort, wenn die Zeitüberschreitung abläuft. Wenn deaktiviert, stoppt die Automatisierung."
+  }
+}

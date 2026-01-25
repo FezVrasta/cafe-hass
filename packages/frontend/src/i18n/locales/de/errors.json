@@ -1,0 +1,50 @@
+{
+  "common": {
+    "failedToCopy": "Kopieren fehlgeschlagen"
+  },
+  "validation": {
+    "emptyAutomation": "Leere Automatisierung kann nicht gespeichert werden. Bitte fügen Sie mindestens einen Auslöser- und einen Aktionsknoten hinzu.",
+    "noTrigger": "Automatisierung muss mindestens einen Auslöserknoten haben. Bitte fügen Sie einen Auslöser aus der Knotenpalette hinzu.",
+    "noAction": "Automatisierung muss mindestens einen Aktionsknoten haben. Bitte fügen Sie eine Aktion aus der Knotenpalette hinzu.",
+    "validationFailed": "Validierung fehlgeschlagen: {{errors}}",
+    "transpileFailed": "Flow konnte nicht in Automatisierungskonfiguration transpiliert werden",
+    "noAutomationId": "Keine Automatisierungs-ID gesetzt. Verwenden Sie saveAutomation() für neue Automatisierungen."
+  },
+  "connection": {
+    "noConnection": "Keine Home Assistant-Verbindung verfügbar",
+    "noAuth": "Keine Authentifizierung für REST-API konfiguriert",
+    "authFailed": "Ungültiges Token - Authentifizierung fehlgeschlagen",
+    "corsError": "Verbindung nicht möglich - URL und CORS-Einstellungen überprüfen",
+    "connectionLost": "Verbindung verloren",
+    "reconnectFailed": "Wiederverbindung fehlgeschlagen",
+    "notConnected": "Home Assistant ist nicht verbunden",
+    "noMethod": "Keine funktionierende Home Assistant-Verbindungsmethode gefunden",
+    "unexpectedResponse": "Unerwartete API-Antwort",
+    "connectionFailed": "Verbindung fehlgeschlagen"
+  },
+  "api": {
+    "httpError": "HTTP {{status}}: {{statusText}}",
+    "createFailed": "Automatisierung konnte nicht erstellt werden: {{message}}",
+    "updateFailed": "Automatisierung konnte nicht aktualisiert werden: {{message}}",
+    "deleteFailed": "Automatisierung konnte nicht gelöscht werden: {{message}}",
+    "importFailed": "Automatisierung konnte nicht importiert werden: {{message}}",
+    "unknownError": "Unbekannter Fehler",
+    "transpileFailed": "Transpilierung fehlgeschlagen",
+    "loadDeviceTriggersFailed": "Geräteauslöser konnten nicht geladen werden:",
+    "loadTriggerCapabilitiesFailed": "Auslöserfähigkeiten konnten nicht geladen werden:"
+  },
+  "properties": {
+    "addFailed": "Eigenschaft konnte nicht hinzugefügt werden"
+  },
+  "form": {
+    "nameRequired": "Automatisierungsname ist erforderlich",
+    "urlTokenRequired": "Bitte geben Sie sowohl URL als auch Token an"
+  },
+  "import": {
+    "fileReadFailed": "Flow konnte nicht importiert werden. Bitte überprüfen Sie das Dateiformat.",
+    "parseFailed": "Automatisierungskonfiguration konnte nicht geparst werden"
+  },
+  "yaml": {
+    "staleWarning": "Zeige letztes gültiges YAML - Fehler beheben zum Aktualisieren"
+  }
+}

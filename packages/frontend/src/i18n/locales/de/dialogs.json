@@ -1,0 +1,99 @@
+{
+  "save": {
+    "title": "Automatisierung speichern",
+    "titleUpdate": "Automatisierung aktualisieren",
+    "description": "Diese Automatisierung in Home Assistant speichern",
+    "descriptionUpdate": "Diese Automatisierung in Home Assistant aktualisieren",
+    "nameLabel": "Automatisierungsname",
+    "descriptionLabel": "Beschreibung (Optional)",
+    "nameConflict": "Name existiert bereits. Verwenden: \"{{suggestedName}}\"?"
+  },
+  "import": {
+    "title": "Automatisierung öffnen",
+    "description": "Wählen Sie eine Automatisierung aus Home Assistant zum Bearbeiten",
+    "descriptionFull": "Öffnen Sie eine bestehende Automatisierung oder erstellen Sie eine neue",
+    "searchPlaceholder": "Automatisierungen suchen...",
+    "noAutomations": "Keine Automatisierungen gefunden",
+    "noConnection": "Verbinden Sie sich mit Home Assistant um Automatisierungen zu laden",
+    "createNew": "Neu erstellen",
+    "columns": {
+      "name": "Name",
+      "lastTriggered": "Zuletzt ausgelöst",
+      "enabled": "Aktiviert",
+      "action": "Aktion"
+    },
+    "mode": "Modus: {{mode}}",
+    "never": "Nie",
+    "justNow": "Gerade eben",
+    "minutesAgo": "vor {{count}} Min",
+    "hoursAgo": "vor {{count}} Std",
+    "daysAgo": "vor {{count}} Tagen",
+    "disabled": "Deaktiviert",
+    "automationEnabled": "Automatisierung erfolgreich aktiviert.",
+    "automationDisabled": "Automatisierung erfolgreich deaktiviert.",
+    "updateStateFailed": "Automatisierungsstatus konnte nicht aktualisiert werden",
+    "importAutomation": "Automatisierung importieren",
+    "openingWarning": "Das Öffnen ersetzt Ihr aktuelles Automatisierungsdesign",
+    "discardTitle": "Aktuellen Flow verwerfen?",
+    "discardDescription": "Ihre aktuelle Automatisierung hat ungespeicherte Änderungen. Das Erstellen oder Öffnen einer neuen Automatisierung verwirft diese Änderungen.",
+    "confirmDiscard": "Verwerfen & Fortfahren",
+    "importSuccess": "Automatisierung \"{{name}}\" erfolgreich importiert!",
+    "openedWarning": "Automatisierung \"{{name}}\" geöffnet!",
+    "openedWarningDescription": "Konfiguration konnte nicht automatisch abgerufen werden. Sie können jetzt einen neuen Flow mit demselben Namen erstellen.",
+    "importFailed": "Automatisierung konnte nicht importiert werden: {{message}}",
+    "ID": "ID: {{id}}",
+    "otherArea": "Anderer Bereich",
+    "noArea": "Kein Bereich"
+  },
+  "importYaml": {
+    "title": "YAML-Automatisierung importieren",
+    "description": "Fügen Sie Ihre Home Assistant Automatisierungs-YAML unten ein. Die Automatisierung kann im Standardformat oder Zustandsautomatenformat sein.",
+    "placeholder": "alias: Meine Automatisierung\\ntrigger:\\n  - platform: state\\n    entity_id: sensor.example",
+    "importFailed": "Import fehlgeschlagen",
+    "warnings": "Warnungen",
+    "successLoading": "Erfolgreich importiert! Lade Flow...",
+    "tipLabel": "Tipp:",
+    "tipText": "Wenn Ihre Automatisierung mit C.A.F.E. erstellt wurde, werden Knotenpositionen beibehalten. Andernfalls werden Knoten automatisch in einem lesbaren Layout angeordnet.",
+    "importing": "Importiere...",
+    "import": "Importieren",
+    "errors": {
+      "parseError": "YAML konnte nicht geparst werden: {{message}}",
+      "importError": "Import fehlgeschlagen: {{message}}"
+    }
+  },
+  "settings": {
+    "title": "Home Assistant-Verbindung",
+    "description": "Konfigurieren Sie Ihre Home Assistant-Verbindungseinstellungen.",
+    "urlLabel": "Home Assistant-URL",
+    "urlPlaceholder": "http://homeassistant.local:8123",
+    "urlHelp": "Die URL Ihrer Home Assistant-Instanz",
+    "tokenLabel": "Langlebiges Zugriffstoken",
+    "tokenPlaceholder": "eyJ0eXAiOiJKV1QiLCJhbGci...",
+    "tokenHelp": "Erstellen Sie eines in HA: Profil → Langlebige Zugriffstoken",
+    "testConnection": "Verbindung testen",
+    "testing": "Teste...",
+    "connected": "Verbunden!",
+    "disconnect": "Trennen",
+    "corsNote": "CORS-Hinweis",
+    "corsDescription": "Um sich von einem Browser zu verbinden, müssen Sie möglicherweise CORS-Header zu Ihrer HA-Konfiguration hinzufügen. Wenn Sie sich von https://fezvrasta.github.io/hass-cafe verbinden, muss Ihre HA-Instanz unter HTTPS laufen.",
+    "tokenGuideLink": "Wie man ein langlebiges Zugriffstoken erstellt",
+    "apiRunning": "API läuft.",
+    "errors": {
+      "missingFields": "Bitte geben Sie sowohl URL als auch Token an",
+      "unexpectedResponse": "Unerwartete API-Antwort",
+      "invalidToken": "Ungültiges Token - Authentifizierung fehlgeschlagen",
+      "httpError": "HTTP {{status}}: {{statusText}}",
+      "corsError": "Verbindung nicht möglich - URL und CORS-Einstellungen überprüfen",
+      "connectionFailed": "Verbindung fehlgeschlagen"
+    }
+  },
+  "error": {
+    "title": "Unerwarteter Fehler",
+    "description": "Ein unerwarteter Fehler ist in der Anwendung aufgetreten. Bitte sehen Sie die Details unten.",
+    "refreshPrompt": "Bitte versuchen Sie, die Seite zu aktualisieren. Wenn das Problem weiterhin besteht, melden Sie es bitte in unserem GitHub-Repository."
+  },
+  "traceViewer": {
+    "saveAutomationFirst": "Speichern Sie zuerst die Automatisierung, um Traces anzuzeigen",
+    "noTracesFound": "Keine Automatisierungs-Traces gefunden"
+  }
+}
