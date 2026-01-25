@@ -171,10 +171,10 @@ export const ConditionNode = memo(function ConditionNode({
       />
 
       {/* Labels for handles - visible on hover */}
-      <div className="absolute top-[30%] right-[-40px] -translate-y-1/2 transform rounded border border-green-200 bg-white px-1 py-0.5 text-[10px] font-medium text-green-700 opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
+      <div className="absolute top-[30%] right-[-40px] -translate-y-1/2 transform rounded border border-green-200 bg-white px-1 py-0.5 font-medium text-[10px] text-green-700 opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
         {t('nodes:conditions.yes')}
       </div>
-      <div className="absolute top-[70%] right-[-36px] -translate-y-1/2 transform rounded border border-red-200 bg-white px-1 py-0.5 text-[10px] font-medium text-red-700 opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
+      <div className="absolute top-[70%] right-[-36px] -translate-y-1/2 transform rounded border border-red-200 bg-white px-1 py-0.5 font-medium text-[10px] text-red-700 opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
         {t('nodes:conditions.no')}
       </div>
     </div>
