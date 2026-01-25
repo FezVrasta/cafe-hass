@@ -38,7 +38,7 @@ export const ConditionNode = memo(function ConditionNode({
   return (
     <div
       className={cn(
-        'relative min-w-[180px] rounded-lg border-2 border-blue-400 bg-blue-50 px-4 py-3',
+        'group relative min-w-[180px] rounded-lg border-2 border-blue-400 bg-blue-50 px-4 py-3',
         'transition-all duration-200',
         selected && 'ring-2 ring-blue-500 ring-offset-2',
         isActive && 'node-active ring-4 ring-green-500',
@@ -170,11 +170,11 @@ export const ConditionNode = memo(function ConditionNode({
         className="!w-3 !h-3 !bg-red-500 !border-red-700"
       />
 
-      {/* Labels for handles */}
-      <div className="absolute top-[30%] right-[-40px] -translate-y-1/2 transform rounded border border-green-200 bg-white px-1 py-0.5 font-medium text-[10px] text-green-700 shadow-sm">
+      {/* Labels for handles - visible on hover */}
+      <div className="absolute top-[30%] right-[-40px] -translate-y-1/2 transform rounded border border-green-200 bg-white px-1 py-0.5 text-[10px] font-medium text-green-700 opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
         {t('nodes:conditions.yes')}
       </div>
-      <div className="absolute top-[70%] right-[-36px] -translate-y-1/2 transform rounded border border-red-200 bg-white px-1 py-0.5 font-medium text-[10px] text-red-700 shadow-sm">
+      <div className="absolute top-[70%] right-[-36px] -translate-y-1/2 transform rounded border border-red-200 bg-white px-1 py-0.5 text-[10px] font-medium text-red-700 opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
         {t('nodes:conditions.no')}
       </div>
     </div>
