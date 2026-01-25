@@ -1,4 +1,12 @@
+import { ChevronDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { EntitySelector } from '@/components/ui/EntitySelector';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -192,91 +200,58 @@ export function DynamicFieldRenderer({
           options = selectorConfig.options as Array<{ value: string; label: string }>;
         }
 
-        const multiple = selectorConfig.multiple === true;
+        const multiple =
+          ('multiple' in field && field.multiple) || selectorConfig.multiple === true;
 
         if (multiple) {
-          // Multi-select dropdown
-          const values = Array.isArray(value) ? value : value ? [value] : [];
+          // Multi-select dropdown with checkboxes
+          const values = Array.isArray(value)
+            ? (value as string[])
+            : value
+              ? [value as string]
+              : [];
+
+          const getDisplayText = () => {
+            if (values.length === 0) {
+              return placeholder || t('dynamicField.selectItems');
+            }
+            if (values.length === 1) {
+              return options.find((o) => o.value === values[0])?.label || values[0];
+            }
+            return t('dynamicField.itemsSelected', { count: values.length });
+          };
 
           return (
-            <div className="space-y-2">
-              <Select
-                value={values.length > 0 ? values[0] : ''}
-                onValueChange={(selectedValue) => {
-                  // Toggle the value in the array
-                  if (values.includes(selectedValue)) {
-                    onChange(values.filter((v) => v !== selectedValue));
-                  } else {
-                    onChange([...values, selectedValue]);
-                  }
-                }}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue>
-                    {values.length === 0 ? (
-                      <span className="text-muted-foreground">
-                        {placeholder || t('dynamicField.selectItems')}
-                      </span>
-                    ) : values.length === 1 ? (
-                      options.find((o) => o.value === values[0])?.label || values[0]
-                    ) : (
-                      t('dynamicField.itemsSelected', { count: values.length })
-                    )}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent className="max-w-[var(--radix-select-trigger-width)]">
-                  {options.map((option) => {
-                    const isSelected = values.includes(option.value);
-                    return (
-                      <SelectItem
-                        key={option.value}
-                        value={option.value}
-                        className={isSelected ? 'bg-accent' : ''}
-                      >
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={(e) => {
-                              // Handle multi-select toggle
-                              const currentValues = Array.isArray(value) ? value : [];
-                              const newValues = e.target.checked
-                                ? [...currentValues, option.value]
-                                : currentValues.filter((v) => v !== option.value);
-                              onChange(newValues);
-                            }}
-                            className="h-4 w-4"
-                          />
-                          <span>{option.label}</span>
-                        </div>
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
-              {values.length > 0 && (
-                <div className="flex flex-wrap gap-1">
-                  {values.map((val) => {
-                    const option = options.find((o) => o.value === val);
-                    return (
-                      <span
-                        key={val}
-                        className="inline-flex items-center gap-1 rounded-md bg-secondary px-2 py-1 text-xs"
-                      >
-                        {option?.label || val}
-                        <button
-                          type="button"
-                          onClick={() => onChange(values.filter((v) => v !== val))}
-                          className="hover:text-destructive"
-                        >
-                          {'×'}
-                        </button>
-                      </span>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="w-full justify-between font-normal">
+                  <span className={values.length === 0 ? 'text-muted-foreground' : ''}>
+                    {getDisplayText()}
+                  </span>
+                  <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)]">
+                {options.map((option) => {
+                  const isSelected = values.includes(option.value);
+                  return (
+                    <DropdownMenuCheckboxItem
+                      key={option.value}
+                      checked={isSelected}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          onChange([...values, option.value]);
+                        } else {
+                          onChange(values.filter((v) => v !== option.value));
+                        }
+                      }}
+                    >
+                      {option.label}
+                    </DropdownMenuCheckboxItem>
+                  );
+                })}
+              </DropdownMenuContent>
+            </DropdownMenu>
           );
         }
 

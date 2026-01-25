@@ -116,10 +116,19 @@ export const CONDITION_TYPE_FIELDS: Record<ConditionType, FieldConfig[]> = {
     {
       name: 'weekday',
       label: 'Weekday (optional)',
-      type: 'text',
+      type: 'select',
       required: false,
-      placeholder: 'mon,tue,wed,thu,fri,sat,sun',
-      description: 'Comma-separated list of days',
+      multiple: true,
+      description: 'Days of the week when condition is true',
+      options: [
+        { value: 'mon', label: 'Monday' },
+        { value: 'tue', label: 'Tuesday' },
+        { value: 'wed', label: 'Wednesday' },
+        { value: 'thu', label: 'Thursday' },
+        { value: 'fri', label: 'Friday' },
+        { value: 'sat', label: 'Saturday' },
+        { value: 'sun', label: 'Sunday' },
+      ],
     },
   ],
 
