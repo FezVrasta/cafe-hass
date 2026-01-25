@@ -1,0 +1,123 @@
+{
+  "buttons": {
+    "save": "Speichern",
+    "saveAsCopy": "Als Kopie speichern",
+    "cancel": "Abbrechen",
+    "close": "Schließen",
+    "delete": "Löschen",
+    "update": "Aktualisieren",
+    "refresh": "Aktualisieren",
+    "copy": "Kopieren",
+    "use": "Verwenden",
+    "add": "Hinzufügen",
+    "addTrigger": "Auslöser hinzufügen",
+    "openAutomation": "Automatisierung öffnen",
+    "newAutomation": "Neue Automatisierung",
+    "importJson": "Aus JSON importieren",
+    "importYaml": "Aus YAML importieren",
+    "testConnection": "Verbindung testen",
+    "disconnect": "Trennen"
+  },
+  "labels": {
+    "automationName": "Automatisierungsname",
+    "properties": "Eigenschaften",
+    "yaml": "YAML",
+    "debug": "Debug",
+    "enabled": "Aktiviert",
+    "alias": "Alias (Anzeigename)",
+    "id": "ID",
+    "strategy": "Strategie",
+    "speed": "Geschwindigkeit",
+    "quickHelp": "Schnellhilfe",
+    "debugControls": "Debug-Steuerung",
+    "addNode": "Knoten hinzufügen",
+    "yamlOutput": "YAML-Ausgabe",
+    "automationTrace": "Automatisierungs-Trace",
+    "selectTraceRun": "Trace-Ausführung wählen:",
+    "traceDetails": "Trace-Details:",
+    "trigger": "Auslöser:",
+    "duration": "Dauer:",
+    "lastStep": "Letzter Schritt:",
+    "executionPath": "Ausführungspfad:",
+    "notApplicable": "N/A",
+    "device": "Gerät",
+    "triggerType": "Auslösertyp",
+    "entityId": "Entitäts-ID",
+    "warning": "Warnung",
+    "requiredAsterisk": "*"
+  },
+  "status": {
+    "connecting": "Verbinde...",
+    "connected": "Verbunden",
+    "connectedTo": "Verbunden mit {{hostname}}",
+    "connectionError": "Verbindungsfehler",
+    "saving": "Speichere...",
+    "updating": "Aktualisiere...",
+    "testing": "Teste...",
+    "loadingTraces": "Lade Traces...",
+    "loadingTriggers": "Lade Auslöser..."
+  },
+  "placeholders": {
+    "automationName": "Automatisierungsname",
+    "optionalDisplayName": "Optionaler Anzeigename",
+    "optionalUniqueId": "Optionale eindeutige ID",
+    "enterAutomationName": "Automatisierungsname eingeben...",
+    "describeAutomation": "Beschreiben Sie, was diese Automatisierung tut...",
+    "searchAutomations": "Automatisierungen suchen...",
+    "selectTrace": "Trace auswählen...",
+    "addNodesForYaml": "# Knoten hinzufügen, um YAML-Ausgabe zu sehen",
+    "selectDevice": "Gerät auswählen...",
+    "selectTriggerType": "Auslösertyp auswählen...",
+    "selectEntity": "Entität auswählen...",
+    "selectEntities": "Entitäten auswählen...",
+    "duration": "00:05:00",
+    "enterTemplate": "Jinja2-Vorlage eingeben...",
+    "jsonExample": "{ \"key\": \"value\" }",
+    "none": "Keine"
+  },
+  "help": {
+    "clickNodesToAdd": "Klicken zum Hinzufügen",
+    "dragToConnect": "Ziehen zum Verbinden",
+    "deleteToRemove": "Löschen zum Entfernen",
+    "backspaceDeleteKey": "Rücktaste/Entf-Taste"
+  },
+  "titles": {
+    "appName": "C.A.F.E.",
+    "appFullName": "Complex Automation Flow Editor",
+    "settings": "Einstellungen",
+    "updateAutomation": "Automatisierung in Home Assistant aktualisieren",
+    "saveAutomation": "Automatisierung in Home Assistant speichern",
+    "exportJson": "Flow als JSON exportieren",
+    "clickToConfigure": "Klicken um Home Assistant-Verbindung zu konfigurieren"
+  },
+  "strategy": {
+    "auto": "Auto",
+    "native": "Nativ",
+    "stateMachine": "Zustandsautomat"
+  },
+  "defaults": {
+    "newAutomation": "Neue Automatisierung"
+  },
+  "boolean": {
+    "true": "Wahr",
+    "false": "Falsch"
+  },
+  "combobox": {
+    "select": "Auswählen...",
+    "noOptions": "Keine Optionen gefunden."
+  },
+  "dynamicField": {
+    "enabled": "Aktiviert",
+    "disabled": "Deaktiviert",
+    "selectItems": "Elemente auswählen...",
+    "itemsSelected": "{{count}} Elemente ausgewählt",
+    "selectEntities": "Entitäten auswählen...",
+    "selectEntity": "Entität auswählen...",
+    "formatHMS": "Format: HH:MM:SS",
+    "enterValue": "{{name}} eingeben..."
+  },
+  "deviceSelector": {
+    "enterId": "Geräte-ID manuell eingeben",
+    "noDevices": "Keine Geräte gefunden. Geben Sie die Geräte-ID manuell ein oder überprüfen Sie Ihre Home Assistant-Verbindung."
+  }
+}
