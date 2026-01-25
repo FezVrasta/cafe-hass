@@ -1,5 +1,6 @@
 import { ChevronDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { DurationInput, type DurationValue } from '@/components/panels/node-fields/DurationField';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -23,7 +24,6 @@ import { Textarea } from '@/components/ui/textarea';
 import type { FieldConfig } from '@/config/triggerFields';
 import type { TriggerField } from '@/hooks/useDeviceAutomation';
 import type { HassEntity } from '@/types/hass';
-import { DurationInput, type DurationValue } from '@/components/panels/node-fields/DurationField';
 
 interface DynamicFieldRendererProps {
   /**
@@ -321,12 +321,7 @@ export function DynamicFieldRenderer({
 
       // Duration input - supports both string (HH:MM:SS) and object ({ hours, minutes, seconds }) formats
       case 'duration':
-        return (
-          <DurationInput
-            value={(value as DurationValue) ?? ''}
-            onChange={onChange}
-          />
-        );
+        return <DurationInput value={(value as DurationValue) ?? ''} onChange={onChange} />;
 
       // Object/JSON input
       case 'object':

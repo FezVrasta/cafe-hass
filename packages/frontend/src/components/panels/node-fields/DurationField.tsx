@@ -88,7 +88,9 @@ export function DurationInput({ value, onChange }: DurationInputProps) {
       ) : (
         <div className="flex gap-2">
           <div className="flex-1">
-            <Label className="text-muted-foreground text-xs">{t('nodes:durationField.hours')}</Label>
+            <Label className="text-muted-foreground text-xs">
+              {t('nodes:durationField.hours')}
+            </Label>
             <Input
               type="number"
               min={0}
@@ -99,7 +101,9 @@ export function DurationInput({ value, onChange }: DurationInputProps) {
             />
           </div>
           <div className="flex-1">
-            <Label className="text-muted-foreground text-xs">{t('nodes:durationField.minutes')}</Label>
+            <Label className="text-muted-foreground text-xs">
+              {t('nodes:durationField.minutes')}
+            </Label>
             <Input
               type="number"
               min={0}
@@ -110,7 +114,9 @@ export function DurationInput({ value, onChange }: DurationInputProps) {
             />
           </div>
           <div className="flex-1">
-            <Label className="text-muted-foreground text-xs">{t('nodes:durationField.seconds')}</Label>
+            <Label className="text-muted-foreground text-xs">
+              {t('nodes:durationField.seconds')}
+            </Label>
             <Input
               type="number"
               min={0}
@@ -121,7 +127,9 @@ export function DurationInput({ value, onChange }: DurationInputProps) {
             />
           </div>
           <div className="flex-1">
-            <Label className="text-muted-foreground text-xs">{t('nodes:durationField.milliseconds')}</Label>
+            <Label className="text-muted-foreground text-xs">
+              {t('nodes:durationField.milliseconds')}
+            </Label>
             <Input
               type="number"
               min={0}
