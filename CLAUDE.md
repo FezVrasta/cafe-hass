@@ -102,19 +102,30 @@ The codebase should compile with zero TypeScript errors and maintain type safety
 
 # Best Practices
 
-## Code Reusability (DRY)
+## Code Reusability (DRY) - VITAL AND MANDATORY
 
-**REQUIRED PRACTICES**:
+**⚠️ THIS IS A NON-NEGOTIABLE REQUIREMENT ⚠️**
 
-- **Helper Functions/Utilities**: Extract common logic into reusable helper functions or utility modules.
-- **Generic Components**: Design React components to be as generic and reusable as possible, accepting props to customize behavior and appearance.
+**ZERO TOLERANCE FOR CODE DUPLICATION.** Every single piece of duplicated code is a violation of this project's core principles. Before writing ANY code, you MUST check if similar logic already exists and reuse it.
+
+**MANDATORY PRACTICES**:
+
+- **Helper Functions/Utilities**: Extract common logic into reusable helper functions or utility modules. If you write the same logic twice, you have failed.
+- **Generic Components**: Design React components to be as generic and reusable as possible, accepting props to customize behavior and appearance. Components MUST be designed for reuse from the start.
 - **Shared Types/Schemas**: Leverage `@cafe/shared` for all common types, interfaces, and Zod schemas to ensure consistency and avoid duplication across `frontend` and `transpiler`.
-- **Custom Hooks**: For shared stateful logic in React, create custom hooks.
+- **Custom Hooks**: For shared stateful logic in React, create custom hooks. ANY repeated stateful pattern MUST become a hook.
+- **Before Writing Code**: ALWAYS search the codebase first to check if similar functionality exists. Reuse and extend existing code rather than creating new duplicates.
+- **Refactor Immediately**: If you discover existing duplication while working, refactor it into a shared abstraction before proceeding.
 
-**FORBIDDEN PRACTICES**:
+**ABSOLUTELY FORBIDDEN - VIOLATIONS WILL NOT BE ACCEPTED**:
 
-- **Copy-pasting code**: Avoid duplicating blocks of code. If you find yourself copying and pasting, it's a sign that a reusable function or component is needed.
-- **Redundant Type Definitions**: Do not redefine types or interfaces that already exist in `@cafe/shared` or can be derived from existing schemas.
+- **Copy-pasting code**: NEVER duplicate blocks of code under any circumstances. If you find yourself copying and pasting, STOP and create a reusable function, component, or hook instead.
+- **Redundant Type Definitions**: NEVER redefine types or interfaces that already exist in `@cafe/shared` or can be derived from existing schemas.
+- **Similar but slightly different implementations**: If two pieces of code do similar things, they MUST be unified into a single parameterized implementation.
+- **Duplicated constants or configuration**: All shared values MUST be defined once and imported where needed.
+- **Repeated UI patterns**: Any UI pattern used more than once MUST be extracted into a reusable component.
+
+**THE RULE IS SIMPLE: If code appears more than once, it's wrong. No exceptions.**
 
 # Cutting a New Release
 

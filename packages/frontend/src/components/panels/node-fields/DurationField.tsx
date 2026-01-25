@@ -2,19 +2,23 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FormField } from '@/components/forms/FormField';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 
-export interface DurationFieldProps {
-  label?: string;
-  description?: string;
-  value: string | { hours?: number; minutes?: number; seconds?: number; milliseconds?: number };
-  onChange: (
-    val: string | { hours?: number; minutes?: number; seconds?: number; milliseconds?: number }
-  ) => void;
-  fieldKey?: string; // e.g. 'delay' or 'timeout'
+export type DurationValue =
+  | string
+  | { hours?: number; minutes?: number; seconds?: number; milliseconds?: number };
+
+export interface DurationInputProps {
+  value: DurationValue;
+  onChange: (val: DurationValue) => void;
 }
 
-export function DurationField({ label, description, value, onChange }: DurationFieldProps) {
+/**
+ * Reusable duration input component without label/description wrapper.
+ * Supports both string (HH:MM:SS) and object ({ hours, minutes, seconds, milliseconds }) formats.
+ */
+export function DurationInput({ value, onChange }: DurationInputProps) {
   const { t } = useTranslation(['common', 'nodes']);
   const isString = typeof value === 'string';
   const obj = !isString && typeof value === 'object' && value !== null ? value : {};
@@ -68,64 +72,91 @@ export function DurationField({ label, description, value, onChange }: DurationF
   };
 
   return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-2">
+        <span className="text-muted-foreground text-xs">{t('nodes:durationField.string')}</span>
+        <Switch checked={useString} onCheckedChange={handleToggle} />
+        <span className="text-muted-foreground text-xs">{t('nodes:durationField.object')}</span>
+      </div>
+      {useString ? (
+        <Input
+          type="text"
+          value={isString ? value : ''}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={t('nodes:durationField.placeholder')}
+        />
+      ) : (
+        <div className="flex gap-2">
+          <div className="flex-1">
+            <Label className="text-muted-foreground text-xs">{t('nodes:durationField.hours')}</Label>
+            <Input
+              type="number"
+              min={0}
+              value={obj.hours ?? ''}
+              onChange={(e) => handleObjChange('hours', e.target.value)}
+              placeholder="0"
+              className="mt-1"
+            />
+          </div>
+          <div className="flex-1">
+            <Label className="text-muted-foreground text-xs">{t('nodes:durationField.minutes')}</Label>
+            <Input
+              type="number"
+              min={0}
+              value={obj.minutes ?? ''}
+              onChange={(e) => handleObjChange('minutes', e.target.value)}
+              placeholder="0"
+              className="mt-1"
+            />
+          </div>
+          <div className="flex-1">
+            <Label className="text-muted-foreground text-xs">{t('nodes:durationField.seconds')}</Label>
+            <Input
+              type="number"
+              min={0}
+              value={obj.seconds ?? ''}
+              onChange={(e) => handleObjChange('seconds', e.target.value)}
+              placeholder="0"
+              className="mt-1"
+            />
+          </div>
+          <div className="flex-1">
+            <Label className="text-muted-foreground text-xs">{t('nodes:durationField.milliseconds')}</Label>
+            <Input
+              type="number"
+              min={0}
+              value={obj.milliseconds ?? ''}
+              onChange={(e) => handleObjChange('milliseconds', e.target.value)}
+              placeholder="0"
+              className="mt-1"
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export interface DurationFieldProps {
+  label?: string;
+  description?: string;
+  value: DurationValue;
+  onChange: (val: DurationValue) => void;
+  fieldKey?: string; // e.g. 'delay' or 'timeout'
+}
+
+/**
+ * Duration field with FormField wrapper for label and description.
+ */
+export function DurationField({ label, description, value, onChange }: DurationFieldProps) {
+  const { t } = useTranslation(['common', 'nodes']);
+
+  return (
     <FormField
       label={label ?? t('nodes:durationField.label')}
       description={description || t('nodes:durationField.description')}
     >
-      <div className="flex flex-col gap-2">
-        <div className="mb-2 flex items-center gap-2">
-          <span className="text-muted-foreground text-xs">{t('nodes:durationField.string')}</span>
-          <Switch checked={useString} onCheckedChange={handleToggle} />
-          <span className="text-muted-foreground text-xs">{t('nodes:durationField.object')}</span>
-        </div>
-        {useString ? (
-          <Input
-            type="text"
-            value={isString ? value : ''}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder={t('nodes:durationField.placeholder')}
-          />
-        ) : (
-          <div className="flex gap-2">
-            <FormField label={t('nodes:durationField.hours')}>
-              <Input
-                type="number"
-                min={0}
-                value={obj.hours ?? ''}
-                onChange={(e) => handleObjChange('hours', e.target.value)}
-                placeholder="0"
-              />
-            </FormField>
-            <FormField label={t('nodes:durationField.minutes')}>
-              <Input
-                type="number"
-                min={0}
-                value={obj.minutes ?? ''}
-                onChange={(e) => handleObjChange('minutes', e.target.value)}
-                placeholder="0"
-              />
-            </FormField>
-            <FormField label={t('nodes:durationField.seconds')}>
-              <Input
-                type="number"
-                min={0}
-                value={obj.seconds ?? ''}
-                onChange={(e) => handleObjChange('seconds', e.target.value)}
-                placeholder="0"
-              />
-            </FormField>
-            <FormField label={t('nodes:durationField.milliseconds')}>
-              <Input
-                type="number"
-                min={0}
-                value={obj.milliseconds ?? ''}
-                onChange={(e) => handleObjChange('milliseconds', e.target.value)}
-                placeholder="0"
-              />
-            </FormField>
-          </div>
-        )}
-      </div>
+      <DurationInput value={value} onChange={onChange} />
     </FormField>
   );
 }

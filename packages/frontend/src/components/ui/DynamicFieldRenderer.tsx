@@ -23,6 +23,7 @@ import { Textarea } from '@/components/ui/textarea';
 import type { FieldConfig } from '@/config/triggerFields';
 import type { TriggerField } from '@/hooks/useDeviceAutomation';
 import type { HassEntity } from '@/types/hass';
+import { DurationInput, type DurationValue } from '@/components/panels/node-fields/DurationField';
 
 interface DynamicFieldRendererProps {
   /**
@@ -318,17 +319,12 @@ export function DynamicFieldRenderer({
           />
         );
 
-      // Duration input (HH:MM:SS format)
+      // Duration input - supports both string (HH:MM:SS) and object ({ hours, minutes, seconds }) formats
       case 'duration':
         return (
-          <Input
-            type="text"
-            value={stringValue}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder={placeholder || t('placeholders.duration')}
-            pattern="^\d{2}:\d{2}:\d{2}$"
-            title={t('dynamicField.formatHMS')}
-            required={required}
+          <DurationInput
+            value={(value as DurationValue) ?? ''}
+            onChange={onChange}
           />
         );
 
