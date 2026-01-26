@@ -65,6 +65,7 @@ function App() {
   const handleSidebarToggle = () => {
     window.parent.postMessage({ type: 'CAFE_TOGGLE_SIDEBAR' }, '*');
   };
+
   const {
     hass,
     isRemote: actualIsRemote,
@@ -85,6 +86,7 @@ function App() {
     isSaving,
     simulationSpeed,
     setSimulationSpeed,
+    hasRealChanges,
   } = useFlowStore();
   const [rightTab, setRightTab] = useState<RightPanelTab>('properties');
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -312,6 +314,9 @@ function App() {
                 size="icon"
                 title={automationId ? t('titles.updateAutomation') : t('titles.saveAutomation')}
                 disabled={isSaving}
+                className={cn(
+                  hasUnsavedChanges && hasRealChanges() && !isSaving && 'save-button-unsaved'
+                )}
               >
                 {isSaving ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
