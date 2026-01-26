@@ -44,13 +44,13 @@ jobs:
 
       - name: Create release archives
         run: |
-          # Create zip with content at root (for HACS)
-          cd custom_components/cafe
-          zip -r ../../cafe.zip . -x "*.DS_Store" "*/.DS_Store"
+          # Create zip with cafe/ folder at root (for HACS with content_in_root: false)
+          cd custom_components
+          zip -r ../cafe.zip cafe -x "*.DS_Store" "*/.DS_Store"
 
-          # Create alternative tar.gz with content at root
-          tar -czf ../../cafe.tar.gz --exclude="*.DS_Store" .
-          cd ../..
+          # Create alternative tar.gz
+          tar -czf ../cafe.tar.gz --exclude="*.DS_Store" cafe
+          cd ..
 
           echo "Created archives:"
           ls -la *.zip *.tar.gz
