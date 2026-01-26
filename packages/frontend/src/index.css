@@ -166,3 +166,23 @@
     opacity: 0.8;
   }
 }
+
+/* Save button animation for unsaved changes */
+@keyframes save-pulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.7);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 10px rgba(255, 193, 7, 0);
+  }
+}
+
+.save-button-unsaved {
+  animation: save-pulse 2s infinite;
+}
+
+.save-button-unsaved-dark {
+  animation: save-pulse 2s infinite;
+}
