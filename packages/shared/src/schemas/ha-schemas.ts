@@ -77,14 +77,13 @@ export type HAPlatform = z.infer<typeof HAPlatformEnum>;
 
 /**
  * Zod schema for Home Assistant trigger objects.
- * Normalizes 'platform' and 'trigger' fields to a single 'platform' property.
- * Supports both legacy 'platform' format and newer 'trigger' format (e.g., 'light.turned_off').
+ * Normalizes both legacy 'platform' and modern 'trigger' fields to a single 'trigger' property.
+ * Supports both legacy format (platform: state) and modern format (trigger: state).
  */
 export const HATriggerSchema = z
   .looseObject({
     alias: z.string().optional(),
     platform: z.string().optional(),
-    // 'trigger' can be legacy platform names or newer domain.event format (e.g., 'light.turned_off', 'conversation')
     trigger: z.string().optional(),
     target: z.looseObject({ entity_id: z.union([z.string(), z.array(z.string())]) }).optional(),
     options: z.looseObject({}).optional(),
@@ -117,13 +116,13 @@ export const HATriggerSchema = z
     command: z.union([z.string(), z.array(z.string())]).optional(),
   })
   .transform((input) => {
-    // Always output a defined platform property
-    const platform = input.platform ?? input.trigger ?? 'state';
-    // Remove the 'trigger' key to avoid outputting both 'platform' and 'trigger'
-    const { trigger: _trigger, ...rest } = input;
+    // Normalize to modern 'trigger' property (HA 2024.1+)
+    const trigger = input.trigger ?? input.platform ?? 'state';
+    // Remove the legacy 'platform' key
+    const { platform: _platform, ...rest } = input;
     return {
       ...rest,
-      platform: platform,
+      trigger,
     };
   });
 

@@ -301,7 +301,7 @@ export function getTriggerFields(platform: TriggerPlatform): FieldConfig[] {
  */
 export function getTriggerDefaults(platform: TriggerPlatform): Record<string, unknown> {
   const fields = getTriggerFields(platform);
-  const defaults: Record<string, unknown> = { platform };
+  const defaults: Record<string, unknown> = { trigger: platform };
 
   for (const field of fields) {
     if (field.default !== undefined) {

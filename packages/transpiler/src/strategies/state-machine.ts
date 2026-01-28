@@ -53,8 +53,8 @@ export class StateMachineStrategy extends BaseStrategy {
           automation: {
             alias: flow.name,
             description: flow.description || '',
-            trigger: triggers,
-            action: [],
+            triggers: triggers,
+            actions: [],
             mode: flow.metadata?.mode ?? 'single',
           },
           warnings,
@@ -141,8 +141,8 @@ export class StateMachineStrategy extends BaseStrategy {
         automation: {
           alias: flow.name,
           description: flow.description || '',
-          trigger: triggers,
-          action: actionSequence,
+          triggers: triggers,
+          actions: actionSequence,
           mode: flow.metadata?.mode ?? 'single',
         },
         warnings,
@@ -229,16 +229,7 @@ export class StateMachineStrategy extends BaseStrategy {
     return flow.nodes
       .filter((n): n is TriggerNode => n.type === 'trigger')
       .map((node) => {
-        const trigger: Record<string, unknown> = {
-          platform: node.data.platform,
-        };
-
-        const { alias, platform, ...rest } = node.data;
-        Object.assign(trigger, rest);
-
-        if (alias) {
-          trigger.alias = alias;
-        }
+        const trigger: Record<string, unknown> = { ...node.data };
 
         return Object.fromEntries(
           Object.entries(trigger).filter(([, v]) => v !== undefined && v !== '' && v !== null)
@@ -615,9 +606,8 @@ export class StateMachineStrategy extends BaseStrategy {
       waitAction.wait_template = wait_template;
     } else if (wait_for_trigger) {
       waitAction.wait_for_trigger = wait_for_trigger.map((triggerData) => {
-        const trigger = { ...triggerData };
-        // Don't include alias in the trigger definition itself
-        delete trigger.alias;
+        const { alias: _alias, ...rest } = triggerData;
+        const trigger: Record<string, unknown> = { ...rest };
         return Object.fromEntries(
           Object.entries(trigger).filter(([, v]) => v !== undefined && v !== '' && v !== null)
         );

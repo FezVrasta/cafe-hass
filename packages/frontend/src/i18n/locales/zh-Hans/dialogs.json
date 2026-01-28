@@ -48,7 +48,7 @@
   "importYaml": {
     "title": "导入YAML自动化",
     "description": "在下方粘贴您的Home Assistant自动化YAML。自动化可以是标准格式或状态机格式。",
-    "placeholder": "alias: 我的自动化\\ntrigger:\\n  - platform: state\\n    entity_id: sensor.example",
+    "placeholder": "alias: 我的自动化\\ntriggers:\\n  - trigger: state\\n    entity_id: sensor.example",
     "importFailed": "导入失败",
     "warnings": "警告",
     "successLoading": "导入成功！正在加载流程...",

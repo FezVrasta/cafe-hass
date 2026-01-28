@@ -28,22 +28,22 @@ interface TriggerFieldsProps {
  */
 export function TriggerFields({ node, onChange, entities }: TriggerFieldsProps) {
   const { t } = useTranslation(['nodes']);
-  const platform = getNodeDataString(node, 'platform', 'state');
+  const triggerType = getNodeDataString(node, 'trigger', 'state');
   const deviceId = getNodeDataString(node, 'device_id');
 
-  // If we have a device_id but platform isn't 'device', auto-correct it
-  const effectivePlatform = deviceId && platform !== 'device' ? 'device' : platform;
+  // If we have a device_id but trigger isn't 'device', auto-correct it
+  const effectiveTriggerType = deviceId && triggerType !== 'device' ? 'device' : triggerType;
 
-  // Auto-correct platform to 'device' if we detected device_id but platform is wrong
+  // Auto-correct trigger to 'device' if we detected device_id but trigger type is wrong
   useEffect(() => {
-    if (deviceId && platform !== 'device') {
-      onChange('platform', 'device');
+    if (deviceId && triggerType !== 'device') {
+      onChange('trigger', 'device');
     }
-  }, [deviceId, platform, onChange]);
+  }, [deviceId, triggerType, onChange]);
 
-  const handlePlatformChange = (newPlatform: string) => {
-    // Get defaults for the new platform (includes platform field and any field defaults)
-    const defaults = getTriggerDefaults(newPlatform as TriggerPlatform);
+  const handleTriggerTypeChange = (newTriggerType: string) => {
+    // Get defaults for the new trigger type (includes trigger field and any field defaults)
+    const defaults = getTriggerDefaults(newTriggerType as TriggerPlatform);
 
     // Apply all defaults
     for (const [key, value] of Object.entries(defaults)) {
@@ -51,7 +51,7 @@ export function TriggerFields({ node, onChange, entities }: TriggerFieldsProps) 
     }
 
     // If switching away from device, clear device_id
-    if (newPlatform !== 'device' && deviceId) {
+    if (newTriggerType !== 'device' && deviceId) {
       onChange('device_id', undefined);
     }
   };
@@ -59,7 +59,7 @@ export function TriggerFields({ node, onChange, entities }: TriggerFieldsProps) 
   return (
     <>
       <FormField label={t('nodes:triggers.platformLabel')} required>
-        <Select value={effectivePlatform} onValueChange={handlePlatformChange}>
+        <Select value={effectiveTriggerType} onValueChange={handleTriggerTypeChange}>
           <SelectTrigger>
             <SelectValue />
           </SelectTrigger>
@@ -86,16 +86,15 @@ export function TriggerFields({ node, onChange, entities }: TriggerFieldsProps) 
         </Select>
       </FormField>
 
-      {/* Dynamic fields based on platform */}
+      {/* Dynamic fields based on trigger type */}
       {(() => {
         // Device triggers use API-driven fields
-        // Check for both platform === 'device' OR presence of device_id (in case platform gets corrupted)
-        if (effectivePlatform === 'device' || deviceId) {
+        if (effectiveTriggerType === 'device' || deviceId) {
           return <DeviceTriggerFields node={node} onChange={onChange} entities={entities} />;
         }
 
-        // Other platforms use static field configuration
-        const fields = getTriggerFields(effectivePlatform as TriggerPlatform);
+        // Other trigger types use static field configuration
+        const fields = getTriggerFields(effectiveTriggerType as TriggerPlatform);
         return fields.map((field) => (
           <DynamicFieldRenderer
             key={field.name}

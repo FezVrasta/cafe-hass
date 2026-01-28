@@ -86,8 +86,8 @@ export class NativeStrategy extends BaseStrategy {
     const automation: Record<string, unknown> = {
       alias: flow.name,
       description: flow.description || '',
-      trigger: triggers,
-      action: actions,
+      triggers: triggers,
+      actions: actions,
       mode: flow.metadata?.mode ?? 'single',
     };
 
@@ -174,17 +174,7 @@ export class NativeStrategy extends BaseStrategy {
    * Build a single trigger configuration
    */
   private buildTrigger(node: TriggerNode): Record<string, unknown> {
-    // Start with all the original data
     const trigger: Record<string, unknown> = { ...node.data };
-
-    // Ensure platform is set (this might have been derived during import)
-    if (!trigger.platform && trigger.trigger) {
-      trigger.platform = trigger.trigger as string;
-    } else if (!trigger.platform && trigger.domain) {
-      trigger.platform = trigger.domain as string;
-    } else if (!trigger.platform) {
-      trigger.platform = 'device';
-    }
 
     // Clean up undefined/empty values
     return Object.fromEntries(
@@ -840,9 +830,7 @@ export class NativeStrategy extends BaseStrategy {
       wait.wait_template = wait_template;
     } else if (wait_for_trigger) {
       wait.wait_for_trigger = wait_for_trigger.map((triggerData) => {
-        const trigger = { ...triggerData };
-        // Don't include alias in the trigger definition itself
-        // delete trigger.alias;
+        const trigger: Record<string, unknown> = { ...triggerData };
         return Object.fromEntries(
           Object.entries(trigger).filter(([, v]) => v !== undefined && v !== '' && v !== null)
         );

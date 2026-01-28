@@ -36,7 +36,7 @@ export function WaitFields({ node, onChange }: WaitFieldsProps) {
       onChange('wait_template', '');
     } else {
       onChange('wait_template', undefined);
-      onChange('wait_for_trigger', [{ platform: 'state' }]);
+      onChange('wait_for_trigger', [{ trigger: 'state' }]);
     }
   };
 
@@ -48,7 +48,7 @@ export function WaitFields({ node, onChange }: WaitFieldsProps) {
   };
 
   const addTrigger = () => {
-    const newTriggers = [...(waitForTrigger || []), { platform: 'state' }];
+    const newTriggers = [...(waitForTrigger || []), { trigger: 'state' }];
     onChange('wait_for_trigger', newTriggers);
   };
 
@@ -96,7 +96,7 @@ export function WaitFields({ node, onChange }: WaitFieldsProps) {
               <div key={index} className="space-y-3 rounded-md border p-3">
                 <div className="flex items-center justify-between">
                   <p className="font-semibold text-sm capitalize">
-                    {t('nodes:wait.triggerLabel', { index: index + 1, platform: trigger.platform })}
+                    {t('nodes:wait.triggerLabel', { index: index + 1, platform: trigger.trigger })}
                   </p>
                   <Button
                     variant="ghost"
@@ -109,8 +109,8 @@ export function WaitFields({ node, onChange }: WaitFieldsProps) {
                 </div>
                 <FormField label={t('nodes:wait.triggerPlatformLabel', 'Platform')}>
                   <Select
-                    value={trigger.platform}
-                    onValueChange={(p) => handleTriggerChange(index, 'platform', p)}
+                    value={trigger.trigger}
+                    onValueChange={(p) => handleTriggerChange(index, 'trigger', p)}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -125,7 +125,7 @@ export function WaitFields({ node, onChange }: WaitFieldsProps) {
                   </Select>
                 </FormField>
 
-                {getTriggerFields(trigger.platform as TriggerPlatform).map((field) => (
+                {getTriggerFields(trigger.trigger as TriggerPlatform).map((field) => (
                   <DynamicFieldRenderer
                     key={field.name}
                     field={field}

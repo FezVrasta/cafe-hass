@@ -59,9 +59,9 @@ export function PropertyPanel() {
     const nodeData = selectedNode.data;
 
     // Check if this is a device-based node (trigger or condition with device_id)
-    const platform = typeof nodeData.platform === 'string' ? nodeData.platform : '';
+    const triggerType = typeof nodeData.trigger === 'string' ? nodeData.trigger : '';
     const deviceId = typeof nodeData.device_id === 'string' ? nodeData.device_id : '';
-    const isDeviceNode = platform === 'device' || deviceId;
+    const isDeviceNode = triggerType === 'device' || deviceId;
 
     // For device nodes, exclude ALL properties to prevent duplicates with API-driven fields
     if (isDeviceNode && (selectedNode.type === 'trigger' || selectedNode.type === 'condition')) {

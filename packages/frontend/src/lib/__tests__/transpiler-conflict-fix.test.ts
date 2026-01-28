@@ -11,15 +11,14 @@ describe('Transpiler Platform/Trigger Fix', () => {
     // Test the full cycle: HA automation -> nodes -> HA automation
     const originalAutomation = {
       alias: 'Test Round Trip',
-      triggers: [
+      trigger: [
         {
-          platform: 'state',
-          trigger: 'state', // This would cause conflicts before the fix
+          platform: 'state', // Legacy format - should be normalized to 'trigger' on parse
           entity_id: 'sensor.temperature',
           above: 25,
         },
       ],
-      actions: [
+      action: [
         {
           service: 'notify.mobile_app_my_phone',
           data: {
@@ -43,7 +42,7 @@ describe('Transpiler Platform/Trigger Fix', () => {
 
     if (triggerNode) {
       // Should preserve platform
-      expect(triggerNode.data.platform).toBe('state');
+      expect(triggerNode.data.trigger).toBe('state');
       expect(triggerNode.data.entity_id).toBe('sensor.temperature');
       expect(triggerNode.data.above).toBe(25);
     }

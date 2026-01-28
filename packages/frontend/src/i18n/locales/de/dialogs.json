@@ -48,7 +48,7 @@
   "importYaml": {
     "title": "YAML-Automatisierung importieren",
     "description": "Fügen Sie Ihre Home Assistant Automatisierungs-YAML unten ein. Die Automatisierung kann im Standardformat oder Zustandsautomatenformat sein.",
-    "placeholder": "alias: Meine Automatisierung\\ntrigger:\\n  - platform: state\\n    entity_id: sensor.example",
+    "placeholder": "alias: Meine Automatisierung\\ntriggers:\\n  - trigger: state\\n    entity_id: sensor.example",
     "importFailed": "Import fehlgeschlagen",
     "warnings": "Warnungen",
     "successLoading": "Erfolgreich importiert! Lade Flow...",

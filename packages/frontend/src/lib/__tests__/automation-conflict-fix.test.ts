@@ -11,15 +11,14 @@ describe('Platform/Trigger Conflict Fix', () => {
     // Simulated HA automation config with both platform and trigger fields (this used to cause conflicts)
     const automationConfig = {
       alias: 'Test Automation',
-      triggers: [
+      trigger: [
         {
-          platform: 'state',
-          trigger: 'state', // This would cause the conflict
+          platform: 'state', // Legacy format - should be normalized to 'trigger'
           entity_id: 'sensor.temperature',
           to: 'on',
         },
       ],
-      actions: [
+      action: [
         {
           service: 'light.turn_on',
           target: {
@@ -40,7 +39,7 @@ describe('Platform/Trigger Conflict Fix', () => {
 
     if (triggerNode) {
       // Should have platform field
-      expect(triggerNode.data.platform).toBe('state');
+      expect(triggerNode.data.trigger).toBe('state');
 
       // Should still have other expected fields
       expect(triggerNode.data.entity_id).toBe('sensor.temperature');
@@ -51,14 +50,14 @@ describe('Platform/Trigger Conflict Fix', () => {
   it('should handle domain field conflicts as well', async () => {
     const automationConfig = {
       alias: 'Test Automation',
-      triggers: [
+      trigger: [
         {
-          platform: 'device',
+          trigger: 'device',
           domain: 'device', // This should also be cleaned up
           entity_id: 'binary_sensor.motion',
         },
       ],
-      actions: [
+      action: [
         {
           service: 'light.turn_on',
           target: {
@@ -75,7 +74,7 @@ describe('Platform/Trigger Conflict Fix', () => {
     const triggerNode = result.graph!.nodes.find((n) => n.type === 'trigger');
 
     if (triggerNode) {
-      expect(triggerNode.data.platform).toBe('device');
+      expect(triggerNode.data.trigger).toBe('device');
     }
   });
 });

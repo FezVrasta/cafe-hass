@@ -85,8 +85,8 @@ describe('Roundtrip Import/Export Tests', () => {
         alias: string;
         description?: string;
         mode: string;
-        trigger: unknown[];
-        action: unknown[];
+        triggers: unknown[];
+        actions: unknown[];
         [key: string]: unknown;
       }
 
@@ -103,9 +103,9 @@ describe('Roundtrip Import/Export Tests', () => {
 
       // Step 5: Trigger validation
       if (originalConfig.trigger || originalConfig.triggers) {
-        expect(generatedConfig.trigger).toBeDefined();
-        expect(Array.isArray(generatedConfig.trigger)).toBe(true);
-        expect(generatedConfig.trigger.length).toBeGreaterThan(0);
+        expect(generatedConfig.triggers).toBeDefined();
+        expect(Array.isArray(generatedConfig.triggers)).toBe(true);
+        expect(generatedConfig.triggers.length).toBeGreaterThan(0);
 
         const originalTriggers = Array.isArray(originalConfig.trigger)
           ? originalConfig.trigger
@@ -113,13 +113,13 @@ describe('Roundtrip Import/Export Tests', () => {
             ? originalConfig.triggers
             : [originalConfig.trigger || originalConfig.triggers];
 
-        expect(generatedConfig.trigger.length).toBe(originalTriggers.length);
+        expect(generatedConfig.triggers.length).toBe(originalTriggers.length);
 
         // Validate each trigger has essential properties
-        generatedConfig.trigger.forEach((trigger: unknown, index: number) => {
+        generatedConfig.triggers.forEach((trigger: unknown, index: number) => {
           const triggerObj = trigger as Record<string, unknown>;
           const originalTrigger = originalTriggers[index] as Record<string, unknown>;
-          expect(triggerObj.platform).toBeDefined();
+          expect(triggerObj.trigger).toBeDefined();
 
           // Validate core trigger properties are preserved
           if (originalTrigger.entity_id)
@@ -147,13 +147,13 @@ describe('Roundtrip Import/Export Tests', () => {
 
       // Step 7: Action validation
       if (originalConfig.action || originalConfig.actions) {
-        expect(generatedConfig.action).toBeDefined();
-        expect(Array.isArray(generatedConfig.action)).toBe(true);
-        expect(generatedConfig.action.length).toBeGreaterThan(0);
+        expect(generatedConfig.actions).toBeDefined();
+        expect(Array.isArray(generatedConfig.actions)).toBe(true);
+        expect(generatedConfig.actions.length).toBeGreaterThan(0);
 
         // Validate action structure preservation
-        if (Array.isArray(generatedConfig.action)) {
-          generatedConfig.action.forEach((action: unknown, actionIndex: number) => {
+        if (Array.isArray(generatedConfig.actions)) {
+          generatedConfig.actions.forEach((action: unknown, actionIndex: number) => {
             expect(action).toBeDefined();
             // Action should have valid action/control flow properties
 
