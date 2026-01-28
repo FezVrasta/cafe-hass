@@ -12,13 +12,13 @@ describe('Divergent Trigger Paths', () => {
           id: 'trigger_0',
           type: 'trigger',
           position: { x: 0, y: 0 },
-          data: { platform: 'time', at: '21:00:00' },
+          data: { trigger: 'time', at: '21:00:00' },
         },
         {
           id: 'trigger_1',
           type: 'trigger',
           position: { x: 0, y: 100 },
-          data: { platform: 'time', at: '07:00:00' },
+          data: { trigger: 'time', at: '07:00:00' },
         },
         {
           id: 'action_0',

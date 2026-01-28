@@ -17,7 +17,7 @@ describe('Metadata Persistence', () => {
           type: 'trigger',
           position: { x: 0, y: 0 },
           data: {
-            platform: 'state',
+            trigger: 'state',
             entity_id: ['sensor.one', 'sensor.two'],
           },
         },
@@ -82,7 +82,7 @@ describe('Metadata Persistence', () => {
             type: 'trigger',
             position: { x: 100, y: 50 },
             data: {
-              platform: 'state',
+              trigger: 'state',
               entity_id: 'light.living_room',
               to: 'on',
             },
@@ -152,7 +152,7 @@ describe('Metadata Persistence', () => {
             id: 'custom-trigger-id',
             type: 'trigger',
             position: { x: 0, y: 0 },
-            data: { platform: 'time', at: '12:00:00' },
+            data: { trigger: 'time', at: '12:00:00' },
           },
           {
             id: 'custom-action-id',
@@ -185,7 +185,7 @@ describe('Metadata Persistence', () => {
             id: 'trigger-1',
             type: 'trigger',
             position: { x: 50, y: 50 },
-            data: { platform: 'state', entity_id: 'sensor.temperature' },
+            data: { trigger: 'state', entity_id: 'sensor.temperature' },
           },
         ],
         edges: [],
@@ -215,7 +215,7 @@ describe('Metadata Persistence', () => {
             type: 'trigger',
             position: { x: 255, y: 60 },
             data: {
-              platform: 'state',
+              trigger: 'state',
               entity_id: 'alarm_control_panel.allarme',
             },
           },
@@ -280,7 +280,7 @@ describe('Metadata Persistence', () => {
             id: 'trigger-1',
             type: 'trigger',
             position: { x: 100, y: 100 },
-            data: { platform: 'state', entity_id: 'input_boolean.test' },
+            data: { trigger: 'state', entity_id: 'input_boolean.test' },
           },
           {
             id: 'action-1',
@@ -324,7 +324,7 @@ describe('Metadata Persistence', () => {
             id: 'trigger-sm',
             type: 'trigger',
             position: { x: 250, y: 100 },
-            data: { platform: 'state', entity_id: 'switch.test' },
+            data: { trigger: 'state', entity_id: 'switch.test' },
           },
           {
             id: 'action-sm-1',
@@ -435,7 +435,7 @@ mode: single
             id: 'trigger-1',
             type: 'trigger',
             position: { x: 100, y: 100 },
-            data: { platform: 'state', entity_id: 'sensor.door' },
+            data: { trigger: 'state', entity_id: 'sensor.door' },
           },
           {
             id: 'condition-1',
@@ -488,7 +488,7 @@ mode: single
             id: 'trigger-1',
             type: 'trigger',
             position: { x: 0, y: 0 },
-            data: { platform: 'state', entity_id: 'input_boolean.test' },
+            data: { trigger: 'state', entity_id: 'input_boolean.test' },
           },
           {
             id: 'delay-1',
@@ -531,7 +531,7 @@ mode: single
             id: 'trigger-1',
             type: 'trigger',
             position: { x: 0, y: 0 },
-            data: { platform: 'time', at: '09:00:00' },
+            data: { trigger: 'time', at: '09:00:00' },
           },
         ],
         edges: [],
@@ -556,7 +556,7 @@ mode: single
             id: 'trigger-1',
             type: 'trigger',
             position: { x: 9999, y: 8888 },
-            data: { platform: 'state', entity_id: 'sensor.test' },
+            data: { trigger: 'state', entity_id: 'sensor.test' },
           },
         ],
         edges: [],
@@ -581,7 +581,7 @@ mode: single
             id: 'trigger_with_underscores_123',
             type: 'trigger',
             position: { x: 50, y: 50 },
-            data: { platform: 'state', entity_id: 'sensor.test' },
+            data: { trigger: 'state', entity_id: 'sensor.test' },
           },
           {
             id: 'action-with-dashes-456',
@@ -670,7 +670,7 @@ mode: single
             id: 'trigger-1',
             type: 'trigger',
             position: { x: 0, y: 0 },
-            data: { platform: 'state', entity_id: 'sensor.test' },
+            data: { trigger: 'state', entity_id: 'sensor.test' },
           },
         ],
         edges: [],
@@ -693,7 +693,7 @@ mode: single
             id: 'trigger-1',
             type: 'trigger',
             position: { x: 0, y: 0 },
-            data: { platform: 'state', entity_id: 'sensor.test' },
+            data: { trigger: 'state', entity_id: 'sensor.test' },
           },
           {
             id: 'action-1',
@@ -734,7 +734,7 @@ mode: single
             type: 'trigger',
             position: { x: 270, y: 60 },
             data: {
-              platform: 'state',
+              trigger: 'state',
               entity_id: 'alarm_control_panel.allarme',
             },
           },
@@ -809,7 +809,7 @@ mode: single
             type: 'trigger',
             position: { x: 105, y: -10 },
             data: {
-              platform: 'state',
+              trigger: 'state',
               entity_id: '',
             },
           },

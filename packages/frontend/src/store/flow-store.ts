@@ -24,7 +24,7 @@ import { cafeIndexedDBStorage } from '@/utils/indexeddb-storage';
 
 export interface TriggerNodeData {
   alias?: string;
-  platform: string;
+  trigger: string;
   entity_id?: string | string[];
   to?: string;
   from?: string;
@@ -648,11 +648,11 @@ export const useFlowStore = create<FlowState>()(
             const nodeData = { ...n.data };
 
             // Add missing required fields for different node types
-            if (n.type === 'trigger' && !nodeData.platform) {
+            if (n.type === 'trigger' && !nodeData.trigger) {
               console.warn(
-                `C.A.F.E.: Trigger node ${n.id} missing platform, adding default 'state'`
+                `C.A.F.E.: Trigger node ${n.id} missing trigger type, adding default 'state'`
               );
-              nodeData.platform = 'state';
+              nodeData.trigger = 'state';
             }
 
             if (n.type === 'action' && !nodeData.service) {

@@ -255,12 +255,12 @@ action:
     expect(waitData.timeout).toBe('00:00:10');
 
     const firstTrigger = waitData.wait_for_trigger[0];
-    expect(firstTrigger.platform).toBe('state');
+    expect(firstTrigger.trigger).toBe('state');
     expect(firstTrigger.entity_id).toBe('binary_sensor.door');
     expect(firstTrigger.to).toBe('on');
 
     const secondTrigger = waitData.wait_for_trigger[1];
-    expect(secondTrigger.platform).toBe('event');
+    expect(secondTrigger.trigger).toBe('event');
     expect(secondTrigger.event_type).toBe('my_custom_event');
   });
 });

@@ -24,7 +24,7 @@ describe('Nested Conditions', () => {
           id: 'trigger',
           type: 'trigger',
           position: { x: 0, y: 0 },
-          data: { platform: 'state', entity_id: 'binary_sensor.motion' },
+          data: { trigger: 'state', entity_id: 'binary_sensor.motion' },
         },
         {
           id: 'cond1',
@@ -92,7 +92,7 @@ describe('Nested Conditions', () => {
           id: 'trigger',
           type: 'trigger',
           position: { x: 0, y: 0 },
-          data: { platform: 'state', entity_id: 'binary_sensor.motion' },
+          data: { trigger: 'state', entity_id: 'binary_sensor.motion' },
         },
         {
           id: 'cond1',
@@ -161,7 +161,7 @@ describe('Nested Conditions', () => {
           id: 'trigger',
           type: 'trigger',
           position: { x: 0, y: 0 },
-          data: { platform: 'state', entity_id: 'binary_sensor.motion' },
+          data: { trigger: 'state', entity_id: 'binary_sensor.motion' },
         },
         {
           id: 'cond1',
@@ -215,7 +215,7 @@ describe('Nested Conditions', () => {
           id: 'trigger',
           type: 'trigger',
           position: { x: 0, y: 0 },
-          data: { platform: 'state', entity_id: 'binary_sensor.motion' },
+          data: { trigger: 'state', entity_id: 'binary_sensor.motion' },
         },
         {
           id: 'cond1',
@@ -277,7 +277,7 @@ describe('Nested Conditions', () => {
           id: 'trigger',
           type: 'trigger',
           position: { x: 0, y: 0 },
-          data: { platform: 'state', entity_id: 'binary_sensor.motion' },
+          data: { trigger: 'state', entity_id: 'binary_sensor.motion' },
         },
         {
           id: 'cond1',
@@ -343,7 +343,7 @@ describe('Nested Conditions', () => {
           id: 'trigger',
           type: 'trigger',
           position: { x: 0, y: 0 },
-          data: { platform: 'state', entity_id: 'binary_sensor.motion' },
+          data: { trigger: 'state', entity_id: 'binary_sensor.motion' },
         },
         {
           id: 'cond1',
@@ -400,7 +400,7 @@ describe('Nested Conditions', () => {
           id: 'trigger',
           type: 'trigger',
           position: { x: 0, y: 0 },
-          data: { platform: 'state', entity_id: 'binary_sensor.motion' },
+          data: { trigger: 'state', entity_id: 'binary_sensor.motion' },
         },
         {
           id: 'cond1',
@@ -464,7 +464,7 @@ describe('Nested Conditions', () => {
           id: 'trigger',
           type: 'trigger',
           position: { x: 0, y: 0 },
-          data: { platform: 'state', entity_id: 'binary_sensor.motion' },
+          data: { trigger: 'state', entity_id: 'binary_sensor.motion' },
         },
         {
           id: 'cond1',
@@ -539,7 +539,7 @@ describe('Nested Conditions', () => {
             id: 'trigger',
             type: 'trigger',
             position: { x: 0, y: 0 },
-            data: { platform: 'state', entity_id: 'binary_sensor.motion' },
+            data: { trigger: 'state', entity_id: 'binary_sensor.motion' },
           },
           {
             id: 'cond1',
@@ -598,7 +598,7 @@ describe('Nested Conditions', () => {
             id: 'trigger',
             type: 'trigger',
             position: { x: 0, y: 0 },
-            data: { platform: 'state', entity_id: 'binary_sensor.motion' },
+            data: { trigger: 'state', entity_id: 'binary_sensor.motion' },
           },
           {
             id: 'cond1',
@@ -655,7 +655,7 @@ describe('Nested Conditions', () => {
             id: 'trigger',
             type: 'trigger',
             position: { x: 0, y: 0 },
-            data: { platform: 'state', entity_id: 'binary_sensor.motion' },
+            data: { trigger: 'state', entity_id: 'binary_sensor.motion' },
           },
           {
             id: 'cond1',
@@ -716,7 +716,7 @@ describe('Nested Conditions', () => {
             id: 'trigger',
             type: 'trigger',
             position: { x: 0, y: 0 },
-            data: { platform: 'state', entity_id: 'binary_sensor.motion' },
+            data: { trigger: 'state', entity_id: 'binary_sensor.motion' },
           },
           {
             id: 'cond1',

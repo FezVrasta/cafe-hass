@@ -3,11 +3,11 @@
 exports[`YAML round-trip (fixtures) > round-trips 01-simple-trigger-action.yaml to identical YAML 1`] = `
 "alias: Simple Light Automation
 description: Turn on light when motion detected
-trigger:
-  - platform: state
+triggers:
+  - trigger: state
     entity_id: binary_sensor.motion_sensor
     to: "on"
-action:
+actions:
   - service: light.turn_on
     target:
       entity_id: light.living_room
@@ -31,9 +31,9 @@ variables:
 exports[`YAML round-trip (fixtures) > round-trips 02-knx-complex.yaml to identical YAML 1`] = `
 "alias: KNX Night/Morning Automation
 description: Handle KNX button presses for night/morning scenes
-trigger:
+triggers:
   - alias: KNX Button Press
-    platform: device
+    trigger: device
     domain: knx
     device_id: ee504a40b987814032d9ec9c29b1a43f
     type: telegram
@@ -45,7 +45,7 @@ trigger:
     destination:
       - 2/0/11
       - 2/0/5
-action:
+actions:
   - alias: Time-based Scene Selection
     if:
       - condition: or
@@ -92,12 +92,12 @@ variables:
 exports[`YAML round-trip (fixtures) > round-trips 03-multiple-conditions.yaml to identical YAML 1`] = `
 "alias: Movie Mode Automation
 description: Close covers when movie starts with proper conditions
-trigger:
-  - platform: state
+triggers:
+  - trigger: state
     entity_id: media_player.tv
     to: playing
     for: "00:00:05"
-action:
+actions:
   - variables:
       current_node: condition_test_1_143
       flow_context: {}
@@ -206,11 +206,11 @@ variables:
 exports[`YAML round-trip (fixtures) > round-trips 04-choose-with-default.yaml to identical YAML 1`] = `
 "alias: Climate Control Based on Presence
 description: Adjust temperature based on occupancy and time
-trigger:
-  - platform: state
+triggers:
+  - trigger: state
     entity_id: binary_sensor.occupancy
     for: "00:05:00"
-action:
+actions:
   - if:
       - condition: and
         conditions:
@@ -279,11 +279,11 @@ variables:
 exports[`YAML round-trip (fixtures) > round-trips 05-delays-and-waits.yaml to identical YAML 1`] = `
 "alias: Security Light Sequence
 description: Automated security light sequence with delays
-trigger:
-  - platform: state
+triggers:
+  - trigger: state
     entity_id: binary_sensor.motion_detector
     to: "on"
-action:
+actions:
   - service: light.turn_on
     target:
       entity_id: light.security_light
@@ -336,17 +336,17 @@ variables:
 exports[`YAML round-trip (fixtures) > round-trips 06-multiple-triggers.yaml to identical YAML 1`] = `
 "alias: Multi-trigger Door Bell
 description: Ring doorbell from multiple input sources
-trigger:
-  - platform: state
+triggers:
+  - trigger: state
     entity_id: binary_sensor.door_button
     to: "on"
-  - platform: mqtt
+  - trigger: mqtt
     topic: doorbell/ring
-  - platform: webhook
+  - trigger: webhook
     webhook_id: doorbell_webhook
-  - platform: time
+  - trigger: time
     at: "12:00:00"
-action:
+actions:
   - service: media_player.play_media
     target:
       entity_id: media_player.speakers
@@ -390,8 +390,8 @@ variables:
 exports[`YAML round-trip (fixtures) > round-trips 07-adaptive-lighting-complex.yaml to identical YAML 1`] = `
 "alias: Adaptive Lighting Quando Accendo Luci
 description: ""
-trigger:
-  - platform: device
+triggers:
+  - trigger: device
     domain: knx
     device_id: ee504a40b987814032d9ec9c29b1a43f
     type: telegram
@@ -407,7 +407,7 @@ trigger:
       - 0/0/142
       - 0/0/248
       - 0/0/1
-action:
+actions:
   - variables:
       current_node: condition_test_1_107
       flow_context: {}
@@ -643,11 +643,11 @@ variables:
 exports[`YAML round-trip (fixtures) > round-trips 08-sm-simple-cafe.yaml to identical YAML 1`] = `
 "alias: CAFE
 description: ""
-trigger:
+triggers:
   - alias: Trigger 1
-    platform: state
+    trigger: state
     entity_id: alarm_control_panel.allarme
-action:
+actions:
   - alias: "Action: light.turn_on"
     service: light.turn_on
     target:
@@ -673,23 +673,23 @@ variables:
 exports[`YAML round-trip (fixtures) > round-trips 09-templates.yaml to identical YAML 1`] = `
 "alias: "DHW: Smart Arrival (Maria)"
 description: "Arrival: Heats if cold (after 5h away). Departure: Turns OFF (only if warm)."
-trigger:
-  - platform: zone
+triggers:
+  - trigger: zone
     entity_id: person.maria
     zone: zone.city_limits
     event: enter
     id: arriving
-  - platform: zone
+  - trigger: zone
     entity_id: person.maria
     zone: zone.city_limits
     event: leave
     id: leaving
-  - platform: numeric_state
+  - trigger: numeric_state
     entity_id: water_heater.altherma
     above: 33
     attribute: current_temperature
     id: temp_limit_reached
-action:
+actions:
   - if:
       - condition: trigger
         id: arriving
@@ -792,14 +792,14 @@ exports[`YAML round-trip (fixtures) > round-trips 10-multiple-entity-ids.yaml to
 description: |-
   Sets Movie Lights when Playing, Turns on Couch Light when Paused after sunset.
   Includes a 2-second delay for scrubbing and smooth dimming transitions.
-trigger:
-  - platform: state
+triggers:
+  - trigger: state
     entity_id:
       - media_player.v3plus
       - media_player.shield
     to: playing
     id: playing
-  - platform: state
+  - trigger: state
     entity_id:
       - media_player.v3plus
       - media_player.shield
@@ -807,7 +807,7 @@ trigger:
     for:
       seconds: 2
     id: paused
-action:
+actions:
   - if:
       - condition: sun
         after: sunset
@@ -872,10 +872,10 @@ variables:
 exports[`YAML round-trip (fixtures) > round-trips 11-sm-basic-cafe.yaml to identical YAML 1`] = `
 "alias: Position Test
 description: ""
-trigger:
-  - platform: state
+triggers:
+  - trigger: state
     entity_id: switch.test
-action:
+actions:
   - variables:
       current_node: action-sm-1
       flow_context: {}
@@ -930,32 +930,32 @@ variables:
 exports[`YAML round-trip (fixtures) > round-trips 12-maya.yaml to identical YAML 1`] = `
 "alias: Reset timer Maya se armadio chiuso → porta aperta → porta riaperta → armadio riaperto
 description: ""
-trigger:
-  - platform: state
+triggers:
+  - trigger: state
     entity_id: binary_sensor.armadio_cappotti_soggiorno
     to: "off"
-action:
+actions:
   - if:
       - condition: state
         entity_id: input_boolean.periodo_giorno
         state: "on"
     then:
       - wait_for_trigger:
-          - platform: state
+          - trigger: state
             entity_id: binary_sensor.porta_blindata
             from: "on"
             to: "off"
         timeout: "00:00:30"
         continue_on_timeout: false
       - wait_for_trigger:
-          - platform: state
+          - trigger: state
             entity_id: binary_sensor.porta_blindata
             from: "off"
             to: "on"
         timeout: "00:15:00"
         continue_on_timeout: false
       - wait_for_trigger:
-          - platform: state
+          - trigger: state
             entity_id: binary_sensor.armadio_cappotti_soggiorno
             to: "on"
         timeout: "00:00:30"
@@ -996,29 +996,29 @@ variables:
 exports[`YAML round-trip (fixtures) > round-trips 13-many-sequences.yaml to identical YAML 1`] = `
 "alias: ensuite fan dupe
 description: ""
-trigger:
-  - platform: time
+triggers:
+  - trigger: time
     at: "21:00:00"
     id: NightOff
-  - platform: state
+  - trigger: state
     entity_id:
       - light.ensuite
     to:
       - "on"
     id: light-toggled-on
-  - platform: state
+  - trigger: state
     entity_id:
       - light.ensuite
     to:
       - "off"
     id: light-toggled-off
-  - platform: state
+  - trigger: state
     entity_id:
       - switch.ensuite_fan_boost
     to:
       - "off"
     id: fan-switch-toggled-off
-action:
+actions:
   - alias: Off at night
     if:
       - condition: trigger
@@ -1032,7 +1032,7 @@ action:
               - "on"
         then:
           - wait_for_trigger:
-              - platform: state
+              - trigger: state
                 entity_id:
                   - switch.ensuite
                 to:
@@ -1194,8 +1194,8 @@ variables:
 exports[`YAML round-trip (fixtures) > round-trips 14-washingmachine.yaml to identical YAML 1`] = `
 "alias: Verzend bericht indien wasmachine gereed
 description: Stuur melding zodra wasmachine gereed is
-trigger:
-  - platform: numeric_state
+triggers:
+  - trigger: numeric_state
     entity_id:
       - sensor.noord_wasplaats_vermogen_wasmachine
     for:
@@ -1204,7 +1204,7 @@ trigger:
       seconds: 0
     above: 10
     id: machine_on
-  - platform: numeric_state
+  - trigger: numeric_state
     entity_id:
       - sensor.noord_wasplaats_vermogen_wasmachine
     for:
@@ -1213,7 +1213,7 @@ trigger:
       seconds: 0
     below: 2
     id: machine_off
-action:
+actions:
   - if:
       - condition: trigger
         id: machine_on
@@ -1308,14 +1308,14 @@ variables:
 exports[`YAML round-trip (fixtures) > round-trips 15-open-ccu.yaml to identical YAML 1`] = `
 "alias: Zapfenstreich Automatisierung
 description: ""
-trigger:
-  - platform: state
+triggers:
+  - trigger: state
     entity_id:
       - input_boolean.zapfenstreich
     from: "off"
     to: "on"
     id: ZapfenstreichAn
-action:
+actions:
   - if:
       - condition: and
         conditions:
@@ -1427,13 +1427,13 @@ variables:
 exports[`YAML round-trip (fixtures) > round-trips 16-paperless.yaml to identical YAML 1`] = `
 "alias: Paperless AI - Auto Shutdown After 4 Hours
 description: Automatically shutdown Paperless AI container after 4 hours of runtime
-trigger:
-  - platform: state
+triggers:
+  - trigger: state
     entity_id: binary_sensor.lxc_paperless_ai_209_status
     to: "on"
     for:
       hours: 4
-action:
+actions:
   - if:
       - condition: state
         entity_id: binary_sensor.lxc_paperless_ai_209_status
@@ -1487,14 +1487,14 @@ variables:
 exports[`YAML round-trip (fixtures) > round-trips 17-nested-condition.yaml to identical YAML 1`] = `
 "alias: "Auto light TV : Handle supposed state"
 description: ""
-trigger:
-  - platform: state
+triggers:
+  - trigger: state
     entity_id:
       - binary_sensor.xxx_presence_sensor
     to:
       - "on"
     id: Occupancy detected
-  - platform: state
+  - trigger: state
     entity_id:
       - binary_sensor.xxx_presence_sensor
     to:
@@ -1504,17 +1504,17 @@ trigger:
       minutes: 0
       seconds: 30
     id: Occupancy clear for x
-  - platform: numeric_state
+  - trigger: numeric_state
     entity_id:
       - sensor.xxx_light_level
     below: 60
     id: Illuminance below
-  - platform: numeric_state
+  - trigger: numeric_state
     entity_id:
       - sensor.xxx_light_level
     above: 90
     id: Illuminance above
-action:
+actions:
   - if:
       - condition: or
         conditions:
@@ -1584,8 +1584,8 @@ variables:
 exports[`YAML round-trip (fixtures) > round-trips 18-sensor-trigger.yaml to identical YAML 1`] = `
 "alias: Kitchen.Freezer_Temp.Automation
 description: ""
-trigger:
-  - platform: device
+triggers:
+  - trigger: device
     entity_id: 05dfa830b43a4f97adfb34a06c2bce50
     for:
       hours: 0
@@ -1595,7 +1595,7 @@ trigger:
     device_id: 7239e87f810ebbd9be93fe71f3977211
     domain: sensor
     type: temperature
-action:
+actions:
   - service: notify.e_mail
     data:
       message: The Freezer in the Kitchen is Open!
@@ -1620,10 +1620,10 @@ variables:
 exports[`YAML round-trip (fixtures) > round-trips 19-nested-condition.yaml to identical YAML 1`] = `
 "alias: Weekly Full Backup
 description: Weekly Full Backup
-trigger:
-  - platform: time
+triggers:
+  - trigger: time
     at: "03:00:00"
-action:
+actions:
   - if:
       - condition: and
         conditions:
@@ -1658,14 +1658,14 @@ variables:
 exports[`YAML round-trip (fixtures) > round-trips 20-select.yaml to identical YAML 1`] = `
 "alias: Fox batteries to Self Use CAFE TEST
 description: ""
-trigger:
-  - platform: device
+triggers:
+  - trigger: device
     entity_id: sensor.myenergi_mg_charger_power_charging
     below: 1450
     type: power
     device_id: 668ca38238b4ea09a8c51fa4d4f45e7c
     domain: sensor
-action:
+actions:
   - if:
       - condition: time
         enabled: false
@@ -1709,12 +1709,12 @@ variables:
 exports[`YAML round-trip (fixtures) > round-trips 21-trigger-to-null.yaml to identical YAML 1`] = `
 "alias: HVAC - climate set
 description: ""
-trigger:
-  - platform: state
+triggers:
+  - trigger: state
     entity_id:
       - climate.CLIMATE_ENTITY
     from: "off"
-action:
+actions:
   - delay:
       hours: 0
       minutes: 0
@@ -1740,13 +1740,13 @@ variables:
 exports[`YAML round-trip (fixtures) > round-trips 22-trigger-target-array.yaml to identical YAML 1`] = `
 "alias: Import Test
 description: ""
-trigger:
-  - platform: light.turned_off
+triggers:
+  - trigger: light.turned_off
     target:
       entity_id: light.bathroom_vanity
     options:
       behavior: any
-action:
+actions:
   - metadata: {}
     service: light.turn_on
     target:
@@ -1772,13 +1772,13 @@ variables:
 exports[`YAML round-trip (fixtures) > round-trips 23-trigger-commands-array.yaml to identical YAML 1`] = `
 "alias: Voice Command/Vacuum Robot
 description: ""
-trigger:
-  - platform: conversation
+triggers:
+  - trigger: conversation
     command:
       - vacuum the house
       - clean up please
       - vacuum the main floor
-action:
+actions:
   - metadata: {}
     service: mqtt.publish
     data:
@@ -1811,14 +1811,14 @@ variables:
 exports[`YAML round-trip (fixtures) > round-trips 24-disabled-choose.yaml to identical YAML 1`] = `
 "alias: Command - Sofabaton Dispatcher
 description: Triggers actions based on URL query parameters and passes control to the Command Router.
-trigger:
-  - platform: webhook
+triggers:
+  - trigger: webhook
     webhook_id: sofabaton_webkook
     allowed_methods:
       - GET
       - POST
     local_only: true
-action:
+actions:
   - variables:
       action_type: "{{ trigger.query.action | lower | default(none) }}"
       action_value: "{{ trigger.query.value | default(none) }}"

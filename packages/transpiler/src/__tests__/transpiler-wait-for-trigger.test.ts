@@ -15,7 +15,7 @@ describe('FlowTranspiler', () => {
           id: 'trigger-1',
           type: 'trigger',
           position: { x: 0, y: 0 },
-          data: { platform: 'state', entity_id: 'input_boolean.test' },
+          data: { trigger: 'state', entity_id: 'input_boolean.test' },
         },
         {
           id: 'wait-1',
@@ -23,8 +23,8 @@ describe('FlowTranspiler', () => {
           position: { x: 200, y: 0 },
           data: {
             wait_for_trigger: [
-              { platform: 'state', entity_id: 'binary_sensor.door', to: 'on' },
-              { platform: 'event', event_type: 'my_event' },
+              { trigger: 'state', entity_id: 'binary_sensor.door', to: 'on' },
+              { trigger: 'event', event_type: 'my_event' },
             ],
             timeout: '00:00:30',
           },
@@ -55,17 +55,17 @@ describe('FlowTranspiler', () => {
 
     const parsedYaml = yamlLoad(result.yaml!) as any;
 
-    const waitAction = parsedYaml.action[0];
+    const waitAction = parsedYaml.actions[0];
     expect(waitAction.wait_for_trigger).toBeDefined();
     expect(waitAction.wait_for_trigger.length).toBe(2);
     expect(waitAction.timeout).toBe('00:00:30');
 
     const firstTrigger = waitAction.wait_for_trigger[0];
-    expect(firstTrigger.platform).toBe('state');
+    expect(firstTrigger.trigger).toBe('state');
     expect(firstTrigger.entity_id).toBe('binary_sensor.door');
 
     const secondTrigger = waitAction.wait_for_trigger[1];
-    expect(secondTrigger.platform).toBe('event');
+    expect(secondTrigger.trigger).toBe('event');
     expect(secondTrigger.event_type).toBe('my_event');
   });
 });

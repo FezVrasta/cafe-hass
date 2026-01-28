@@ -10,7 +10,7 @@ describe('Position Restoration', () => {
       trigger: [
         {
           alias: 'Trigger 1',
-          platform: 'state',
+          trigger: 'state',
           entity_id: 'alarm_control_panel.allarme',
         },
       ],
@@ -74,7 +74,7 @@ describe('Position Restoration', () => {
   it('should handle missing metadata gracefully', async () => {
     const automationConfigWithoutMetadata = {
       alias: 'Simple Automation',
-      trigger: [{ platform: 'state', entity_id: 'sensor.test' }],
+      trigger: [{ trigger: 'state', entity_id: 'sensor.test' }],
       action: [{ service: 'light.turn_on', entity_id: 'light.test' }],
       mode: 'single',
     };

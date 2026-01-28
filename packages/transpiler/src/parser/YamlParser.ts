@@ -2040,7 +2040,7 @@ export class YamlParser {
       type: 'action',
       position: { x: 0, y: 0 },
       data: {
-        alias: `Unknown: ${data?.service || data?.platform || 'Node'}`,
+        alias: `Unknown: ${data?.service || data?.trigger || 'Node'}`,
         service: (data?.service as string) || 'unknown.unknown',
         data: data as Record<string, unknown> | undefined,
       },

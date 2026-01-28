@@ -16,7 +16,7 @@ export const TriggerNode = memo(function TriggerNode({ id, data, selected }: Tri
   const stepNumber = getExecutionStepNumber(id);
   const isDisabled = data.enabled === false;
 
-  const platformLabels: Record<string, string> = {
+  const triggerLabels: Record<string, string> = {
     state: 'State Change',
     time: 'Time',
     time_pattern: 'Time Pattern',
@@ -31,11 +31,11 @@ export const TriggerNode = memo(function TriggerNode({ id, data, selected }: Tri
     device: 'Device',
   };
 
-  // Generate display text based on platform
+  // Generate display text based on trigger type
   const getDisplayInfo = () => {
-    const platform = data.platform;
+    const triggerType = data.trigger;
 
-    switch (platform) {
+    switch (triggerType) {
       case 'device':
         return {
           title: data.alias || 'Device Trigger',
@@ -67,42 +67,42 @@ export const TriggerNode = memo(function TriggerNode({ id, data, selected }: Tri
       case 'event':
         return {
           title: data.alias || 'Event',
-          subtitle: platformLabels[platform],
+          subtitle: triggerLabels[triggerType],
           detail: data.event_type || null,
         };
 
       case 'time':
         return {
           title: data.alias || 'Time',
-          subtitle: platformLabels[platform],
+          subtitle: triggerLabels[triggerType],
           detail: data.at || null,
         };
 
       case 'sun':
         return {
           title: data.alias || 'Sun',
-          subtitle: platformLabels[platform],
+          subtitle: triggerLabels[triggerType],
           detail: data.event ? `${data.event}${data.offset ? ` ${data.offset}` : ''}` : null,
         };
 
       case 'mqtt':
         return {
           title: data.alias || 'MQTT',
-          subtitle: platformLabels[platform],
+          subtitle: triggerLabels[triggerType],
           detail: data.topic || null,
         };
 
       case 'webhook':
         return {
           title: data.alias || 'Webhook',
-          subtitle: platformLabels[platform],
+          subtitle: triggerLabels[triggerType],
           detail: data.webhook_id || null,
         };
 
       case 'zone':
         return {
           title: data.alias || 'Zone',
-          subtitle: platformLabels[platform],
+          subtitle: triggerLabels[triggerType],
           detail:
             data.zone ||
             (Array.isArray(data.entity_id) ? data.entity_id.join(', ') : data.entity_id) ||
@@ -111,8 +111,8 @@ export const TriggerNode = memo(function TriggerNode({ id, data, selected }: Tri
 
       default:
         return {
-          title: data.alias || platformLabels[platform] || 'Trigger',
-          subtitle: platformLabels[platform] || platform,
+          title: data.alias || triggerLabels[triggerType] || 'Trigger',
+          subtitle: triggerLabels[triggerType] || triggerType,
           detail: null,
         };
     }

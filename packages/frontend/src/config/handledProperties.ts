@@ -15,8 +15,8 @@ export const HANDLED_PROPERTIES = {
 
   // Trigger properties handled by TriggerFields component
   trigger: [
-    // Platform and common trigger properties
-    'platform',
+    // Trigger type and common trigger properties
+    'trigger',
     'entity_id',
     'to',
     'from',
