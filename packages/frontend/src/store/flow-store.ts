@@ -147,6 +147,10 @@ export interface FlowState {
   // Shared simulation/trace state
   simulationSpeed: number;
 
+  // Toolbar state
+  clipboard: string | null;
+  pasteCount: number;
+
   // Actions
   setNodes: (nodes: Node<FlowNodeData>[]) => void;
   setEdges: (edges: Edge[]) => void;
@@ -162,6 +166,9 @@ export interface FlowState {
 
   setFlowName: (name: string) => void;
   setFlowDescription: (description: string) => void;
+
+  setClipboard: (data: string | null) => void;
+  setPasteCount: (count: number) => void;
 
   // Save actions
   setAutomationId: (id: string | null) => void;
@@ -217,6 +224,8 @@ const initialState = {
   traceExecutionPath: [],
   traceTimestamps: {},
   simulationSpeed: 800,
+  clipboard: null,
+  pasteCount: 0,
 };
 
 /**
@@ -305,6 +314,9 @@ export const useFlowStore = create<FlowState>()(
         })),
 
       selectNode: (nodeId) => set({ selectedNodeId: nodeId }),
+
+      setClipboard: (data: string | null) => set({ clipboard: data }),
+      setPasteCount: (count: number) => set({ pasteCount: count }),
 
       setFlowName: (name) => set({ flowName: name, hasUnsavedChanges: true }),
       setFlowDescription: (description) =>

@@ -119,5 +119,33 @@
   "deviceSelector": {
     "enterId": "手动输入设备ID",
     "noDevices": "未找到设备。请手动输入设备ID或检查您的Home Assistant连接。"
+  },
+  "toolbar": {
+    "runAction": "运行操作",
+    "cut": "剪切",
+    "copy": "复制",
+    "paste": "粘贴",
+    "duplicate": "复制",
+    "toggleEnabled": "切换启用/禁用",
+    "enable": "启用",
+    "disable": "禁用",
+    "disconnect": "断开连接",
+    "alignLeft": "左对齐",
+    "alignCenter": "居中对齐",
+    "alignRight": "右对齐",
+    "alignTop": "顶端对齐",
+    "alignBottom": "底端对齐",
+    "deleteNode": "删除节点",
+    "duplicateNode": "复制节点",
+    "selectAll": "全选"
+  },
+  "shortcuts": {
+    "ctrl": "Ctrl",
+    "shift": "Shift",
+    "alt": "Alt",
+    "arrowUp": "向上箭头",
+    "arrowDown": "向下箭头",
+    "arrowLeft": "向左箭头",
+    "arrowRight": "向右箭头"
   }
 }

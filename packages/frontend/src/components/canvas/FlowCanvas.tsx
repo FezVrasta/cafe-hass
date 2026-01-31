@@ -23,12 +23,13 @@ import {
   TriggerNode,
   WaitNode,
 } from '@/components/nodes';
-import { useCopyPaste } from '@/hooks/useCopyPaste';
+import { NodeToolbar } from '@/components/toolbar/NodeToolbar';
 import { useDarkMode } from '@/hooks/useDarkMode';
 import { generateNodeId } from '@/lib/utils';
 import { useFlowStore } from '@/store/flow-store';
 import { isMacOS } from '@/utils/useAgentPlatform';
 
+// New node types should be added here as needed!
 const nodeTypes: NodeTypes = {
   trigger: TriggerNode,
   condition: ConditionNode,
@@ -63,9 +64,7 @@ export function FlowCanvas() {
 
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const { screenToFlowPosition, setViewport } = useReactFlow();
-  const [rfInstance, setRfInstance] = useState<ReactFlowInstance | null>(null);
-  // Enable copy/paste support only inside the canvas
-  useCopyPaste(rfInstance, reactFlowWrapper);
+  const [setRfInstance] = useState<ReactFlowInstance | null>(null);
 
   // Set initial zoom level
   useEffect(() => {
@@ -269,9 +268,11 @@ export function FlowCanvas() {
           }}
         />
 
+        <NodeToolbar />
+
         {isSimulating && (
           <Panel
-            position="top-center"
+            position="top-left"
             className="rounded-lg border border-green-300 bg-green-100 px-4 py-2 dark:border-green-700 dark:bg-green-950"
           >
             <div className="flex items-center gap-2 font-medium text-green-800 text-sm dark:text-green-200">
@@ -283,7 +284,7 @@ export function FlowCanvas() {
 
         {isShowingTrace && !isSimulating && (
           <Panel
-            position="top-center"
+            position="top-left"
             className="rounded-lg border border-orange-300 bg-orange-100 px-4 py-2 dark:border-orange-700 dark:bg-orange-950"
           >
             <div className="flex items-center gap-2 font-medium text-orange-800 text-sm dark:text-orange-200">

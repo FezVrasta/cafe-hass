@@ -119,5 +119,33 @@
   "deviceSelector": {
     "enterId": "Enter device ID manually",
     "noDevices": "No devices found. Enter device ID manually or check your Home Assistant connection."
+  },
+  "toolbar": {
+    "runAction": "Run Action",
+    "cut": "Cut",
+    "copy": "Copy",
+    "paste": "Paste",
+    "duplicate": "Duplicate",
+    "toggleEnabled": "Toggle Enabled/Disabled",
+    "enable": "Enable",
+    "disable": "Disable",
+    "disconnect": "Disconnect",
+    "alignLeft": "Align Left",
+    "alignCenter": "Align Center",
+    "alignRight": "Align Right",
+    "alignTop": "Align Top",
+    "alignBottom": "Align Bottom",
+    "deleteNode": "Delete Node",
+    "duplicateNode": "Duplicate Node",
+    "selectAll": "Select All"
+  },
+  "shortcuts": {
+    "ctrl": "Ctrl",
+    "shift": "Shift",
+    "alt": "Alt",
+    "arrowUp": "Arrow Up",
+    "arrowDown": "Arrow Down",
+    "arrowLeft": "Arrow Left",
+    "arrowRight": "Arrow Right"
   }
 }
