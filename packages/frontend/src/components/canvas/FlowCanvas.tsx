@@ -12,7 +12,7 @@ import {
   ReactFlow,
   useReactFlow,
 } from '@xyflow/react';
-import { type DragEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { type DragEvent, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DeletableEdge } from '@/components/edges';
 import {
@@ -64,7 +64,7 @@ export function FlowCanvas() {
 
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const { screenToFlowPosition, setViewport } = useReactFlow();
-  const [setRfInstance] = useState<ReactFlowInstance | null>(null);
+  const rfInstanceRef = useRef<ReactFlowInstance | null>(null);
 
   // Set initial zoom level
   useEffect(() => {
@@ -204,7 +204,9 @@ export function FlowCanvas() {
   return (
     <div className="h-full w-full" ref={reactFlowWrapper}>
       <ReactFlow
-        onInit={setRfInstance}
+        onInit={(instance) => {
+          rfInstanceRef.current = instance;
+       }}
         colorMode={isDarkMode ? 'dark' : 'light'}
         nodes={nodes}
         edges={styledEdges}
