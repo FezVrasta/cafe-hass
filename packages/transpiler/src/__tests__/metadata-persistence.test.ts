@@ -363,6 +363,112 @@ describe('Metadata Persistence', () => {
       expect(action1?.position).toEqual({ x: 255, y: 240 });
       expect(action2?.position).toEqual({ x: 150, y: 405 });
     });
+
+    it('should not produce duplicate IDs when metadata has interleaved trigger/action IDs', async () => {
+      // Reproduces bug: when metadata node order is trigger, action, trigger, action
+      // the parser would assign action IDs to triggers, causing duplicates
+      const yaml = `
+alias: test
+description: ""
+trigger:
+  - platform: state
+    entity_id:
+      - binary_sensor.porte_fenetre_bureau
+    to: "on"
+  - platform: state
+    entity_id:
+      - binary_sensor.porte_fenetre_bureau
+    to: "off"
+action:
+  - variables:
+      current_node: "{% if trigger.idx == \\"0\\" %}action_1769519727281{% else %}action_1769520234571{% endif %}"
+      flow_context: {}
+  - alias: State Machine Loop
+    repeat:
+      until: "{{ current_node == \\"END\\" }}"
+      sequence:
+        - choose:
+            - conditions:
+                - condition: template
+                  value_template: "{{ current_node == \\"action_1769519727281\\" }}"
+              sequence:
+                - service: switch.turn_on
+                  target:
+                    entity_id:
+                      - switch.prise_eclairage_aquarium
+                - variables:
+                    current_node: END
+            - conditions:
+                - condition: template
+                  value_template: "{{ current_node == \\"action_1769520234571\\" }}"
+              sequence:
+                - service: switch.turn_off
+                  target:
+                    entity_id:
+                      - switch.prise_eclairage_aquarium
+                - variables:
+                    current_node: END
+          default:
+            - service: system_log.write
+              data:
+                message: "C.A.F.E.: Unknown state \\"{{ current_node }}\\", ending flow"
+                level: warning
+            - variables:
+                current_node: END
+mode: single
+variables:
+  _cafe_metadata:
+    version: 1
+    nodes:
+      trigger_1769519721851:
+        x: 285
+        "y": 30
+      action_1769519727281:
+        x: 585
+        "y": 50
+      trigger_1769520151192:
+        x: 270
+        "y": 180
+      action_1769520234571:
+        x: 600
+        "y": 165
+    graph_id: 3f94c67e-a7cf-4c66-863c-6d8f759cbcab
+    graph_version: 1
+    strategy: state-machine
+      `;
+
+      const parsed = await parser.parse(yaml);
+
+      expect(parsed.success).toBe(true);
+      expect(parsed.graph).toBeDefined();
+
+      const graph = parsed.graph!;
+      const nodeIds = graph.nodes.map((n) => n.id);
+
+      // All IDs should be unique
+      expect(new Set(nodeIds).size).toBe(nodeIds.length);
+
+      // Should have 4 nodes: 2 triggers + 2 actions
+      expect(graph.nodes).toHaveLength(4);
+
+      // Triggers should have trigger IDs, actions should have action IDs
+      const triggers = graph.nodes.filter((n) => n.type === 'trigger');
+      const actions = graph.nodes.filter((n) => n.type === 'action');
+      expect(triggers).toHaveLength(2);
+      expect(actions).toHaveLength(2);
+
+      expect(triggers.find((n) => n.id === 'trigger_1769519721851')).toBeDefined();
+      expect(triggers.find((n) => n.id === 'trigger_1769520151192')).toBeDefined();
+      expect(actions.find((n) => n.id === 'action_1769519727281')).toBeDefined();
+      expect(actions.find((n) => n.id === 'action_1769520234571')).toBeDefined();
+
+      // Positions should be preserved from metadata
+      const trigger1 = graph.nodes.find((n) => n.id === 'trigger_1769519721851')!;
+      expect(trigger1.position).toEqual({ x: 285, y: 30 });
+
+      const action1 = graph.nodes.find((n) => n.id === 'action_1769519727281')!;
+      expect(action1.position).toEqual({ x: 585, y: 50 });
+    });
   });
 
   describe('YAML without metadata', () => {

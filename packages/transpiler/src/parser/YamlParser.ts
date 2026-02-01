@@ -507,29 +507,6 @@ export class YamlParser {
   ): { nodes: FlowNode[]; edges: FlowEdge[] } {
     const nodes: FlowNode[] = [];
     const edges: FlowEdge[] = [];
-    let nodeIdIndex = 0;
-
-    // Helper to get next node ID (from metadata if available, otherwise generate)
-    const getNextNodeId = (type: string): string => {
-      if (nodeIdIndex < metadataNodeIds.length) {
-        return metadataNodeIds[nodeIdIndex++];
-      }
-      return generateNodeId(type, nodeIdIndex++);
-    };
-
-    // Parse triggers
-    const triggerData = content.triggers || content.trigger;
-    if (!triggerData) {
-      warnings.push('No triggers found in automation');
-      return { nodes, edges };
-    }
-    const triggers = Array.isArray(triggerData) ? triggerData : [triggerData];
-    const triggerNodes = this.parseTriggers(
-      triggers as Record<string, unknown>[],
-      warnings,
-      getNextNodeId
-    );
-    nodes.push(...triggerNodes);
 
     // Find the entry node and parse the state machine
     const actions = (content.actions || content.action) as unknown[];
@@ -584,6 +561,36 @@ export class YamlParser {
         }
       }
     }
+
+    // In state-machine strategy, action/condition/delay/wait node IDs are extracted
+    // directly from the Jinja2 templates in the YAML choose blocks. Only trigger
+    // node IDs need to be allocated via getNextNodeId, so we filter out IDs that
+    // are already claimed by the choose blocks to avoid assigning them to triggers.
+    const stateMachineNodeIds = new Set(nodeInfoMap.keys());
+    const triggerMetadataIds = metadataNodeIds.filter((id) => !stateMachineNodeIds.has(id));
+    let triggerIdIndex = 0;
+    let nodeIdIndex = 0;
+
+    const getNextNodeId = (type: string): string => {
+      if (triggerIdIndex < triggerMetadataIds.length) {
+        return triggerMetadataIds[triggerIdIndex++];
+      }
+      return generateNodeId(type, nodeIdIndex++);
+    };
+
+    // Parse triggers
+    const triggerData = content.triggers || content.trigger;
+    if (!triggerData) {
+      warnings.push('No triggers found in automation');
+      return { nodes, edges };
+    }
+    const triggers = Array.isArray(triggerData) ? triggerData : [triggerData];
+    const triggerNodes = this.parseTriggers(
+      triggers as Record<string, unknown>[],
+      warnings,
+      getNextNodeId
+    );
+    nodes.push(...triggerNodes);
 
     // Create nodes from parsed info
     for (const [nodeId, info] of nodeInfoMap) {
