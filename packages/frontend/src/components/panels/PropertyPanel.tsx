@@ -12,6 +12,7 @@ import { useHass } from '@/contexts/HassContext';
 import { useFlowStore } from '@/store/flow-store';
 import type { HassEntity } from '@/types/hass';
 import { Separator } from '../ui/separator';
+import { AutomationSettingsPanel } from './AutomationSettingsPanel';
 import { NodeFields } from './NodeFields';
 import { PropertyEditor } from './PropertyEditor';
 
@@ -74,9 +75,7 @@ export function PropertyPanel() {
   }, [selectedNode]);
 
   if (!selectedNode) {
-    return (
-      <div className="p-4 text-center text-slate-500 text-sm">{t('nodes:panel.selectNode')}</div>
-    );
+    return <AutomationSettingsPanel />;
   }
 
   const handleChange = (key: string, value: unknown) => {

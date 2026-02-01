@@ -1,4 +1,10 @@
-import type { FlowEdge, FlowGraph, FlowNode, NodeValidationError } from '@cafe/shared';
+import type {
+  FlowEdge,
+  FlowGraph,
+  FlowMetadata,
+  FlowNode,
+  NodeValidationError,
+} from '@cafe/shared';
 import { validateNodeData } from '@cafe/shared';
 import { FlowTranspiler } from '@cafe/transpiler';
 import {
@@ -124,6 +130,9 @@ export interface FlowState {
   nodes: Node<FlowNodeData>[];
   edges: Edge[];
 
+  // Automation metadata (mode, max, max_exceeded, etc.)
+  flowMetadata: FlowMetadata;
+
   // Selection state
   selectedNodeId: string | null;
 
@@ -163,6 +172,7 @@ export interface FlowState {
 
   setFlowName: (name: string) => void;
   setFlowDescription: (description: string) => void;
+  setFlowMetadata: (metadata: Partial<FlowMetadata>) => void;
 
   // Save actions
   setAutomationId: (id: string | null) => void;
@@ -228,10 +238,16 @@ function normalizeNodeData(type: string, data: Record<string, unknown>): Record<
   return data;
 }
 
+const defaultFlowMetadata: FlowMetadata = {
+  mode: 'single',
+  initial_state: true,
+};
+
 const initialState = {
   flowId: generateUUID(),
   flowName: 'Untitled Automation',
   flowDescription: '',
+  flowMetadata: defaultFlowMetadata,
   nodes: [],
   edges: [],
   selectedNodeId: null,
@@ -260,6 +276,7 @@ export type PersistedFlowState = Pick<
   | 'flowId'
   | 'flowName'
   | 'flowDescription'
+  | 'flowMetadata'
   | 'nodes'
   | 'edges'
   | 'selectedNodeId'
@@ -273,6 +290,7 @@ const persistSelector = (state: FlowState): PersistedFlowState => ({
   flowId: state.flowId,
   flowName: state.flowName,
   flowDescription: state.flowDescription,
+  flowMetadata: state.flowMetadata,
   nodes: state.nodes,
   edges: state.edges,
   selectedNodeId: state.selectedNodeId,
@@ -358,6 +376,11 @@ export const useFlowStore = create<FlowState>()(
       setFlowName: (name) => set({ flowName: name, hasUnsavedChanges: true }),
       setFlowDescription: (description) =>
         set({ flowDescription: description, hasUnsavedChanges: true }),
+      setFlowMetadata: (metadata) =>
+        set((state) => ({
+          flowMetadata: { ...state.flowMetadata, ...metadata },
+          hasUnsavedChanges: true,
+        })),
 
       // Save actions
       setAutomationId: (id) => set({ automationId: id }),
@@ -374,6 +397,7 @@ export const useFlowStore = create<FlowState>()(
         const currentSnapshot = JSON.stringify({
           flowName: state.flowName,
           flowDescription: state.flowDescription,
+          flowMetadata: state.flowMetadata,
           nodes: state.nodes.map((n) => ({
             id: n.id,
             type: n.type,
@@ -753,10 +777,7 @@ export const useFlowStore = create<FlowState>()(
               targetHandle: e.targetHandle,
               label: typeof e.label === 'string' ? e.label : undefined,
             })) as FlowEdge[],
-          metadata: {
-            mode: 'single',
-            initial_state: true,
-          },
+          metadata: state.flowMetadata,
           version: 1,
         };
       },
@@ -777,10 +798,15 @@ export const useFlowStore = create<FlowState>()(
           targetHandle: e.targetHandle,
           label: e.label,
         }));
+        const importedMetadata: FlowMetadata = {
+          ...defaultFlowMetadata,
+          ...graph.metadata,
+        };
         // Create snapshot for comparison
         const originalSnapshot = JSON.stringify({
           flowName: graph.name,
           flowDescription: graph.description || '',
+          flowMetadata: importedMetadata,
           nodes: nodes.map((n) => ({ id: n.id, type: n.type, position: n.position, data: n.data })),
           edges: edges.map((e) => ({
             id: e.id,
@@ -794,6 +820,7 @@ export const useFlowStore = create<FlowState>()(
           flowId: graph.id,
           flowName: graph.name,
           flowDescription: graph.description || '',
+          flowMetadata: importedMetadata,
           nodes,
           edges,
           selectedNodeId: null,
@@ -812,6 +839,7 @@ export const useFlowStore = create<FlowState>()(
         set({
           ...initialState,
           flowId: generateUUID(),
+          flowMetadata: { ...defaultFlowMetadata },
           originalSnapshot: null,
           nodeErrors: new Map(),
         }),

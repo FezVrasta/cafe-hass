@@ -119,5 +119,32 @@
   "deviceSelector": {
     "enterId": "Enter device ID manually",
     "noDevices": "No devices found. Enter device ID manually or check your Home Assistant connection."
+  },
+  "automationSettings": {
+    "title": "Automation Settings",
+    "description": "Description",
+    "mode": "Mode",
+    "modeDescription": "Controls what happens when the automation is triggered while already running.",
+    "modes": {
+      "single": "Single",
+      "restart": "Restart",
+      "queued": "Queued",
+      "parallel": "Parallel"
+    },
+    "modeDescriptions": {
+      "single": "Do not start a new run if already running",
+      "restart": "Stop the current run and start a new one",
+      "queued": "Queue new runs to execute after the current one finishes",
+      "parallel": "Start a new independent run in parallel"
+    },
+    "max": "Max runs",
+    "maxDescription": "Maximum number of concurrent or queued runs.",
+    "maxExceeded": "Max exceeded",
+    "maxExceededDescription": "What to do when the maximum number of runs is exceeded.",
+    "maxExceededOptions": {
+      "silent": "Silent",
+      "warning": "Warning",
+      "critical": "Critical"
+    }
   }
 }

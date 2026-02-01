@@ -45,7 +45,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Input } from '@/components/ui/input';
 import { ResizablePanel } from '@/components/ui/resizable-panel';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -77,7 +76,6 @@ function App() {
 
   const {
     flowName,
-    setFlowName,
     toFlowGraph,
     fromFlowGraph,
     reset,
@@ -233,13 +231,14 @@ function App() {
                   {t('titles.appName')}
                 </h1>
               )}
-              <Input
-                type="text"
-                value={flowName}
-                onChange={(e) => setFlowName(e.target.value)}
-                className="min-w-32 max-w-96 flex-1"
-                placeholder={t('placeholders.automationName')}
-              />
+              <span className="mx-1 h-5 w-px bg-border" />
+              <span className="min-w-32 max-w-96 flex-1 truncate font-semibold text-foreground">
+                {flowName || (
+                  <span className="font-normal text-muted-foreground">
+                    {t('placeholders.automationName')}
+                  </span>
+                )}
+              </span>
             </div>
 
             <div className="flex items-center gap-2">
