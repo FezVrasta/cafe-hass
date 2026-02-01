@@ -40,9 +40,32 @@ export class NativeStrategy extends BaseStrategy {
     // Remove duplicates
     const uniqueFirstActions = [...new Set(firstActions)];
 
+    // Check if leading conditions can be promoted to root conditions block.
+    // Conditions directly after triggers with no else/false paths can be placed
+    // in the root "conditions:" block so HA properly tracks "Last triggered at".
+    let rootConditions: unknown[] | null = null;
+    let actionsStartNodeId: string | null = null;
+    let promotedVisited: Set<string> | null = null;
+
+    if (uniqueFirstActions.length === 1) {
+      const promoted = this.extractLeadingConditions(flow, uniqueFirstActions[0]);
+      if (promoted.conditions.length > 0) {
+        rootConditions = promoted.conditions;
+        actionsStartNodeId = promoted.nextNodeId;
+        promotedVisited = promoted.visitedIds;
+      }
+    }
+
     // Build the action sequence
     let actions: unknown[];
-    if (uniqueFirstActions.length === 1) {
+    if (rootConditions) {
+      // Leading conditions promoted to root - build actions from continuation point
+      if (actionsStartNodeId) {
+        actions = this.buildSequenceFromNode(flow, actionsStartNodeId, promotedVisited!);
+      } else {
+        actions = [];
+      }
+    } else if (uniqueFirstActions.length === 1) {
       actions = this.buildSequenceFromNode(flow, uniqueFirstActions[0], new Set());
     } else if (uniqueFirstActions.length > 1) {
       // Check if this is an OR pattern: all first actions are conditions
@@ -87,9 +110,14 @@ export class NativeStrategy extends BaseStrategy {
       alias: flow.name,
       description: flow.description || '',
       triggers: triggers,
-      actions: actions,
-      mode: flow.metadata?.mode ?? 'single',
     };
+
+    if (rootConditions && rootConditions.length > 0) {
+      automation.conditions = rootConditions;
+    }
+
+    automation.actions = actions;
+    automation.mode = flow.metadata?.mode ?? 'single';
 
     // Add optional metadata
     if (flow.metadata?.max) {
@@ -168,6 +196,57 @@ export class NativeStrategy extends BaseStrategy {
     }
 
     return null;
+  }
+
+  /**
+   * Extract leading condition nodes that can be promoted to the root conditions block.
+   * Only conditions with no false/else path are promotable, forming a straight chain
+   * from triggers to actions via true paths only.
+   */
+  private extractLeadingConditions(
+    flow: FlowGraph,
+    startNodeId: string
+  ): { conditions: unknown[]; nextNodeId: string | null; visitedIds: Set<string> } {
+    const conditions: unknown[] = [];
+    const visitedIds = new Set<string>();
+    let currentId: string | null = startNodeId;
+
+    while (currentId) {
+      const node = this.getNode(flow, currentId);
+      if (!node || node.type !== 'condition') break;
+
+      const outgoing = this.getOutgoingEdges(flow, currentId);
+      const truePath = outgoing.find((edge) => edge.sourceHandle === 'true');
+      const falsePath = outgoing.find((edge) => edge.sourceHandle === 'false');
+
+      // Can only promote if the condition has a single path (no branching)
+      if (truePath && falsePath) break;
+      // Must have at least one path
+      if (!truePath && !falsePath) break;
+
+      // Build the condition object with alias preserved
+      const condition = this.buildCondition(node as ConditionNode);
+      if ((node as ConditionNode).data.alias) {
+        condition.alias = (node as ConditionNode).data.alias;
+      }
+
+      if (falsePath) {
+        // Connected via false handle only → inverted condition, wrap in "not"
+        conditions.push({
+          condition: 'not',
+          conditions: [condition],
+        });
+        visitedIds.add(currentId);
+        currentId = falsePath.target;
+      } else {
+        // Connected via true handle only → promote as-is
+        conditions.push(condition);
+        visitedIds.add(currentId);
+        currentId = truePath!.target;
+      }
+    }
+
+    return { conditions, nextNodeId: currentId, visitedIds };
   }
 
   /**
