@@ -29,10 +29,12 @@ import {
  * Format a shortcut string for display
  */
 function formatShortcut(shortcut: string, t: TFunction): string {
+  const isMac = isMacOS();
+
   return shortcut
     .split('+')
     .map((part) => {
-      if (part === 'ctrl') return t('shortcuts.ctrl');
+      if (part === 'ctrl') return isMac ? t('shortcuts.cmd') : t('shortcuts.ctrl');
       if (part === 'shift') return t('shortcuts.shift');
       if (part === 'alt') return t('shortcuts.alt');
       if (part === 'arrowup') return t('shortcuts.arrowUp');

@@ -140,6 +140,7 @@
     "selectAll": "Alles auswählen"
   },
   "shortcuts": {
+    "cmd": "Cmd",
     "ctrl": "Strg",
     "shift": "Umschalt",
     "alt": "Alt",

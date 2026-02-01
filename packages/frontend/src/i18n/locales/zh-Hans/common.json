@@ -140,6 +140,7 @@
     "selectAll": "全选"
   },
   "shortcuts": {
+    "cmd": "Cmd",
     "ctrl": "Ctrl",
     "shift": "Shift",
     "alt": "Alt",
