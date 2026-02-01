@@ -232,7 +232,7 @@ export function NodeToolbar() {
 
   // Define the order of groups to display
   // New groups should be added here as needed!
-  const groupOrder: Array<'node-specific' | 'clipboard' | 'edit' | 'align' | 'delete'> = [
+  const groupOrder: Array<'node-specific' | 'selection' | 'clipboard' | 'edit' | 'align' | 'delete'> = [
     'node-specific',
     'selection',
     'clipboard',
