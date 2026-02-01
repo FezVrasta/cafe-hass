@@ -807,36 +807,34 @@ triggers:
     for:
       seconds: 2
     id: paused
+conditions:
+  - condition: sun
+    after: sunset
+    after_offset: "00:05:00"
 actions:
   - if:
-      - condition: sun
-        after: sunset
-        after_offset: "00:05:00"
+      - condition: trigger
+        id: playing
     then:
+      - service: light.turn_off
+        target:
+          entity_id:
+            - light.0a12b58eadb1ae45d36fdb96e025444d
+            - light.751314eaa8749ab751d478948a65b33e
+        data:
+          transition: 2
+    else:
       - if:
           - condition: trigger
-            id: playing
+            id: paused
         then:
-          - service: light.turn_off
+          - service: light.turn_on
             target:
-              entity_id:
-                - light.0a12b58eadb1ae45d36fdb96e025444d
-                - light.751314eaa8749ab751d478948a65b33e
+              entity_id: light.751314eaa8749ab751d478948a65b33e
             data:
-              transition: 2
-        else:
-          - if:
-              - condition: trigger
-                id: paused
-            then:
-              - service: light.turn_on
-                target:
-                  entity_id: light.751314eaa8749ab751d478948a65b33e
-                data:
-                  brightness_pct: 5
-                  transition: 3
-            else: []
-    else: []
+              brightness_pct: 5
+              transition: 3
+        else: []
 mode: restart
 variables:
   _cafe_metadata:
@@ -934,36 +932,34 @@ triggers:
   - trigger: state
     entity_id: binary_sensor.armadio_cappotti_soggiorno
     to: "off"
+conditions:
+  - condition: state
+    entity_id: input_boolean.periodo_giorno
+    state: "on"
 actions:
-  - if:
-      - condition: state
-        entity_id: input_boolean.periodo_giorno
-        state: "on"
-    then:
-      - wait_for_trigger:
-          - trigger: state
-            entity_id: binary_sensor.porta_blindata
-            from: "on"
-            to: "off"
-        timeout: "00:00:30"
-        continue_on_timeout: false
-      - wait_for_trigger:
-          - trigger: state
-            entity_id: binary_sensor.porta_blindata
-            from: "off"
-            to: "on"
-        timeout: "00:15:00"
-        continue_on_timeout: false
-      - wait_for_trigger:
-          - trigger: state
-            entity_id: binary_sensor.armadio_cappotti_soggiorno
-            to: "on"
-        timeout: "00:00:30"
-        continue_on_timeout: false
-      - service: timer.start
-        target:
-          entity_id: timer.uscita_maya
-    else: []
+  - wait_for_trigger:
+      - trigger: state
+        entity_id: binary_sensor.porta_blindata
+        from: "on"
+        to: "off"
+    timeout: "00:00:30"
+    continue_on_timeout: false
+  - wait_for_trigger:
+      - trigger: state
+        entity_id: binary_sensor.porta_blindata
+        from: "off"
+        to: "on"
+    timeout: "00:15:00"
+    continue_on_timeout: false
+  - wait_for_trigger:
+      - trigger: state
+        entity_id: binary_sensor.armadio_cappotti_soggiorno
+        to: "on"
+    timeout: "00:00:30"
+    continue_on_timeout: false
+  - service: timer.start
+    target:
+      entity_id: timer.uscita_maya
 mode: restart
 variables:
   _cafe_metadata:
@@ -1315,65 +1311,63 @@ triggers:
     from: "off"
     to: "on"
     id: ZapfenstreichAn
+conditions:
+  - condition: and
+    conditions:
+      - condition: state
+        entity_id: input_boolean.zapfenstreich
+        state: "on"
+      - condition: trigger
+        id:
+          - ZapfenstreichAn
 actions:
-  - if:
-      - condition: and
-        conditions:
-          - condition: state
+  - service: input_boolean.turn_off
+    target:
+      entity_id: input_boolean.gartenbeleuchtung
+    data: {}
+  - device_id: 5c52f5c8c8e59972a9f7d359a5bcaf2f
+    domain: switch
+    type: turn_off
+    entity_id: 4906302ad1fd63fb7a358ce3e30146e4
+  - device_id: ee8b0db24fc5d9ca7cf1e9ad4d406e45
+    domain: switch
+    type: turn_off
+    entity_id: 616e70061d2add8d6295bd2204b25f7d
+  - device_id: b8ac21757194c9fba5cac089fd8ede51
+    domain: switch
+    type: turn_off
+    entity_id: cace6d6a39ec897bc6560f945c7fc689
+  - device_id: 8255c85496be5b6962a278ebdd7411e8
+    domain: switch
+    type: turn_off
+    entity_id: 62f9263c0006b6f9acdf12a35139e095
+  - parallel:
+      - device_id: ad7a2c892d7118cbfcdc89d2e2b3323d
+        domain: cover
+        type: close
+        entity_id: 63bff85b1243e4da6edf77f186725bc6
+      - - delay:
+            hours: 0
+            minutes: 0
+            seconds: 10
+            milliseconds: 0
+        - device_id: e2a191a70faa1f7d07a4068b51b417fb
+          domain: light
+          type: turn_off
+          entity_id: fe1b6aecf59b3bdd146aec7d8e589496
+        - service: input_boolean.turn_off
+          target:
             entity_id: input_boolean.zapfenstreich
-            state: "on"
-          - condition: trigger
-            id:
-              - ZapfenstreichAn
-    then:
-      - service: input_boolean.turn_off
+          data: {}
+      - metadata: {}
+        service: input_boolean.turn_off
         target:
           entity_id: input_boolean.gartenbeleuchtung
         data: {}
-      - device_id: 5c52f5c8c8e59972a9f7d359a5bcaf2f
-        domain: switch
-        type: turn_off
-        entity_id: 4906302ad1fd63fb7a358ce3e30146e4
-      - device_id: ee8b0db24fc5d9ca7cf1e9ad4d406e45
-        domain: switch
-        type: turn_off
-        entity_id: 616e70061d2add8d6295bd2204b25f7d
-      - device_id: b8ac21757194c9fba5cac089fd8ede51
-        domain: switch
-        type: turn_off
-        entity_id: cace6d6a39ec897bc6560f945c7fc689
-      - device_id: 8255c85496be5b6962a278ebdd7411e8
-        domain: switch
-        type: turn_off
-        entity_id: 62f9263c0006b6f9acdf12a35139e095
-      - parallel:
-          - device_id: ad7a2c892d7118cbfcdc89d2e2b3323d
-            domain: cover
-            type: close
-            entity_id: 63bff85b1243e4da6edf77f186725bc6
-          - - delay:
-                hours: 0
-                minutes: 0
-                seconds: 10
-                milliseconds: 0
-            - device_id: e2a191a70faa1f7d07a4068b51b417fb
-              domain: light
-              type: turn_off
-              entity_id: fe1b6aecf59b3bdd146aec7d8e589496
-            - service: input_boolean.turn_off
-              target:
-                entity_id: input_boolean.zapfenstreich
-              data: {}
-          - metadata: {}
-            service: input_boolean.turn_off
-            target:
-              entity_id: input_boolean.gartenbeleuchtung
-            data: {}
-      - device_id: 38156e5e85c33bd4d2129e9c7a67c5af
-        domain: switch
-        type: turn_off
-        entity_id: f7cbd6770bbb3bb5276c3d8e991e9b4d
-    else: []
+  - device_id: 38156e5e85c33bd4d2129e9c7a67c5af
+    domain: switch
+    type: turn_off
+    entity_id: f7cbd6770bbb3bb5276c3d8e991e9b4d
 mode: single
 variables:
   _cafe_metadata:
@@ -1433,28 +1427,26 @@ triggers:
     to: "on"
     for:
       hours: 4
+conditions:
+  - condition: state
+    entity_id: binary_sensor.lxc_paperless_ai_209_status
+    state: "on"
 actions:
-  - if:
-      - condition: state
-        entity_id: binary_sensor.lxc_paperless_ai_209_status
-        state: "on"
-    then:
-      - service: persistent_notification.create
-        data:
-          title: Container Auto-Shutdown
-          message: Paperless AI (209) has been running for 4 hours and will be shut down now.
-          notification_id: paperless_ai_shutdown
-      - service: button.press
-        target:
-          entity_id: button.lxc_paperless_ai_209_shutdown
-      - delay:
-          seconds: 5
-      - service: persistent_notification.create
-        data:
-          title: Container Shutdown Complete
-          message: Paperless AI (209) has been shut down successfully.
-          notification_id: paperless_ai_shutdown_complete
-    else: []
+  - service: persistent_notification.create
+    data:
+      title: Container Auto-Shutdown
+      message: Paperless AI (209) has been running for 4 hours and will be shut down now.
+      notification_id: paperless_ai_shutdown
+  - service: button.press
+    target:
+      entity_id: button.lxc_paperless_ai_209_shutdown
+  - delay:
+      seconds: 5
+  - service: persistent_notification.create
+    data:
+      title: Container Shutdown Complete
+      message: Paperless AI (209) has been shut down successfully.
+      notification_id: paperless_ai_shutdown_complete
 mode: single
 variables:
   _cafe_metadata:
@@ -1623,18 +1615,16 @@ description: Weekly Full Backup
 triggers:
   - trigger: time
     at: "03:00:00"
+conditions:
+  - condition: and
+    conditions:
+      - condition: time
+        weekday:
+          - sat
 actions:
-  - if:
-      - condition: and
-        conditions:
-          - condition: time
-            weekday:
-              - sat
-    then:
-      - service: hassio.backup_full
-        data:
-          compressed: true
-    else: []
+  - service: hassio.backup_full
+    data:
+      compressed: true
 mode: single
 variables:
   _cafe_metadata:
@@ -1665,24 +1655,22 @@ triggers:
     type: power
     device_id: 668ca38238b4ea09a8c51fa4d4f45e7c
     domain: sensor
+conditions:
+  - condition: time
+    enabled: false
+    after: "05:30:00"
+    before: "23:30:00"
 actions:
-  - if:
-      - condition: time
-        enabled: false
-        after: "05:30:00"
-        before: "23:30:00"
-    then:
-      - device_id: fc32de247133cbee1c2587690d3f4629
-        domain: select
-        type: select_option
-        entity_id: select.work_mode
-        option: Self Use
-      - metadata: {}
-        service: notify.mobile_app_pbw_iphone
-        data:
-          message: Change slot closed
-          title: Self Use reactivated
-    else: []
+  - device_id: fc32de247133cbee1c2587690d3f4629
+    domain: select
+    type: select_option
+    entity_id: select.work_mode
+    option: Self Use
+  - metadata: {}
+    service: notify.mobile_app_pbw_iphone
+    data:
+      message: Change slot closed
+      title: Self Use reactivated
 mode: single
 variables:
   _cafe_metadata:
