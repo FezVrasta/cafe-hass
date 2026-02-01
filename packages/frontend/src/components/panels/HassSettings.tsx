@@ -64,7 +64,7 @@ export function HassSettings({ isOpen, onClose, config, onSave }: HassSettingsPr
 
       if (response.ok) {
         const data = await response.json();
-        if (data.message === t('dialogs:settings.apiRunning')) {
+        if (data.message === 'API running.') {
           setStatus('success');
         } else {
           setStatus('error');
