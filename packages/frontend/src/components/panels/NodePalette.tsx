@@ -20,7 +20,7 @@ export const nodeTypes = [
     icon: Zap,
     color: 'bg-amber-100 border-amber-400 text-amber-700 hover:bg-amber-200',
     defaultData: {
-      platform: 'state',
+      trigger: 'state',
       entity_id: '',
     },
   },

@@ -1,12 +1,14 @@
 import type { FlowNode } from '@cafe/shared';
 import { PlusIcon, XIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { FieldError } from '@/components/forms/FieldError';
 import { FormField } from '@/components/forms/FormField';
 import { Button } from '@/components/ui/button';
 import { Combobox } from '@/components/ui/Combobox';
 import { Input } from '@/components/ui/input';
 import { MultiEntitySelector } from '@/components/ui/MultiEntitySelector';
 import { useHass } from '@/contexts/HassContext';
+import { useNodeErrors } from '@/hooks/useNodeErrors';
 import { cn } from '@/lib/utils';
 import type { HassEntity } from '@/types/hass';
 import { getNodeDataObject, getNodeDataString } from '@/utils/nodeData';
@@ -96,6 +98,7 @@ interface ActionFieldsProps {
 
 export function ActionFields({ node, onChange, entities }: ActionFieldsProps) {
   const { getAllServices, getServiceDefinition } = useHass();
+  const { getFieldError } = useNodeErrors(node.id);
   const serviceName = getNodeDataString(node, 'service');
   const serviceDefinition = getServiceDefinition(serviceName);
   const serviceFields = serviceDefinition?.fields || {};
@@ -182,6 +185,7 @@ export function ActionFields({ node, onChange, entities }: ActionFieldsProps) {
           onChange={handleServiceChange}
           placeholder="Select service..."
         />
+        <FieldError message={getFieldError('service')} />
       </FormField>
 
       {/* Target Entities */}

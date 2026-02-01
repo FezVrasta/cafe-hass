@@ -1,4 +1,5 @@
-import type { FlowEdge, FlowGraph, FlowNode } from '@cafe/shared';
+import type { FlowEdge, FlowGraph, FlowNode, NodeValidationError } from '@cafe/shared';
+import { validateNodeData } from '@cafe/shared';
 import { FlowTranspiler } from '@cafe/transpiler';
 import {
   addEdge,
@@ -195,6 +196,36 @@ export interface FlowState {
   toFlowGraph: () => FlowGraph;
   fromFlowGraph: (graph: FlowGraph) => void;
   reset: () => void;
+
+  // Node validation
+  nodeErrors: Map<string, NodeValidationError[]>;
+  validateNode: (nodeId: string) => void;
+  validateAllNodes: () => void;
+  clearNodeErrors: (nodeId: string) => void;
+  hasValidationErrors: () => boolean;
+}
+
+/**
+ * Normalize trigger node data to use 'trigger' instead of legacy 'platform' field.
+ * This ensures consistency across the codebase.
+ */
+function normalizeTriggerData(data: Record<string, unknown>): Record<string, unknown> {
+  if ('platform' in data && !('trigger' in data)) {
+    const { platform, ...rest } = data;
+    return { ...rest, trigger: platform };
+  }
+  return data;
+}
+
+/**
+ * Normalize node data based on node type.
+ * Currently only normalizes trigger nodes.
+ */
+function normalizeNodeData(type: string, data: Record<string, unknown>): Record<string, unknown> {
+  if (type === 'trigger') {
+    return normalizeTriggerData(data);
+  }
+  return data;
 }
 
 const initialState = {
@@ -217,6 +248,7 @@ const initialState = {
   traceExecutionPath: [],
   traceTimestamps: {},
   simulationSpeed: 800,
+  nodeErrors: new Map<string, NodeValidationError[]>(),
 };
 
 /**
@@ -282,19 +314,36 @@ export const useFlowStore = create<FlowState>()(
           hasUnsavedChanges: true,
         })),
 
-      addNode: (node) =>
-        set((state) => ({
-          nodes: [...state.nodes, node],
-          hasUnsavedChanges: true,
-        })),
+      addNode: (node) => {
+        // Normalize node data (e.g., convert platform to trigger for trigger nodes)
+        const normalizedNode = node.type
+          ? {
+              ...node,
+              data: normalizeNodeData(
+                node.type,
+                node.data as Record<string, unknown>
+              ) as FlowNodeData,
+            }
+          : node;
 
-      updateNodeData: (nodeId, data) =>
+        set((state) => ({
+          nodes: [...state.nodes, normalizedNode],
+          hasUnsavedChanges: true,
+        }));
+        // Validate the newly added node
+        get().validateNode(node.id);
+      },
+
+      updateNodeData: (nodeId, data) => {
         set((state) => ({
           nodes: state.nodes.map((node) =>
             node.id === nodeId ? { ...node, data: { ...node.data, ...data } } : node
           ),
           hasUnsavedChanges: true,
-        })),
+        }));
+        // Validate the node after data update
+        get().validateNode(nodeId);
+      },
 
       removeNode: (nodeId) =>
         set((state) => ({
@@ -349,6 +398,18 @@ export const useFlowStore = create<FlowState>()(
         set({ isSaving: true });
 
         try {
+          // Validate all nodes first
+          get().validateAllNodes();
+
+          // Check for validation errors
+          const currentState = get();
+          if (currentState.nodeErrors.size > 0) {
+            const errorCount = currentState.nodeErrors.size;
+            throw new Error(
+              `Cannot save: ${errorCount} node(s) have validation errors. Fix the highlighted nodes before saving.`
+            );
+          }
+
           // Convert flow to graph
           const graph = state.toFlowGraph();
 
@@ -448,6 +509,18 @@ export const useFlowStore = create<FlowState>()(
         set({ isSaving: true });
 
         try {
+          // Validate all nodes first
+          get().validateAllNodes();
+
+          // Check for validation errors
+          const currentState = get();
+          if (currentState.nodeErrors.size > 0) {
+            const errorCount = currentState.nodeErrors.size;
+            throw new Error(
+              `Cannot save: ${errorCount} node(s) have validation errors. Fix the highlighted nodes before saving.`
+            );
+          }
+
           // Convert flow to graph
           const graph = state.toFlowGraph();
 
@@ -693,7 +766,8 @@ export const useFlowStore = create<FlowState>()(
           id: n.id,
           type: n.type,
           position: n.position,
-          data: n.data as FlowNodeData,
+          // Normalize node data when loading (e.g., convert platform to trigger)
+          data: normalizeNodeData(n.type, n.data as Record<string, unknown>) as FlowNodeData,
         }));
         const edges = graph.edges.map((e) => ({
           id: e.id,
@@ -728,16 +802,93 @@ export const useFlowStore = create<FlowState>()(
           hasUnsavedChanges: false,
           lastSaved: null,
           originalSnapshot,
+          nodeErrors: new Map(),
+        });
+        // Validate all nodes after loading
+        get().validateAllNodes();
+      },
+
+      reset: () =>
+        set({
+          ...initialState,
+          flowId: generateUUID(),
+          originalSnapshot: null,
+          nodeErrors: new Map(),
+        }),
+
+      // Node validation
+      validateNode: (nodeId) => {
+        const state = get();
+        const node = state.nodes.find((n) => n.id === nodeId);
+        if (!node || !node.type) return;
+
+        const errors = validateNodeData(node.type, node.data as Record<string, unknown>);
+
+        set((s) => {
+          const newErrors = new Map(s.nodeErrors);
+          if (errors.length > 0) {
+            newErrors.set(nodeId, errors);
+          } else {
+            newErrors.delete(nodeId);
+          }
+          return { nodeErrors: newErrors };
         });
       },
 
-      reset: () => set({ ...initialState, flowId: generateUUID(), originalSnapshot: null }),
+      validateAllNodes: () => {
+        const state = get();
+        const newErrors = new Map<string, NodeValidationError[]>();
+
+        for (const node of state.nodes) {
+          if (!node.type) continue;
+          const errors = validateNodeData(node.type, node.data as Record<string, unknown>);
+          if (errors.length > 0) {
+            newErrors.set(node.id, errors);
+          }
+        }
+
+        set({ nodeErrors: newErrors });
+      },
+
+      clearNodeErrors: (nodeId) => {
+        set((s) => {
+          const newErrors = new Map(s.nodeErrors);
+          newErrors.delete(nodeId);
+          return { nodeErrors: newErrors };
+        });
+      },
+
+      hasValidationErrors: () => {
+        return get().nodeErrors.size > 0;
+      },
     }),
     {
       name: 'cafe-flow-storage',
       storage: cafeIndexedDBStorage,
       partialize: persistSelector,
       version: 1,
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          // Normalize node data after rehydration (e.g., convert platform to trigger)
+          const normalizedNodes = state.nodes.map((n) => ({
+            ...n,
+            data: n.type
+              ? (normalizeNodeData(n.type, n.data as Record<string, unknown>) as FlowNodeData)
+              : n.data,
+          }));
+
+          // Update nodes if any were normalized
+          const hasChanges = normalizedNodes.some(
+            (n, i) => JSON.stringify(n.data) !== JSON.stringify(state.nodes[i].data)
+          );
+          if (hasChanges) {
+            state.nodes = normalizedNodes;
+          }
+
+          // Validate all nodes after normalization
+          state.validateAllNodes();
+        }
+      },
     }
   )
 );

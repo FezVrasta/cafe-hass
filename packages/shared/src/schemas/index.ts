@@ -94,3 +94,15 @@ export {
   type WaitNode,
   WaitNodeSchema,
 } from './nodes';
+// Validation schemas for UI
+export {
+  ActionNodeValidationSchema,
+  ConditionNodeValidationSchema,
+  DelayNodeValidationSchema,
+  getNodeValidationSchema,
+  type NodeValidationError,
+  SetVariablesNodeValidationSchema,
+  TriggerNodeValidationSchema,
+  validateNodeData,
+  WaitNodeValidationSchema,
+} from './validation';

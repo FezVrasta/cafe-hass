@@ -1,6 +1,7 @@
 import { Handle, type NodeProps, Position } from '@xyflow/react';
-import { Ban, Play } from 'lucide-react';
+import { AlertCircle, Ban, Play } from 'lucide-react';
 import { memo } from 'react';
+import { useNodeErrors } from '@/hooks/useNodeErrors';
 import { cn } from '@/lib/utils';
 import type { ActionNodeData } from '@/store/flow-store';
 import { useFlowStore } from '@/store/flow-store';
@@ -12,6 +13,7 @@ interface ActionNodeProps extends NodeProps {
 export const ActionNode = memo(function ActionNode({ id, data, selected }: ActionNodeProps) {
   const activeNodeId = useFlowStore((s) => s.activeNodeId);
   const getExecutionStepNumber = useFlowStore((s) => s.getExecutionStepNumber);
+  const { hasErrors, errorMessages } = useNodeErrors(id);
   const isActive = activeNodeId === id;
   const stepNumber = getExecutionStepNumber(id);
   const isDisabled = data.enabled === false;
@@ -40,10 +42,19 @@ export const ActionNode = memo(function ActionNode({ id, data, selected }: Actio
         'transition-all duration-200',
         selected && 'ring-2 ring-green-500 ring-offset-2',
         isActive && 'node-active ring-4 ring-green-500',
-        isDisabled && 'border-dashed opacity-50 grayscale'
+        isDisabled && 'border-dashed opacity-50 grayscale',
+        hasErrors && 'border-red-500 ring-2 ring-red-400'
       )}
     >
-      {isDisabled && (
+      {hasErrors && (
+        <div
+          className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white shadow-sm"
+          title={errorMessages.join('\n')}
+        >
+          <AlertCircle className="h-3 w-3" />
+        </div>
+      )}
+      {isDisabled && !hasErrors && (
         <div className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-gray-500 text-white shadow-sm">
           <Ban className="h-3 w-3" />
         </div>

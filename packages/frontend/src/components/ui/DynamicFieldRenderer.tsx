@@ -1,5 +1,6 @@
 import { ChevronDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { FieldError } from '@/components/forms/FieldError';
 import { DurationInput, type DurationValue } from '@/components/panels/node-fields/DurationField';
 import { Button } from '@/components/ui/button';
 import {
@@ -56,6 +57,11 @@ interface DynamicFieldRendererProps {
    * Translation resources from Home Assistant
    */
   translations?: Record<string, string>;
+
+  /**
+   * Validation error message to display below the field
+   */
+  error?: string;
 }
 
 /**
@@ -69,6 +75,7 @@ export function DynamicFieldRenderer({
   entities,
   domain,
   translations = {},
+  error,
 }: DynamicFieldRendererProps) {
   const { t } = useTranslation(['common']);
   // Extract common properties
@@ -385,6 +392,7 @@ export function DynamicFieldRenderer({
         {required && <span className="ml-1 text-destructive">{t('labels.requiredAsterisk')}</span>}
       </Label>
       {renderField()}
+      <FieldError message={error} />
       {description && <p className="text-muted-foreground text-xs">{description}</p>}
     </div>
   );
