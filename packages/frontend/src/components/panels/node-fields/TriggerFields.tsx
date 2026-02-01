@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { getTriggerDefaults, getTriggerFields } from '@/config/triggerFields';
+import { useNodeErrors } from '@/hooks/useNodeErrors';
 import type { HassEntity } from '@/types/hass';
 import { getNodeDataString } from '@/utils/nodeData';
 import { DeviceTriggerFields } from './DeviceTriggerFields';
@@ -28,6 +29,7 @@ interface TriggerFieldsProps {
  */
 export function TriggerFields({ node, onChange, entities }: TriggerFieldsProps) {
   const { t } = useTranslation(['nodes']);
+  const { getFieldError } = useNodeErrors(node.id);
   const triggerType = getNodeDataString(node, 'trigger', 'state');
   const deviceId = getNodeDataString(node, 'device_id');
 
@@ -87,24 +89,48 @@ export function TriggerFields({ node, onChange, entities }: TriggerFieldsProps) 
       </FormField>
 
       {/* Dynamic fields based on trigger type */}
-      {(() => {
-        // Device triggers use API-driven fields
-        if (effectiveTriggerType === 'device' || deviceId) {
-          return <DeviceTriggerFields node={node} onChange={onChange} entities={entities} />;
-        }
-
-        // Other trigger types use static field configuration
-        const fields = getTriggerFields(effectiveTriggerType as TriggerPlatform);
-        return fields.map((field) => (
-          <DynamicFieldRenderer
-            key={field.name}
-            field={field}
-            value={(node.data as Record<string, unknown>)[field.name]}
-            onChange={(value) => onChange(field.name, value)}
-            entities={entities}
-          />
-        ));
-      })()}
+      <TriggerDynamicFields
+        effectiveTriggerType={effectiveTriggerType}
+        deviceId={deviceId}
+        node={node}
+        onChange={onChange}
+        entities={entities}
+        getFieldError={getFieldError}
+      />
     </>
   );
+}
+
+function TriggerDynamicFields({
+  effectiveTriggerType,
+  deviceId,
+  node,
+  onChange,
+  entities,
+  getFieldError,
+}: {
+  effectiveTriggerType: string;
+  deviceId: string;
+  node: FlowNode;
+  onChange: (key: string, value: unknown) => void;
+  entities: HassEntity[];
+  getFieldError: (fieldPath: string) => string | undefined;
+}) {
+  // Device triggers use API-driven fields
+  if (effectiveTriggerType === 'device' || deviceId) {
+    return <DeviceTriggerFields node={node} onChange={onChange} entities={entities} />;
+  }
+
+  // Other trigger types use static field configuration
+  const fields = getTriggerFields(effectiveTriggerType as TriggerPlatform);
+  return fields.map((field) => (
+    <DynamicFieldRenderer
+      key={field.name}
+      field={field}
+      value={(node.data as Record<string, unknown>)[field.name]}
+      onChange={(value) => onChange(field.name, value)}
+      entities={entities}
+      error={getFieldError(field.name)}
+    />
+  ));
 }

@@ -41,7 +41,7 @@ export const TRIGGER_PLATFORM_FIELDS: Record<TriggerPlatform, FieldConfig[]> = {
     },
     {
       name: 'from',
-      label: 'From State (optional)',
+      label: 'From State',
       type: 'text',
       required: false,
       placeholder: 'e.g., off',

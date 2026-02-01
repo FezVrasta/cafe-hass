@@ -1,10 +1,12 @@
 import type { SetVariablesNode } from '@cafe/shared';
 import { Plus, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { FieldError } from '@/components/forms/FieldError';
 import { FormField } from '@/components/forms/FormField';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { useNodeErrors } from '@/hooks/useNodeErrors';
 import { getNodeDataObject } from '@/utils/nodeData';
 
 interface SetVariablesFieldsProps {
@@ -18,6 +20,7 @@ interface SetVariablesFieldsProps {
  */
 export function SetVariablesFields({ node, onChange }: SetVariablesFieldsProps) {
   const { t } = useTranslation(['nodes']);
+  const { getFieldError } = useNodeErrors(node.id);
   const variables = getNodeDataObject<Record<string, unknown>>(node, 'variables', {});
   const variableEntries = Object.entries(variables);
 
@@ -60,6 +63,7 @@ export function SetVariablesFields({ node, onChange }: SetVariablesFieldsProps) 
 
   return (
     <div className="space-y-4">
+      <FieldError message={getFieldError('variables')} />
       {variableEntries.length === 0 ? (
         <p className="text-muted-foreground text-sm">{t('nodes:setVariablesFields.empty')}</p>
       ) : (

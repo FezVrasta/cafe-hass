@@ -1,6 +1,7 @@
 import type { TriggerPlatform, WaitNode } from '@cafe/shared';
 import { Trash2Icon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { FieldError } from '@/components/forms/FieldError';
 import { FormField } from '@/components/forms/FormField';
 import { Button } from '@/components/ui/button';
 import { DynamicFieldRenderer } from '@/components/ui/DynamicFieldRenderer';
@@ -14,6 +15,7 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { getTriggerFields, TRIGGER_PLATFORM_FIELDS } from '@/config/triggerFields';
+import { useNodeErrors } from '@/hooks/useNodeErrors';
 import type { TriggerNodeData } from '@/store/flow-store';
 import { getNodeData, getNodeDataString } from '@/utils/nodeData';
 import { DurationField } from './DurationField';
@@ -25,10 +27,12 @@ interface WaitFieldsProps {
 
 export function WaitFields({ node, onChange }: WaitFieldsProps) {
   const { t } = useTranslation(['nodes']);
+  const { getFieldError, getRootError } = useNodeErrors(node.id);
   const waitTemplate = getNodeDataString(node, 'wait_template');
   const waitForTrigger = getNodeData<TriggerNodeData[]>(node, 'wait_for_trigger');
 
   const waitType = waitForTrigger !== undefined ? 'trigger' : 'template';
+  const rootError = getRootError();
 
   const handleWaitTypeChange = (type: 'template' | 'trigger') => {
     if (type === 'template') {
@@ -60,6 +64,9 @@ export function WaitFields({ node, onChange }: WaitFieldsProps) {
 
   return (
     <>
+      {/* Root-level error (cross-field validation) */}
+      <FieldError message={rootError} />
+
       <FormField label={t('nodes:wait.waitType')} description={t('nodes:wait.waitTypeDescription')}>
         <Select value={waitType} onValueChange={handleWaitTypeChange}>
           <SelectTrigger>
@@ -85,11 +92,13 @@ export function WaitFields({ node, onChange }: WaitFieldsProps) {
             rows={3}
             placeholder={t('nodes:placeholders.waitTemplate')}
           />
+          <FieldError message={getFieldError('wait_template')} />
         </FormField>
       )}
 
       {waitType === 'trigger' && (
         <div className="space-y-4">
+          <FieldError message={getFieldError('wait_for_trigger')} />
           <div className="space-y-2">
             <h3 className="font-medium">{t('nodes:wait.triggersHeading')}</h3>
             {waitForTrigger?.map((trigger, index) => (

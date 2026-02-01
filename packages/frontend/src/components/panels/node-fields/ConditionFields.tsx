@@ -15,6 +15,7 @@ import {
   getConditionFields,
   isLogicalGroupType,
 } from '@/config/conditionFields';
+import { useNodeErrors } from '@/hooks/useNodeErrors';
 import type { ConditionNodeData } from '@/store/flow-store';
 import type { HassEntity } from '@/types/hass';
 import { getNodeDataString } from '@/utils/nodeData';
@@ -33,6 +34,7 @@ interface ConditionFieldsProps {
  */
 export function ConditionFields({ node, onChange, entities }: ConditionFieldsProps) {
   const { t } = useTranslation(['common', 'nodes']);
+  const { getFieldError } = useNodeErrors(node.id);
   const conditionType = getNodeDataString(node, 'condition', 'state') as ConditionType;
   const nodeData = node.data as Record<string, unknown>;
   const hasNestedConditions = Array.isArray(nodeData.conditions) && nodeData.conditions.length > 0;
@@ -72,6 +74,7 @@ export function ConditionFields({ node, onChange, entities }: ConditionFieldsPro
             key={field.name}
             field={field}
             value={displayValue}
+            error={getFieldError(field.name)}
             onChange={(value) => {
               // Convert comma-separated string to array
               const arrayValue =
@@ -92,6 +95,7 @@ export function ConditionFields({ node, onChange, entities }: ConditionFieldsPro
           value={nodeData[field.name]}
           onChange={(value) => onChange(field.name, value)}
           entities={entities}
+          error={getFieldError(field.name)}
         />
       );
     });
