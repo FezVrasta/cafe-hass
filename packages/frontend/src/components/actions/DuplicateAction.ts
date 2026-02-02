@@ -1,9 +1,9 @@
 import type { TFunction } from 'i18next';
 import { CopyPlus } from 'lucide-react';
 import { toast } from 'sonner';
+import { cloneNodesIntoCanvas } from './clipboardHelpers';
 import type { NodeAction } from './NodeAction';
 import type { NodeActionContext } from './NodeActionContext';
-import { cloneNodesIntoCanvas } from './clipboardHelpers';
 
 export function getDuplicateAction(t: TFunction): NodeAction {
   return {

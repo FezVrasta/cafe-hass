@@ -98,7 +98,19 @@ export function NodeToolbar() {
       setClipboard,
       setPasteCount,
     }),
-    [nodes, edges, clipboard, pasteCount, addNode, removeNode, updateNodeData, setNodes, setEdges, setClipboard, setPasteCount]
+    [
+      nodes,
+      edges,
+      clipboard,
+      pasteCount,
+      addNode,
+      removeNode,
+      updateNodeData,
+      setNodes,
+      setEdges,
+      setClipboard,
+      setPasteCount,
+    ]
   );
 
   // The default actions available for all nodes
@@ -216,7 +228,11 @@ export function NodeToolbar() {
             action.variant === 'destructive' &&
               'text-destructive hover:bg-destructive/10 hover:text-destructive'
           )}
-          title={action.shortcut ? `${tooltip} (${formatShortcut(Array.isArray(action.shortcut) ? action.shortcut[0] : action.shortcut, t)})` : tooltip}
+          title={
+            action.shortcut
+              ? `${tooltip} (${formatShortcut(Array.isArray(action.shortcut) ? action.shortcut[0] : action.shortcut, t)})`
+              : tooltip
+          }
           onClick={() => action.execute(context)}
         >
           <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />

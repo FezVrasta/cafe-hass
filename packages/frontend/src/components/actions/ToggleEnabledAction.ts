@@ -8,24 +8,16 @@ export function getToggleEnabledAction(t: TFunction): NodeAction {
     name: 'toggle-enabled',
     icon: ToggleLeft,
     getIcon: (context: NodeActionContext) => {
-      const allDisabled = context.selectedNodes.every(
-        (node) => node.data.enabled === false
-      );
-      const allEnabled = context.selectedNodes.every(
-        (node) => node.data.enabled !== false
-      );
+      const allDisabled = context.selectedNodes.every((node) => node.data.enabled === false);
+      const allEnabled = context.selectedNodes.every((node) => node.data.enabled !== false);
 
       if (allDisabled) return CirclePlay;
       if (allEnabled) return Ban;
       return ToggleLeft;
     },
     tooltip: (context: NodeActionContext) => {
-      const allDisabled = context.selectedNodes.every(
-        (node) => node.data.enabled === false
-      );
-      const allEnabled = context.selectedNodes.every(
-        (node) => node.data.enabled !== false
-      );
+      const allDisabled = context.selectedNodes.every((node) => node.data.enabled === false);
+      const allEnabled = context.selectedNodes.every((node) => node.data.enabled !== false);
 
       if (allDisabled) return t('toolbar.enable');
       if (allEnabled) return t('toolbar.disable');
