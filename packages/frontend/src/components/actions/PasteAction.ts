@@ -1,8 +1,8 @@
 import type { TFunction } from 'i18next';
 import { Clipboard } from 'lucide-react';
+import { cloneNodesIntoCanvas } from './clipboardHelpers';
 import type { NodeAction } from './NodeAction';
 import type { NodeActionContext } from './NodeActionContext';
-import { cloneNodesIntoCanvas } from './clipboardHelpers';
 
 export function getPasteAction(t: TFunction): NodeAction {
   return {

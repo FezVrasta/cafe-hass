@@ -1,9 +1,9 @@
 import type { TFunction } from 'i18next';
 import { Copy } from 'lucide-react';
 import { toast } from 'sonner';
+import { copyNodesToClipboard } from './clipboardHelpers';
 import type { NodeAction } from './NodeAction';
 import type { NodeActionContext } from './NodeActionContext';
-import { copyNodesToClipboard } from './clipboardHelpers';
 
 export function getCopyAction(t: TFunction): NodeAction {
   return {
