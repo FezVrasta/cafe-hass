@@ -178,6 +178,28 @@ export class HomeAssistantAPI {
   }
 
   /**
+   * Execute a Home Assistant action
+   * An action can be either a service call or other HA action types
+   */
+  async executeAction(action: {
+    service?: string;
+    data?: Record<string, unknown>;
+    target?: Record<string, unknown>;
+    [key: string]: unknown;
+  }): Promise<unknown> {
+    if (!action.service) {
+      throw new Error('Action must have a service property');
+    }
+
+    const [domain, service] = action.service.split('.');
+    if (!domain || !service) {
+      throw new Error(`Invalid service format: ${action.service}`);
+    }
+
+    return await this.callService(domain, service, action.data, action.target);
+  }
+
+  /**
    * Call Home Assistant REST API
    */
   async callAPI(

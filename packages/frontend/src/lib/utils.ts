@@ -19,10 +19,13 @@ export function generateUUID(): string {
   });
 }
 
+let nodeIdCounter = 0;
+
 /**
- * Generate a unique node ID with the standard format: {type}_{timestamp}
+ * Generate a unique node ID with the standard format: {type}_{timestamp}_{counter}
  * This format is used throughout the app for consistent node identification.
+ * The counter avoids collisions when multiple nodes are created within the same millisecond.
  */
 export function generateNodeId(type: string): string {
-  return `${type}_${Date.now()}`;
+  return `${type}_${Date.now()}_${nodeIdCounter++}`;
 }

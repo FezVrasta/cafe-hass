@@ -119,5 +119,34 @@
   "deviceSelector": {
     "enterId": "Entrer l'ID de l'appareil manuellement",
     "noDevices": "Aucun appareil trouvé. Entrez l'ID de l'appareil manuellement ou vérifiez votre connexion Home Assistant."
+  },
+  "toolbar": {
+    "runAction": "Exécuter l'action",
+    "cut": "Couper",
+    "copy": "Copier",
+    "paste": "Coller",
+    "duplicate": "Dupliquer",
+    "toggleEnabled": "Basculer Activé/Désactivé",
+    "enable": "Activer",
+    "disable": "Désactiver",
+    "disconnect": "Déconnecter",
+    "alignLeft": "Aligner à gauche",
+    "alignCenter": "Aligner au centre",
+    "alignRight": "Aligner à droite",
+    "alignTop": "Aligner en haut",
+    "alignBottom": "Aligner en bas",
+    "deleteNode": "Supprimer le nœud",
+    "duplicateNode": "Dupliquer le nœud",
+    "selectAll": "Tout sélectionner"
+  },
+  "shortcuts": {
+    "cmd": "Cmd",
+    "ctrl": "Ctrl",
+    "shift": "Maj",
+    "alt": "Alt",
+    "arrowUp": "Flèche vers le haut",
+    "arrowDown": "Flèche vers le bas",
+    "arrowLeft": "Flèche vers la gauche",
+    "arrowRight": "Flèche vers la droite"
   }
 }

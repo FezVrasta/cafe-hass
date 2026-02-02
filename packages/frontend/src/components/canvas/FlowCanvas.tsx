@@ -1,4 +1,4 @@
-import type { OnBeforeDelete, ReactFlowInstance } from '@xyflow/react';
+import type { OnBeforeDelete } from '@xyflow/react';
 import {
   Background,
   BackgroundVariant,
@@ -12,7 +12,7 @@ import {
   ReactFlow,
   useReactFlow,
 } from '@xyflow/react';
-import { type DragEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { type DragEvent, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DeletableEdge } from '@/components/edges';
 import {
@@ -23,12 +23,13 @@ import {
   TriggerNode,
   WaitNode,
 } from '@/components/nodes';
-import { useCopyPaste } from '@/hooks/useCopyPaste';
+import { NodeToolbar } from '@/components/toolbar/NodeToolbar';
 import { useDarkMode } from '@/hooks/useDarkMode';
 import { generateNodeId } from '@/lib/utils';
 import { useFlowStore } from '@/store/flow-store';
 import { isMacOS } from '@/utils/useAgentPlatform';
 
+// New node types should be added here as needed!
 const nodeTypes: NodeTypes = {
   trigger: TriggerNode,
   condition: ConditionNode,
@@ -63,9 +64,6 @@ export function FlowCanvas() {
 
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const { screenToFlowPosition, setViewport } = useReactFlow();
-  const [rfInstance, setRfInstance] = useState<ReactFlowInstance | null>(null);
-  // Enable copy/paste support only inside the canvas
-  useCopyPaste(rfInstance, reactFlowWrapper);
 
   // Set initial zoom level
   useEffect(() => {
@@ -205,7 +203,6 @@ export function FlowCanvas() {
   return (
     <div className="h-full w-full" ref={reactFlowWrapper}>
       <ReactFlow
-        onInit={setRfInstance}
         colorMode={isDarkMode ? 'dark' : 'light'}
         nodes={nodes}
         edges={styledEdges}
@@ -234,7 +231,7 @@ export function FlowCanvas() {
         fitViewOptions={{ maxZoom: 0.75 }}
         snapToGrid
         snapGrid={[15, 15]}
-        deleteKeyCode={['Backspace', 'Delete']}
+        deleteKeyCode={null}
         className={isDarkMode ? 'dark bg-background' : 'bg-muted/30'}
         proOptions={{ hideAttribution: true }}
       >
@@ -269,9 +266,11 @@ export function FlowCanvas() {
           }}
         />
 
+        <NodeToolbar />
+
         {isSimulating && (
           <Panel
-            position="top-center"
+            position="top-left"
             className="rounded-lg border border-green-300 bg-green-100 px-4 py-2 dark:border-green-700 dark:bg-green-950"
           >
             <div className="flex items-center gap-2 font-medium text-green-800 text-sm dark:text-green-200">
@@ -283,7 +282,7 @@ export function FlowCanvas() {
 
         {isShowingTrace && !isSimulating && (
           <Panel
-            position="top-center"
+            position="top-left"
             className="rounded-lg border border-orange-300 bg-orange-100 px-4 py-2 dark:border-orange-700 dark:bg-orange-950"
           >
             <div className="flex items-center gap-2 font-medium text-orange-800 text-sm dark:text-orange-200">
