@@ -295,10 +295,6 @@ function App() {
                       <DiamondPlus className="mr-2 size-4" />
                       {t('buttons.newAutomation')}
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleImport}>
-                      <FileUp className="mr-2 h-4 w-4" />
-                      {t('buttons.importJson')}
-                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setImportYamlOpen(true)}>
                       <FileCode className="mr-2 h-4 w-4" />
                       {t('buttons.importYaml')}
@@ -324,14 +320,6 @@ function App() {
                 )}
               </Button>
 
-              <Button
-                onClick={handleExport}
-                variant="ghost"
-                size="icon"
-                title={t('titles.exportJson')}
-              >
-                <FileDown className="h-5 w-5" />
-              </Button>
             </div>
           </header>
 
@@ -406,9 +394,31 @@ function App() {
                     <div className="flex h-full flex-col">
                       {/* Shared Speed Control */}
                       <div className="border-b p-4">
-                        <h4 className="mb-2 font-medium text-muted-foreground text-xs">
-                          {t('labels.debugControls')}
-                        </h4>
+                        <div className="mb-2 flex items-center justify-between">
+                          <h4 className="font-medium text-muted-foreground text-xs">
+                            {t('labels.debugControls')}
+                          </h4>
+                          <div className="flex gap-1">
+                            <Button
+                              onClick={handleImport}
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              title={t('buttons.importJson')}
+                            >
+                              <FileUp className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              onClick={handleExport}
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              title={t('titles.exportJson')}
+                            >
+                              <FileDown className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </div>
                         <SpeedControl speed={simulationSpeed} onSpeedChange={setSimulationSpeed} />
                       </div>
 
