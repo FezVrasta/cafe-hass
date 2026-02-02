@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { EntitySelector } from '@/components/ui/EntitySelector';
+import { IdList } from '@/components/ui/IdList';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { MultiEntitySelector } from '@/components/ui/MultiEntitySelector';
@@ -149,7 +150,27 @@ export function DynamicFieldRenderer({
   const renderField = () => {
     switch (selectorType) {
       // Text input
-      case 'text':
+      case 'text': {
+        // Check if this field supports multiple values
+        const isMultiple = 'multiple' in field && field.multiple;
+
+        if (isMultiple) {
+          // Coerce value to an array, handling both strings and existing arrays
+          const values = Array.isArray(value)
+            ? value
+            : typeof value === 'string' && value
+              ? [value]
+              : [];
+
+          return (
+            <IdList
+              values={values}
+              onChange={onChange}
+              placeholder={placeholder || 'Add value...'}
+            />
+          );
+        }
+
         return (
           <Input
             type="text"
@@ -159,6 +180,7 @@ export function DynamicFieldRenderer({
             required={required}
           />
         );
+      }
 
       // Number input
       case 'number':

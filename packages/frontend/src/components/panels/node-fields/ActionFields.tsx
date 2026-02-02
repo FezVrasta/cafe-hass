@@ -1,94 +1,16 @@
 import type { FlowNode } from '@cafe/shared';
-import { PlusIcon, XIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { FieldError } from '@/components/forms/FieldError';
 import { FormField } from '@/components/forms/FormField';
-import { Button } from '@/components/ui/button';
 import { Combobox } from '@/components/ui/Combobox';
-import { Input } from '@/components/ui/input';
+import { IdList } from '@/components/ui/IdList';
 import { MultiEntitySelector } from '@/components/ui/MultiEntitySelector';
 import { useHass } from '@/contexts/HassContext';
 import { useNodeErrors } from '@/hooks/useNodeErrors';
-import { cn } from '@/lib/utils';
 import type { HassEntity } from '@/types/hass';
 import { getNodeDataObject, getNodeDataString } from '@/utils/nodeData';
 import { ResponseVariableField } from './ResponseVariableField';
 import { ServiceDataFields } from './ServiceDataFields';
-
-/**
- * Simple component for managing a list of IDs (device_id, area_id)
- */
-function TargetIdList({
-  values,
-  onChange,
-  placeholder = 'Add ID...',
-  className,
-}: {
-  values: string[];
-  onChange: (values: string[]) => void;
-  placeholder?: string;
-  className?: string;
-}) {
-  const [inputValue, setInputValue] = useState('');
-
-  const handleAdd = () => {
-    const trimmed = inputValue.trim();
-    if (trimmed && !values.includes(trimmed)) {
-      onChange([...values, trimmed]);
-      setInputValue('');
-    }
-  };
-
-  const handleRemove = (id: string) => {
-    onChange(values.filter((v) => v !== id));
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleAdd();
-    }
-  };
-
-  return (
-    <div className={cn('space-y-1', className)}>
-      <div className="flex gap-1">
-        <Input
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder={placeholder}
-          className="flex-1 font-mono text-xs"
-        />
-        <Button
-          type="button"
-          size="icon"
-          variant="outline"
-          onClick={handleAdd}
-          disabled={!inputValue.trim()}
-        >
-          <PlusIcon className="h-4 w-4" />
-        </Button>
-      </div>
-      {values.length > 0 && (
-        <div className="flex flex-wrap gap-1">
-          {values.map((id) => (
-            <span
-              key={id}
-              className="inline-flex items-center rounded border bg-muted px-2 py-0.5 font-mono text-muted-foreground text-xs"
-            >
-              {id}
-              <XIcon
-                className="ml-1 h-3 w-3 cursor-pointer hover:text-destructive"
-                onClick={() => handleRemove(id)}
-              />
-            </span>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 interface ActionFieldsProps {
   node: FlowNode;
@@ -203,7 +125,7 @@ export function ActionFields({ node, onChange, entities }: ActionFieldsProps) {
       {/* Target Devices - show if we have device targets or service supports targets */}
       {(hasDeviceTargets || serviceDefinition?.target) && (
         <FormField label="Target Devices" description="Device IDs to target">
-          <TargetIdList
+          <IdList
             values={targetDeviceIdArray}
             onChange={handleDeviceTargetChange}
             placeholder="Add device ID..."
@@ -214,7 +136,7 @@ export function ActionFields({ node, onChange, entities }: ActionFieldsProps) {
       {/* Target Areas - show if we have area targets or service supports targets */}
       {(hasAreaTargets || serviceDefinition?.target) && (
         <FormField label="Target Areas" description="Area IDs to target">
-          <TargetIdList
+          <IdList
             values={targetAreaIdArray}
             onChange={handleAreaTargetChange}
             placeholder="Add area ID..."

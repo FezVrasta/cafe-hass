@@ -54,6 +54,18 @@ function hasEntityId(entityId: unknown): boolean {
 }
 
 /**
+ * Helper to check if a trigger ID value is valid (non-empty).
+ * Handles both string and array formats, ensuring no empty strings.
+ */
+function hasValidTriggerId(id: unknown): boolean {
+  if (Array.isArray(id)) {
+    return id.length > 0 && id.every((item) => typeof item === 'string' && item.trim() !== '');
+  }
+  if (typeof id === 'string') return id.trim() !== '';
+  return false;
+}
+
+/**
  * Trigger node validation - requires trigger platform and type-specific fields.
  * Accepts both 'trigger' (modern) and 'platform' (legacy) field names.
  */
@@ -239,7 +251,7 @@ export const ConditionNodeValidationSchema = z
     value_template: z.string().optional(),
     zone: z.string().optional(),
     device_id: z.string().optional(),
-    id: z.string().optional(),
+    id: z.unknown().optional(),
   })
   .passthrough()
   .superRefine((data, ctx) => {
@@ -272,7 +284,7 @@ export const ConditionNodeValidationSchema = z
         break;
 
       case 'trigger':
-        if (!data.id || data.id.trim() === '') {
+        if (!hasValidTriggerId(data.id)) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
             message: 'Trigger ID is required',

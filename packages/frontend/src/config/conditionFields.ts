@@ -205,11 +205,12 @@ export const CONDITION_TYPE_FIELDS: Record<ConditionType, FieldConfig[]> = {
   trigger: [
     {
       name: 'id',
-      label: 'Trigger ID',
+      label: 'Trigger ID(s)',
       type: 'text',
       required: true,
+      multiple: true,
       placeholder: 'e.g., arriving, leaving',
-      description: 'The ID of the trigger to match',
+      description: 'The ID(s) of the trigger(s) to match',
     },
   ],
 
