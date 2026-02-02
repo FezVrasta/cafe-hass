@@ -1,22 +1,9 @@
-type OptionWithDomain = {
-  value: string;
-  label: string;
+type OptionWithDomain = ComboboxOption & {
   domainLabel: string;
   domainColor: string;
   deviceLabel?: string;
 };
 
-function isOptionWithDomain(option: unknown): option is OptionWithDomain {
-  return (
-    typeof option === 'object' &&
-    option !== null &&
-    'domainLabel' in option &&
-    'domainColor' in option &&
-    'deviceLabel' in option
-  );
-}
-// Extend ComboboxOption for this component
-//
 // Map domain to display name and color
 const DOMAIN_INFO: Record<string, { label: string; color: string }> = {
   light: {
@@ -164,7 +151,7 @@ function getDomainInfo(entityId: string | undefined | null): { label: string; co
 }
 
 import { useMemo } from 'react';
-import { Combobox } from '@/components/ui/Combobox';
+import { Combobox, type ComboboxOption } from '@/components/ui/Combobox';
 import { useHass } from '@/contexts/HassContext';
 import { cn } from '@/lib/utils';
 import type { HassEntity } from '@/types/hass';
@@ -222,45 +209,40 @@ export function EntitySelector({
 
   return (
     <div className={cn('relative', className)}>
-      <Combobox
+      <Combobox<OptionWithDomain>
         options={options}
         value={normalizedValue || ''}
         onChange={handleChange}
         placeholder={placeholder}
         buttonClassName={cn(!normalizedValue && 'text-muted-foreground')}
         disabled={options.length === 0}
-        renderOption={(option) =>
-          isOptionWithDomain(option) ? (
-            <div className="flex min-w-0 flex-col gap-2">
-              <span>{option.label}</span>
-
-              <div className="flex min-w-0 items-center gap-2">
-                <span
-                  className={cn('rounded px-1.5 py-0.5 font-medium text-xs', option.domainColor)}
-                >
-                  {option.domainLabel}
-                </span>
-                {option.deviceLabel && (
-                  <span className="truncate text-muted-foreground text-xs">
-                    {option.deviceLabel}
-                  </span>
-                )}
-              </div>
-            </div>
-          ) : (
+        searchKeys={['label', 'value', 'deviceLabel']} // Search on friendly name, entity ID, and device name
+        fuzzyOptions={{
+          threshold: 0.3, // More strict for entity selection
+          minMatchCharLength: 2, // Require at least 2 characters for search
+        }}
+        renderOption={(option: OptionWithDomain) => (
+          <div className="flex min-w-0 flex-col gap-2">
             <span>{option.label}</span>
-          )
-        }
-        renderValue={(option) =>
-          option && isOptionWithDomain(option) ? (
+
+            <div className="flex min-w-0 items-center gap-2">
+              <span className={cn('rounded px-1.5 py-0.5 font-medium text-xs', option.domainColor)}>
+                {option.domainLabel}
+              </span>
+              {option.deviceLabel && (
+                <span className="truncate text-muted-foreground text-xs">{option.deviceLabel}</span>
+              )}
+            </div>
+          </div>
+        )}
+        renderValue={(option?: OptionWithDomain) =>
+          option ? (
             <div className="flex min-w-0 items-center gap-2">
               <span className={cn('rounded px-1.5 py-0.5 font-medium text-xs', option.domainColor)}>
                 {option.domainLabel}
               </span>
               <span className="truncate">{option.label}</span>
             </div>
-          ) : option ? (
-            <span className="truncate">{option.label}</span>
           ) : null
         }
       />

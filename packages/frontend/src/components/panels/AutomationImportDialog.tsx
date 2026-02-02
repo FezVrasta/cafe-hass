@@ -28,6 +28,7 @@ interface EntityRegistryEntry {
   area_id?: string;
 }
 
+import { useFuzzySearch } from '@/hooks/useFuzzySearch';
 import { getHomeAssistantAPI } from '@/lib/ha-api';
 import { useFlowStore } from '@/store/flow-store';
 
@@ -122,6 +123,38 @@ export function AutomationImportDialog({ isOpen, onClose }: AutomationImportDial
       state: entity.state,
     })) as HaAutomation[];
   }, [entities]);
+
+  // Create search-friendly automation objects
+  const searchableAutomations = useMemo(
+    () =>
+      automations.map((automation) => ({
+        ...automation,
+        searchText: [
+          automation.entity_id,
+          automation.attributes.friendly_name || '',
+          automation.attributes.description || '',
+          ...(Array.isArray(automation.attributes.tags) ? automation.attributes.tags : []),
+        ]
+          .filter(Boolean)
+          .join(' '),
+      })),
+    [automations]
+  );
+
+  // Use fuzzy search for better automation filtering
+  const { setQuery: setFuzzySearchQuery, filteredItems: filteredAutomations } = useFuzzySearch(
+    searchableAutomations,
+    {
+      keys: ['searchText', 'entity_id', 'attributes.friendly_name', 'attributes.description'],
+      threshold: 0.4, // Moderately fuzzy
+      minMatchCharLength: 2,
+    }
+  );
+
+  // Sync the search term with fuzzy search query
+  useEffect(() => {
+    setFuzzySearchQuery(searchTerm);
+  }, [searchTerm, setFuzzySearchQuery]);
 
   // Map entity_id to area_id using entityRegistry
   const entityIdToAreaId = useMemo(() => {
@@ -386,20 +419,16 @@ export function AutomationImportDialog({ isOpen, onClose }: AutomationImportDial
               </div>
               <div>
                 {Object.entries(automationsByArea).flatMap(([areaName, automations]) => {
-                  const filteredAutomations = searchTerm
-                    ? automations.filter(
-                        (automation) =>
-                          automation.entity_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          automation.attributes.friendly_name
-                            ?.toLowerCase()
-                            .includes(searchTerm.toLowerCase()) ||
-                          automation.attributes.description
-                            ?.toLowerCase()
-                            .includes(searchTerm.toLowerCase())
+                  // Filter automations using fuzzy search if search term exists
+                  const areaFilteredAutomations = searchTerm
+                    ? automations.filter((automation) =>
+                        filteredAutomations.some(
+                          (filtered) => filtered.entity_id === automation.entity_id
+                        )
                       )
                     : automations;
 
-                  if (filteredAutomations.length === 0) {
+                  if (areaFilteredAutomations.length === 0) {
                     return [];
                   }
 
@@ -414,7 +443,7 @@ export function AutomationImportDialog({ isOpen, onClose }: AutomationImportDial
                     </div>,
                   ];
 
-                  const automationRows = filteredAutomations.map((automation) => (
+                  const automationRows = areaFilteredAutomations.map((automation) => (
                     <div key={automation.entity_id} className="flex border-b last:border-0">
                       <div className="flex-1 px-3 py-2 align-top">
                         {/* Name (with tags below) */}

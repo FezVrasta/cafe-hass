@@ -1508,33 +1508,26 @@ export class YamlParser {
 
           // Chain condition nodes together with 'true' edges
           for (let ci = 0; ci < conditionNodes.length - 1; ci++) {
-            edges.push(
-              this.createEdge(conditionNodes[ci].id, conditionNodes[ci + 1].id, 'true')
-            );
+            edges.push(this.createEdge(conditionNodes[ci].id, conditionNodes[ci + 1].id, 'true'));
           }
 
           const lastCondId = conditionNodes[conditionNodes.length - 1].id;
 
           // Parse body sequence from last condition's TRUE path
-          const bodyResult = this.parseActions(
-            repeatSequence as (HAAction | HACondition)[],
-            {
-              warnings,
-              previousNodeIds: [lastCondId],
-              getNextNodeId,
-              conditionNodeIds: localConditionNodeIds,
-              inheritedEnabled: blockEnabled,
-            }
-          );
+          const bodyResult = this.parseActions(repeatSequence as (HAAction | HACondition)[], {
+            warnings,
+            previousNodeIds: [lastCondId],
+            getNextNodeId,
+            conditionNodeIds: localConditionNodeIds,
+            inheritedEnabled: blockEnabled,
+          });
           nodes.push(...bodyResult.nodes);
           edges.push(...bodyResult.edges);
 
           // Fix the first edge from last condition to body to use 'true' handle
           if (bodyResult.nodes.length > 0) {
             const firstBodyId = bodyResult.nodes[0].id;
-            const trueEdge = edges.find(
-              (e) => e.source === lastCondId && e.target === firstBodyId
-            );
+            const trueEdge = edges.find((e) => e.source === lastCondId && e.target === firstBodyId);
             if (trueEdge) {
               trueEdge.sourceHandle = 'true';
             }
@@ -1544,9 +1537,9 @@ export class YamlParser {
           const bodyNodeIds = new Set(bodyResult.nodes.map((n) => n.id));
           const bodySourceIds = new Set(bodyResult.edges.map((e) => e.source));
           const bodyLastNodes = bodyResult.nodes.filter(
-            (n) => !bodySourceIds.has(n.id) || ![...bodyResult.edges].some(
-              (e) => e.source === n.id && bodyNodeIds.has(e.target)
-            )
+            (n) =>
+              !bodySourceIds.has(n.id) ||
+              ![...bodyResult.edges].some((e) => e.source === n.id && bodyNodeIds.has(e.target))
           );
           const lastBodyNodeId =
             bodyLastNodes.length > 0
@@ -1573,34 +1566,28 @@ export class YamlParser {
           // condition_node →(false, back-edge)→ first body node
 
           // Parse body sequence first
-          const bodyResult = this.parseActions(
-            repeatSequence as (HAAction | HACondition)[],
-            {
-              warnings,
-              previousNodeIds: currentNodeIds,
-              getNextNodeId,
-              conditionNodeIds: localConditionNodeIds,
-              inheritedEnabled: blockEnabled,
-            }
-          );
+          const bodyResult = this.parseActions(repeatSequence as (HAAction | HACondition)[], {
+            warnings,
+            previousNodeIds: currentNodeIds,
+            getNextNodeId,
+            conditionNodeIds: localConditionNodeIds,
+            inheritedEnabled: blockEnabled,
+          });
           nodes.push(...bodyResult.nodes);
           edges.push(...bodyResult.edges);
 
           // Find the first body node
-          const firstBodyNodeId =
-            bodyResult.nodes.length > 0 ? bodyResult.nodes[0].id : null;
+          const firstBodyNodeId = bodyResult.nodes.length > 0 ? bodyResult.nodes[0].id : null;
 
           // Find the last body node
           const bodyNodeIds = new Set(bodyResult.nodes.map((n) => n.id));
           const bodySourceIds = new Set(
-            bodyResult.edges
-              .filter((e) => bodyNodeIds.has(e.target))
-              .map((e) => e.source)
+            bodyResult.edges.filter((e) => bodyNodeIds.has(e.target)).map((e) => e.source)
           );
           const bodyLastNodes = bodyResult.nodes.filter(
-            (n) => !bodySourceIds.has(n.id) || !bodyResult.edges.some(
-              (e) => e.source === n.id && bodyNodeIds.has(e.target)
-            )
+            (n) =>
+              !bodySourceIds.has(n.id) ||
+              !bodyResult.edges.some((e) => e.source === n.id && bodyNodeIds.has(e.target))
           );
           const lastBodyNodeId =
             bodyLastNodes.length > 0
@@ -1610,9 +1597,10 @@ export class YamlParser {
                 : null;
 
           // Create condition nodes from until conditions
-          const untilConditions: HACondition[] = typeof repeat.until === 'string'
-            ? [{ condition: 'template', value_template: repeat.until }]
-            : (repeat.until as HACondition[]);
+          const untilConditions: HACondition[] =
+            typeof repeat.until === 'string'
+              ? [{ condition: 'template', value_template: repeat.until }]
+              : (repeat.until as HACondition[]);
 
           const conditionNodes: ConditionNode[] = [];
           for (let ci = 0; ci < untilConditions.length; ci++) {
@@ -1644,9 +1632,8 @@ export class YamlParser {
           // Connect last body node → first condition
           if (lastBodyNodeId) {
             const lastBodyNode = bodyResult.nodes.find((n) => n.id === lastBodyNodeId);
-            const sourceHandle = lastBodyNode && localConditionNodeIds.has(lastBodyNodeId)
-              ? 'true'
-              : undefined;
+            const sourceHandle =
+              lastBodyNode && localConditionNodeIds.has(lastBodyNodeId) ? 'true' : undefined;
             edges.push(this.createEdge(lastBodyNodeId, conditionNodes[0].id, sourceHandle));
           } else {
             // Empty body - connect previous nodes directly to condition
@@ -1655,9 +1642,7 @@ export class YamlParser {
 
           // Chain condition nodes together with 'true' edges
           for (let ci = 0; ci < conditionNodes.length - 1; ci++) {
-            edges.push(
-              this.createEdge(conditionNodes[ci].id, conditionNodes[ci + 1].id, 'true')
-            );
+            edges.push(this.createEdge(conditionNodes[ci].id, conditionNodes[ci + 1].id, 'true'));
           }
 
           const lastCondId = conditionNodes[conditionNodes.length - 1].id;
@@ -1694,30 +1679,25 @@ export class YamlParser {
           createEdgesFromCurrent(counterId);
 
           // Parse body sequence
-          const bodyResult = this.parseActions(
-            repeatSequence as (HAAction | HACondition)[],
-            {
-              warnings,
-              previousNodeIds: [counterId],
-              getNextNodeId,
-              conditionNodeIds: localConditionNodeIds,
-              inheritedEnabled: blockEnabled,
-            }
-          );
+          const bodyResult = this.parseActions(repeatSequence as (HAAction | HACondition)[], {
+            warnings,
+            previousNodeIds: [counterId],
+            getNextNodeId,
+            conditionNodeIds: localConditionNodeIds,
+            inheritedEnabled: blockEnabled,
+          });
           nodes.push(...bodyResult.nodes);
           edges.push(...bodyResult.edges);
 
           // Find last body node
           const bodyNodeIds = new Set(bodyResult.nodes.map((n) => n.id));
           const bodySourceIds = new Set(
-            bodyResult.edges
-              .filter((e) => bodyNodeIds.has(e.target))
-              .map((e) => e.source)
+            bodyResult.edges.filter((e) => bodyNodeIds.has(e.target)).map((e) => e.source)
           );
           const bodyLastNodes = bodyResult.nodes.filter(
-            (n) => !bodySourceIds.has(n.id) || !bodyResult.edges.some(
-              (e) => e.source === n.id && bodyNodeIds.has(e.target)
-            )
+            (n) =>
+              !bodySourceIds.has(n.id) ||
+              !bodyResult.edges.some((e) => e.source === n.id && bodyNodeIds.has(e.target))
           );
           const lastBodyNodeId =
             bodyLastNodes.length > 0
@@ -1740,9 +1720,8 @@ export class YamlParser {
           nodes.push(incrNode);
           if (bodyResult.nodes.length > 0) {
             const lastBodyNode = bodyResult.nodes.find((n) => n.id === lastBodyNodeId);
-            const sourceHandle = lastBodyNode && localConditionNodeIds.has(lastBodyNodeId)
-              ? 'true'
-              : undefined;
+            const sourceHandle =
+              lastBodyNode && localConditionNodeIds.has(lastBodyNodeId) ? 'true' : undefined;
             edges.push(this.createEdge(lastBodyNodeId, incrId, sourceHandle));
           } else {
             edges.push(this.createEdge(counterId, incrId));
@@ -1765,8 +1744,7 @@ export class YamlParser {
           edges.push(this.createEdge(incrId, condId));
 
           // Back-edge: condition →(true)→ first body node (or init if no body)
-          const loopTargetId =
-            bodyResult.nodes.length > 0 ? bodyResult.nodes[0].id : incrId;
+          const loopTargetId = bodyResult.nodes.length > 0 ? bodyResult.nodes[0].id : incrId;
           const backEdge = this.createEdge(condId, loopTargetId, 'true');
           edges.push(backEdge);
 
