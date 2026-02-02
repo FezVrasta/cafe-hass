@@ -209,7 +209,8 @@ export class NativeStrategy extends BaseStrategy {
           if (node?.type !== 'condition') break;
           conditionNodeIds.push(currentId);
           const trueEdge = flow.edges.find(
-            (e) => e.source === currentId && e.sourceHandle === 'true' && !this.backEdgeIds.has(e.id)
+            (e) =>
+              e.source === currentId && e.sourceHandle === 'true' && !this.backEdgeIds.has(e.id)
           );
           if (!trueEdge) break;
           const nextNode = this.getNode(flow, trueEdge.target);
@@ -232,7 +233,8 @@ export class NativeStrategy extends BaseStrategy {
 
         // Exit: first condition's false path
         const falseEdge = flow.edges.find(
-          (e) => e.source === firstCondId && e.sourceHandle === 'false' && !this.backEdgeIds.has(e.id)
+          (e) =>
+            e.source === firstCondId && e.sourceHandle === 'false' && !this.backEdgeIds.has(e.id)
         );
 
         patterns.set(firstCondId, {
@@ -268,11 +270,7 @@ export class NativeStrategy extends BaseStrategy {
         }
 
         // Body nodes: traverse forward from firstBodyId until we hit the condition
-        const bodyNodeIds = this.collectNodesUntil(
-          flow,
-          firstBodyId,
-          new Set(conditionNodeIds)
-        );
+        const bodyNodeIds = this.collectNodesUntil(flow, firstBodyId, new Set(conditionNodeIds));
 
         // Exit: last condition's true path
         const lastCondId = conditionNodeIds[conditionNodeIds.length - 1];
@@ -397,11 +395,7 @@ export class NativeStrategy extends BaseStrategy {
   /**
    * Collect node IDs by traversing forward until hitting any node in stopIds
    */
-  private collectNodesUntil(
-    flow: FlowGraph,
-    startId: string,
-    stopIds: Set<string>
-  ): string[] {
+  private collectNodesUntil(flow: FlowGraph, startId: string, stopIds: Set<string>): string[] {
     const bodyIds: string[] = [];
     const queue = [startId];
     const visited = new Set<string>();
@@ -709,7 +703,10 @@ export class NativeStrategy extends BaseStrategy {
     visited: Set<string>
   ): ConditionNode[] {
     const sources = flow.edges
-      .filter((e) => e.target === targetNodeId && e.sourceHandle === handleType && !this.backEdgeIds.has(e.id))
+      .filter(
+        (e) =>
+          e.target === targetNodeId && e.sourceHandle === handleType && !this.backEdgeIds.has(e.id)
+      )
       .map((e) => this.getNode(flow, e.source))
       .filter((n): n is ConditionNode => n?.type === 'condition' && !visited.has(n.id));
 
@@ -825,9 +822,7 @@ export class NativeStrategy extends BaseStrategy {
     visited.add(nodeId);
 
     // Get outgoing edges (excluding repeat back-edges)
-    const outgoing = this.getOutgoingEdges(flow, nodeId).filter(
-      (e) => !this.backEdgeIds.has(e.id)
-    );
+    const outgoing = this.getOutgoingEdges(flow, nodeId).filter((e) => !this.backEdgeIds.has(e.id));
 
     if (node.type === 'condition') {
       // ===== Condition Chain Logic =====
@@ -1081,9 +1076,7 @@ export class NativeStrategy extends BaseStrategy {
     }
 
     // Get outgoing edges (excluding repeat back-edges)
-    const outgoing = this.getOutgoingEdges(flow, nodeId).filter(
-      (e) => !this.backEdgeIds.has(e.id)
-    );
+    const outgoing = this.getOutgoingEdges(flow, nodeId).filter((e) => !this.backEdgeIds.has(e.id));
 
     if (node.type === 'condition') {
       // Condition nodes are handled specially

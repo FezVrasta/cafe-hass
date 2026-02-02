@@ -33,6 +33,7 @@
     "clsx": "^2.1.0",
     "cmdk": "^1.1.1",
     "custom-card-helpers": "^1.9.0",
+    "fuse.js": "^7.1.0",
     "home-assistant-js-websocket": "^9.6.0",
     "i18next": "^25.8.0",
     "lucide-react": "^0.460.0",
