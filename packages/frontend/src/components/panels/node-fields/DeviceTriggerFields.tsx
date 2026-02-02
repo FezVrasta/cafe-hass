@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { FormField } from '@/components/forms/FormField';
 import { DeviceSelector } from '@/components/ui/DeviceSelector';
 import { DynamicFieldRenderer } from '@/components/ui/DynamicFieldRenderer';
+import { EntitySelector } from '@/components/ui/EntitySelector';
 import {
   Select,
   SelectContent,
@@ -143,12 +144,15 @@ export function DeviceTriggerFields({ node, onChange, entities }: DeviceTriggerF
         )
       )}
 
-      {/* Entity ID - show if present and no API data */}
-      {deviceId && entityId && availableDeviceTriggers.length === 0 && (
-        <FormField label={t('labels.entityId')}>
-          <div className="truncate rounded-md border bg-muted px-3 py-2 font-mono text-sm">
-            {entityId}
-          </div>
+      {/* Entity ID - always required for device triggers when device is selected */}
+      {deviceId && (
+        <FormField label={t('labels.entityId')} required>
+          <EntitySelector
+            value={entityId || ''}
+            onChange={(value) => onChange('entity_id', value)}
+            entities={entities}
+            placeholder={t('placeholders.selectEntity')}
+          />
         </FormField>
       )}
 
