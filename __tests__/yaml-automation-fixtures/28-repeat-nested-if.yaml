@@ -1,0 +1,27 @@
+alias: Repeat Inside If
+description: Test repeat block nested inside if/then/else
+triggers:
+  - trigger: time
+    at: "08:00:00"
+actions:
+  - if:
+      - condition: state
+        entity_id: binary_sensor.workday
+        state: "on"
+    then:
+      - repeat:
+          while:
+            - condition: state
+              entity_id: input_boolean.reminder_needed
+              state: "on"
+          sequence:
+            - action: notify.mobile_app
+              data:
+                message: Time to get ready!
+            - delay:
+                minutes: 5
+    else:
+      - action: notify.mobile_app
+        data:
+          message: Enjoy your day off!
+mode: single

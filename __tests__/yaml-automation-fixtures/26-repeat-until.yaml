@@ -1,0 +1,19 @@
+alias: Repeat Until Test
+description: Test repeat until loop
+triggers:
+  - trigger: state
+    entity_id: binary_sensor.door
+    to: "on"
+actions:
+  - repeat:
+      until:
+        - condition: state
+          entity_id: binary_sensor.door
+          state: "off"
+      sequence:
+        - action: notify.mobile_app
+          data:
+            message: Door is still open!
+        - delay:
+            minutes: 1
+mode: single

@@ -16,10 +16,10 @@ variables:
   _cafe_metadata:
     version: 1
     nodes:
-      trigger_test_0_154:
+      trigger_test_0_174:
         x: 12
         "y": 12
-      action_test_1_155:
+      action_test_1_175:
         x: 312
         "y": 12
     graph_id: a18b0fbb-d966-432c-aba7-4f7361da8d29
@@ -71,16 +71,16 @@ variables:
   _cafe_metadata:
     version: 1
     nodes:
-      trigger_test_0_150:
+      trigger_test_0_170:
         x: 12
         "y": 92
-      condition_test_1_151:
+      condition_test_1_171:
         x: 312
         "y": 82
-      action_test_2_152:
+      action_test_2_172:
         x: 632
         "y": 12
-      action_test_3_153:
+      action_test_3_173:
         x: 632
         "y": 172
     graph_id: a18b0fbb-d966-432c-aba7-4f7361da8d29
@@ -99,7 +99,7 @@ triggers:
     for: "00:00:05"
 actions:
   - variables:
-      current_node: condition_test_1_143
+      current_node: condition_test_1_163
       flow_context: {}
   - alias: State Machine Loop
     repeat:
@@ -108,53 +108,53 @@ actions:
         - choose:
             - conditions:
                 - condition: template
-                  value_template: "{{ current_node == \\"condition_test_1_143\\" }}"
+                  value_template: "{{ current_node == \\"condition_test_1_163\\" }}"
               sequence:
                 - variables:
-                    current_node: "{% if states('sensor.brightness_sensor') | float > 120 %}condition_test_2_144{% else %}END{% endif %}"
+                    current_node: "{% if states('sensor.brightness_sensor') | float > 120 %}condition_test_2_164{% else %}END{% endif %}"
             - conditions:
                 - condition: template
-                  value_template: "{{ current_node == \\"condition_test_2_144\\" }}"
+                  value_template: "{{ current_node == \\"condition_test_2_164\\" }}"
               sequence:
                 - if:
                     - condition: template
                       value_template: "{% set app = (state_attr('media_player.tv', 'app_name') or '') | string %} {% set ok_apps = ['TV','Apple TV','Prime Video','Netflix'] %} {{ app in ok_apps }}"
                   then:
                     - variables:
-                        current_node: condition_test_3_145
+                        current_node: condition_test_3_165
                   else:
                     - variables:
                         current_node: END
             - conditions:
                 - condition: template
-                  value_template: "{{ current_node == \\"condition_test_3_145\\" }}"
+                  value_template: "{{ current_node == \\"condition_test_3_165\\" }}"
               sequence:
                 - variables:
-                    current_node: "{% if (state_attr('media_player.tv','media_content_type') or '') | lower == 'movie' %}condition_test_4_146{% else %}END{% endif %}"
+                    current_node: "{% if (state_attr('media_player.tv','media_content_type') or '') | lower == 'movie' %}condition_test_4_166{% else %}END{% endif %}"
             - conditions:
                 - condition: template
-                  value_template: "{{ current_node == \\"condition_test_4_146\\" }}"
+                  value_template: "{{ current_node == \\"condition_test_4_166\\" }}"
               sequence:
                 - variables:
-                    current_node: "{% if states('cover.velux_blind') != 'closed' %}action_test_5_147{% else %}condition_test_6_148{% endif %}"
+                    current_node: "{% if states('cover.velux_blind') != 'closed' %}action_test_5_167{% else %}condition_test_6_168{% endif %}"
             - conditions:
                 - condition: template
-                  value_template: "{{ current_node == \\"action_test_5_147\\" }}"
+                  value_template: "{{ current_node == \\"action_test_5_167\\" }}"
               sequence:
                 - service: cover.close_cover
                   target:
                     entity_id: cover.velux_blind
                 - variables:
-                    current_node: condition_test_6_148
+                    current_node: condition_test_6_168
             - conditions:
                 - condition: template
-                  value_template: "{{ current_node == \\"condition_test_6_148\\" }}"
+                  value_template: "{{ current_node == \\"condition_test_6_168\\" }}"
               sequence:
                 - variables:
-                    current_node: "{% if states('cover.main_blind') != 'closed' %}action_test_7_149{% else %}END{% endif %}"
+                    current_node: "{% if states('cover.main_blind') != 'closed' %}action_test_7_169{% else %}END{% endif %}"
             - conditions:
                 - condition: template
-                  value_template: "{{ current_node == \\"action_test_7_149\\" }}"
+                  value_template: "{{ current_node == \\"action_test_7_169\\" }}"
               sequence:
                 - service: cover.close_cover
                   target:
@@ -173,28 +173,28 @@ variables:
   _cafe_metadata:
     version: 1
     nodes:
-      trigger_test_0_142:
+      trigger_test_0_162:
         x: 12
         "y": 32.5
-      condition_test_1_143:
+      condition_test_1_163:
         x: 312
         "y": 22.5
-      condition_test_2_144:
+      condition_test_2_164:
         x: 632
         "y": 22.5
-      condition_test_3_145:
+      condition_test_3_165:
         x: 952
         "y": 22.5
-      condition_test_4_146:
+      condition_test_4_166:
         x: 1272
         "y": 22.5
-      action_test_5_147:
+      action_test_5_167:
         x: 1592
         "y": 53
-      condition_test_6_148:
+      condition_test_6_168:
         x: 1892
         "y": 22.5
-      action_test_7_149:
+      action_test_7_169:
         x: 2212
         "y": 32.5
     graph_id: a18b0fbb-d966-432c-aba7-4f7361da8d29
@@ -252,22 +252,22 @@ variables:
   _cafe_metadata:
     version: 1
     nodes:
-      trigger_test_0_136:
+      trigger_test_0_156:
         x: 12
         "y": 102
-      condition_test_1_137:
+      condition_test_1_157:
         x: 312
         "y": 92
-      action_test_2_138:
+      action_test_2_158:
         x: 632
         "y": 192
-      condition_test_3_139:
+      condition_test_3_159:
         x: 632
         "y": 12
-      action_test_4_140:
+      action_test_4_160:
         x: 952
         "y": 22
-      action_test_5_141:
+      action_test_5_161:
         x: 952
         "y": 182
     graph_id: a18b0fbb-d966-432c-aba7-4f7361da8d29
@@ -306,25 +306,25 @@ variables:
   _cafe_metadata:
     version: 1
     nodes:
-      trigger_test_0_129:
+      trigger_test_0_149:
         x: 12
         "y": 12
-      action_test_1_130:
+      action_test_1_150:
         x: 312
         "y": 12
-      delay_test_2_131:
+      delay_test_2_151:
         x: 612
         "y": 17
-      action_test_3_132:
+      action_test_3_152:
         x: 892
         "y": 12
-      wait_test_4_133:
+      wait_test_4_153:
         x: 1192
         "y": 17
-      delay_test_5_134:
+      delay_test_5_154:
         x: 1472
         "y": 17
-      action_test_6_135:
+      action_test_6_155:
         x: 1752
         "y": 12
     graph_id: a18b0fbb-d966-432c-aba7-4f7361da8d29
@@ -363,22 +363,22 @@ variables:
   _cafe_metadata:
     version: 1
     nodes:
-      trigger_test_0_123:
+      trigger_test_0_143:
         x: 12
         "y": 172
-      trigger_test_1_124:
+      trigger_test_1_144:
         x: 12
         "y": 332
-      trigger_test_2_125:
+      trigger_test_2_145:
         x: 12
         "y": 492
-      trigger_test_3_126:
+      trigger_test_3_146:
         x: 12
         "y": 12
-      action_test_4_127:
+      action_test_4_147:
         x: 312
         "y": 252
-      action_test_5_128:
+      action_test_5_148:
         x: 612
         "y": 252
     graph_id: a18b0fbb-d966-432c-aba7-4f7361da8d29
@@ -409,7 +409,7 @@ triggers:
       - 0/0/1
 actions:
   - variables:
-      current_node: condition_test_1_107
+      current_node: condition_test_1_127
       flow_context: {}
   - alias: State Machine Loop
     repeat:
@@ -418,33 +418,33 @@ actions:
         - choose:
             - conditions:
                 - condition: template
-                  value_template: "{{ current_node == \\"condition_test_1_107\\" }}"
+                  value_template: "{{ current_node == \\"condition_test_1_127\\" }}"
               sequence:
                 - variables:
-                    current_node: "{% if trigger.payload == 1 %}condition_test_2_108{% else %}END{% endif %}"
+                    current_node: "{% if trigger.payload == 1 %}condition_test_2_128{% else %}END{% endif %}"
             - conditions:
                 - condition: template
-                  value_template: "{{ current_node == \\"condition_test_2_108\\" }}"
+                  value_template: "{{ current_node == \\"condition_test_2_128\\" }}"
               sequence:
                 - variables:
-                    current_node: "{% if target_light is not none %}wait_test_3_109{% else %}END{% endif %}"
+                    current_node: "{% if target_light is not none %}wait_test_3_129{% else %}END{% endif %}"
             - conditions:
                 - condition: template
-                  value_template: "{{ current_node == \\"wait_test_3_109\\" }}"
+                  value_template: "{{ current_node == \\"wait_test_3_129\\" }}"
               sequence:
                 - wait_template: "{{ is_state(target_light, 'on') }}"
                   timeout: "00:00:03"
                 - variables:
-                    current_node: condition_test_4_110
+                    current_node: condition_test_4_130
             - conditions:
                 - condition: template
-                  value_template: "{{ current_node == \\"condition_test_4_110\\" }}"
+                  value_template: "{{ current_node == \\"condition_test_4_130\\" }}"
               sequence:
                 - variables:
-                    current_node: "{% if is_state(target_light, 'on') %}action_test_5_111{% else %}END{% endif %}"
+                    current_node: "{% if is_state(target_light, 'on') %}action_test_5_131{% else %}END{% endif %}"
             - conditions:
                 - condition: template
-                  value_template: "{{ current_node == \\"action_test_5_111\\" }}"
+                  value_template: "{{ current_node == \\"action_test_5_131\\" }}"
               sequence:
                 - service: light.turn_on
                   target:
@@ -453,26 +453,26 @@ actions:
                     brightness_pct: 100
                     transition: 0
                 - variables:
-                    current_node: delay_test_6_112
+                    current_node: delay_test_6_132
             - conditions:
                 - condition: template
-                  value_template: "{{ current_node == \\"delay_test_6_112\\" }}"
+                  value_template: "{{ current_node == \\"delay_test_6_132\\" }}"
               sequence:
                 - delay:
                     milliseconds: 500
                 - variables:
-                    current_node: set_variables_test_7_113
+                    current_node: set_variables_test_7_133
             - conditions:
                 - condition: template
-                  value_template: "{{ current_node == \\"set_variables_test_7_113\\" }}"
+                  value_template: "{{ current_node == \\"set_variables_test_7_133\\" }}"
               sequence:
                 - variables:
                     color_before: "{% set a = state_attr(target_light, 'hs_color') %} {% set b = state_attr(target_light, 'xy_color') %} {% set c = state_attr(target_light, 'color_temp_kelvin') %} {% set d = state_attr(target_light, 'color_temp') %} {{ [a, b, c, d] }}"
                 - variables:
-                    current_node: action_test_8_114
+                    current_node: action_test_8_134
             - conditions:
                 - condition: template
-                  value_template: "{{ current_node == \\"action_test_8_114\\" }}"
+                  value_template: "{{ current_node == \\"action_test_8_134\\" }}"
               sequence:
                 - service: adaptive_lighting.apply
                   data:
@@ -484,32 +484,32 @@ actions:
                     adapt_color: true
                     transition: 0
                 - variables:
-                    current_node: delay_test_9_115
+                    current_node: delay_test_9_135
             - conditions:
                 - condition: template
-                  value_template: "{{ current_node == \\"delay_test_9_115\\" }}"
+                  value_template: "{{ current_node == \\"delay_test_9_135\\" }}"
               sequence:
                 - delay:
                     milliseconds: 350
                 - variables:
-                    current_node: set_variables_test_10_116
+                    current_node: set_variables_test_10_136
             - conditions:
                 - condition: template
-                  value_template: "{{ current_node == \\"set_variables_test_10_116\\" }}"
+                  value_template: "{{ current_node == \\"set_variables_test_10_136\\" }}"
               sequence:
                 - variables:
                     color_after_1: "{% set a = state_attr(target_light, 'hs_color') %} {% set b = state_attr(target_light, 'xy_color') %} {% set c = state_attr(target_light, 'color_temp_kelvin') %} {% set d = state_attr(target_light, 'color_temp') %} {{ [a, b, c, d] }}"
                 - variables:
-                    current_node: condition_test_11_117
+                    current_node: condition_test_11_137
             - conditions:
                 - condition: template
-                  value_template: "{{ current_node == \\"condition_test_11_117\\" }}"
+                  value_template: "{{ current_node == \\"condition_test_11_137\\" }}"
               sequence:
                 - variables:
-                    current_node: "{% if is_state(target_light, 'on') and (color_after_1 == color_before) %}action_test_12_118{% else %}set_variables_test_14_120{% endif %}"
+                    current_node: "{% if is_state(target_light, 'on') and (color_after_1 == color_before) %}action_test_12_138{% else %}set_variables_test_14_140{% endif %}"
             - conditions:
                 - condition: template
-                  value_template: "{{ current_node == \\"action_test_12_118\\" }}"
+                  value_template: "{{ current_node == \\"action_test_12_138\\" }}"
               sequence:
                 - service: adaptive_lighting.apply
                   data:
@@ -521,32 +521,32 @@ actions:
                     adapt_color: true
                     transition: 0
                 - variables:
-                    current_node: delay_test_13_119
+                    current_node: delay_test_13_139
             - conditions:
                 - condition: template
-                  value_template: "{{ current_node == \\"delay_test_13_119\\" }}"
+                  value_template: "{{ current_node == \\"delay_test_13_139\\" }}"
               sequence:
                 - delay:
                     milliseconds: 350
                 - variables:
-                    current_node: set_variables_test_14_120
+                    current_node: set_variables_test_14_140
             - conditions:
                 - condition: template
-                  value_template: "{{ current_node == \\"set_variables_test_14_120\\" }}"
+                  value_template: "{{ current_node == \\"set_variables_test_14_140\\" }}"
               sequence:
                 - variables:
                     color_after_2: "{% set a = state_attr(target_light, 'hs_color') %} {% set b = state_attr(target_light, 'xy_color') %} {% set c = state_attr(target_light, 'color_temp_kelvin') %} {% set d = state_attr(target_light, 'color_temp') %} {{ [a, b, c, d] }}"
                 - variables:
-                    current_node: condition_test_15_121
+                    current_node: condition_test_15_141
             - conditions:
                 - condition: template
-                  value_template: "{{ current_node == \\"condition_test_15_121\\" }}"
+                  value_template: "{{ current_node == \\"condition_test_15_141\\" }}"
               sequence:
                 - variables:
-                    current_node: "{% if is_state(target_light, 'on') and (color_after_2 == color_before) %}action_test_16_122{% else %}END{% endif %}"
+                    current_node: "{% if is_state(target_light, 'on') and (color_after_2 == color_before) %}action_test_16_142{% else %}END{% endif %}"
             - conditions:
                 - condition: template
-                  value_template: "{{ current_node == \\"action_test_16_122\\" }}"
+                  value_template: "{{ current_node == \\"action_test_16_142\\" }}"
               sequence:
                 - service: adaptive_lighting.apply
                   data:
@@ -583,55 +583,55 @@ variables:
   _cafe_metadata:
     version: 1
     nodes:
-      trigger_test_0_106:
+      trigger_test_0_126:
         x: 12
         "y": 32.5
-      condition_test_1_107:
+      condition_test_1_127:
         x: 312
         "y": 22.5
-      condition_test_2_108:
+      condition_test_2_128:
         x: 632
         "y": 22.5
-      wait_test_3_109:
+      wait_test_3_129:
         x: 952
         "y": 37.5
-      condition_test_4_110:
+      condition_test_4_130:
         x: 1232
         "y": 22.5
-      action_test_5_111:
+      action_test_5_131:
         x: 1552
         "y": 32.5
-      delay_test_6_112:
+      delay_test_6_132:
         x: 1852
         "y": 37.5
-      set_variables_test_7_113:
+      set_variables_test_7_133:
         x: 2132
         "y": 32.5
-      action_test_8_114:
+      action_test_8_134:
         x: 2432
         "y": 32.5
-      delay_test_9_115:
+      delay_test_9_135:
         x: 2732
         "y": 37.5
-      set_variables_test_10_116:
+      set_variables_test_10_136:
         x: 3012
         "y": 32.5
-      condition_test_11_117:
+      condition_test_11_137:
         x: 3312
         "y": 22.5
-      action_test_12_118:
+      action_test_12_138:
         x: 3632
         "y": 53
-      delay_test_13_119:
+      delay_test_13_139:
         x: 3932
         "y": 58
-      set_variables_test_14_120:
+      set_variables_test_14_140:
         x: 4212
         "y": 32.5
-      condition_test_15_121:
+      condition_test_15_141:
         x: 4512
         "y": 22.5
-      action_test_16_122:
+      action_test_16_142:
         x: 4832
         "y": 32.5
     graph_id: a18b0fbb-d966-432c-aba7-4f7361da8d29
@@ -742,43 +742,43 @@ variables:
   _cafe_metadata:
     version: 1
     nodes:
-      trigger_test_0_93:
+      trigger_test_0_113:
         x: 12
         "y": 342
-      trigger_test_1_94:
+      trigger_test_1_114:
         x: 12
         "y": 182
-      trigger_test_2_95:
+      trigger_test_2_115:
         x: 12
         "y": 22
-      condition_test_3_96:
+      condition_test_3_116:
         x: 312
         "y": 172
-      condition_test_4_97:
+      condition_test_4_117:
         x: 632
         "y": 82
-      condition_test_5_98:
+      condition_test_5_118:
         x: 952
         "y": 82
-      action_test_6_99:
+      action_test_6_119:
         x: 1272
         "y": 12
-      action_test_7_100:
+      action_test_7_120:
         x: 1282
         "y": 172
-      action_test_8_101:
+      action_test_8_121:
         x: 1592
         "y": 102
-      condition_test_9_102:
+      condition_test_9_122:
         x: 632
         "y": 262
-      condition_test_10_103:
+      condition_test_10_123:
         x: 952
         "y": 262
-      condition_test_11_104:
+      condition_test_11_124:
         x: 1272
         "y": 332
-      action_test_12_105:
+      action_test_12_125:
         x: 1592
         "y": 262
     graph_id: a18b0fbb-d966-432c-aba7-4f7361da8d29
@@ -840,25 +840,25 @@ variables:
   _cafe_metadata:
     version: 1
     nodes:
-      trigger_test_0_86:
+      trigger_test_0_106:
         x: 12
         "y": 182
-      trigger_test_1_87:
+      trigger_test_1_107:
         x: 12
         "y": 22
-      condition_test_2_88:
+      condition_test_2_108:
         x: 312
         "y": 92
-      condition_test_3_89:
+      condition_test_3_109:
         x: 632
         "y": 92
-      action_test_4_90:
+      action_test_4_110:
         x: 952
         "y": 12
-      condition_test_5_91:
+      condition_test_5_111:
         x: 952
         "y": 172
-      action_test_6_92:
+      action_test_6_112:
         x: 1272
         "y": 102
     graph_id: a18b0fbb-d966-432c-aba7-4f7361da8d29
@@ -965,22 +965,22 @@ variables:
   _cafe_metadata:
     version: 1
     nodes:
-      trigger_test_0_80:
+      trigger_test_0_100:
         x: 12
         "y": 22
-      condition_test_1_81:
+      condition_test_1_101:
         x: 312
         "y": 12
-      wait_test_2_82:
+      wait_test_2_102:
         x: 632
         "y": 27
-      wait_test_3_83:
+      wait_test_3_103:
         x: 912
         "y": 27
-      wait_test_4_84:
+      wait_test_4_104:
         x: 1192
         "y": 27
-      action_test_5_85:
+      action_test_5_105:
         x: 1472
         "y": 22
     graph_id: a18b0fbb-d966-432c-aba7-4f7361da8d29
@@ -1118,67 +1118,67 @@ variables:
   _cafe_metadata:
     version: 1
     nodes:
-      trigger_test_0_59:
+      trigger_test_0_79:
         x: 12
         "y": 187
-      trigger_test_1_60:
+      trigger_test_1_80:
         x: 12
         "y": 347
-      trigger_test_2_61:
+      trigger_test_2_81:
         x: 12
         "y": 507
-      trigger_test_3_62:
+      trigger_test_3_82:
         x: 12
         "y": 27
-      condition_test_4_63:
+      condition_test_4_83:
         x: 312
         "y": 257
-      condition_test_5_64:
+      condition_test_5_84:
         x: 632
         "y": 347
-      wait_test_6_65:
+      wait_test_6_85:
         x: 972
         "y": 532
-      action_test_7_66:
+      action_test_7_86:
         x: 1272
         "y": 447
-      action_test_8_67:
+      action_test_8_87:
         x: 952
         "y": 372
-      condition_test_9_68:
+      condition_test_9_88:
         x: 632
         "y": 167
-      condition_test_10_69:
+      condition_test_10_89:
         x: 952
         "y": 12
-      condition_test_11_70:
+      condition_test_11_90:
         x: 1272
         "y": 87
-      condition_test_12_71:
+      condition_test_12_91:
         x: 1592
         "y": 167
-      action_test_13_72:
+      action_test_13_92:
         x: 1912
         "y": 117
-      condition_test_14_73:
+      condition_test_14_93:
         x: 952
         "y": 192
-      condition_test_15_74:
+      condition_test_15_94:
         x: 1272
         "y": 267
-      condition_test_16_75:
+      condition_test_16_95:
         x: 1592
         "y": 347
-      delay_test_17_76:
+      delay_test_17_96:
         x: 1922
         "y": 277
-      action_test_18_77:
+      action_test_18_97:
         x: 2212
         "y": 187
-      delay_test_19_78:
+      delay_test_19_98:
         x: 1922
         "y": 427
-      action_test_20_79:
+      action_test_20_99:
         x: 2212
         "y": 347
     graph_id: a18b0fbb-d966-432c-aba7-4f7361da8d29
@@ -1259,40 +1259,40 @@ variables:
   _cafe_metadata:
     version: 1
     nodes:
-      trigger_test_0_47:
+      trigger_test_0_67:
         x: 12
         "y": 192
-      trigger_test_1_48:
+      trigger_test_1_68:
         x: 12
         "y": 32
-      condition_test_2_49:
+      condition_test_2_69:
         x: 312
         "y": 102
-      condition_test_3_50:
+      condition_test_3_70:
         x: 632
         "y": 192
-      action_test_4_51:
+      action_test_4_71:
         x: 962
         "y": 202
-      action_test_5_52:
+      action_test_5_72:
         x: 1272
         "y": 192
-      condition_test_6_53:
+      condition_test_6_73:
         x: 632
         "y": 12
-      condition_test_7_54:
+      condition_test_7_74:
         x: 952
         "y": 22
-      action_test_8_55:
+      action_test_8_75:
         x: 1272
         "y": 32
-      set_variables_test_9_56:
+      set_variables_test_9_76:
         x: 1572
         "y": 112
-      action_test_10_57:
+      action_test_10_77:
         x: 1872
         "y": 112
-      action_test_11_58:
+      action_test_11_78:
         x: 2172
         "y": 112
     graph_id: a18b0fbb-d966-432c-aba7-4f7361da8d29
@@ -1373,43 +1373,43 @@ variables:
   _cafe_metadata:
     version: 1
     nodes:
-      trigger_test_0_34:
+      trigger_test_0_54:
         x: 12
         "y": 112.5
-      condition_test_1_35:
+      condition_test_1_55:
         x: 312
         "y": 102.5
-      action_test_2_36:
+      action_test_2_56:
         x: 632
         "y": 112.5
-      action_test_3_37:
+      action_test_3_57:
         x: 932
         "y": 112.5
-      action_test_4_38:
+      action_test_4_58:
         x: 1232
         "y": 112.5
-      action_test_5_39:
+      action_test_5_59:
         x: 1532
         "y": 112.5
-      action_test_6_40:
+      action_test_6_60:
         x: 1832
         "y": 112.5
-      action_test_7_41:
+      action_test_7_61:
         x: 2412
         "y": 213
-      delay_test_8_42:
+      delay_test_8_62:
         x: 2132
         "y": 117.5
-      action_test_9_43:
+      action_test_9_63:
         x: 2412
         "y": 53
-      action_test_10_44:
+      action_test_10_64:
         x: 2712
         "y": 172
-      action_test_11_45:
+      action_test_11_65:
         x: 2712
         "y": 12
-      action_test_12_46:
+      action_test_12_66:
         x: 3012
         "y": 112.5
     graph_id: a18b0fbb-d966-432c-aba7-4f7361da8d29
@@ -1452,22 +1452,22 @@ variables:
   _cafe_metadata:
     version: 1
     nodes:
-      trigger_test_0_28:
+      trigger_test_0_48:
         x: 12
         "y": 22
-      condition_test_1_29:
+      condition_test_1_49:
         x: 312
         "y": 12
-      action_test_2_30:
+      action_test_2_50:
         x: 632
         "y": 22
-      action_test_3_31:
+      action_test_3_51:
         x: 932
         "y": 22
-      delay_test_4_32:
+      delay_test_4_52:
         x: 1232
         "y": 27
-      action_test_5_33:
+      action_test_5_53:
         x: 1512
         "y": 22
     graph_id: a18b0fbb-d966-432c-aba7-4f7361da8d29
@@ -1546,25 +1546,25 @@ variables:
   _cafe_metadata:
     version: 1
     nodes:
-      trigger_test_0_21:
+      trigger_test_0_41:
         x: 12
         "y": 172
-      trigger_test_1_22:
+      trigger_test_1_42:
         x: 12
         "y": 332
-      trigger_test_2_23:
+      trigger_test_2_43:
         x: 12
         "y": 492
-      trigger_test_3_24:
+      trigger_test_3_44:
         x: 12
         "y": 12
-      condition_test_4_25:
+      condition_test_4_45:
         x: 312
         "y": 242
-      action_test_5_26:
+      action_test_5_46:
         x: 632
         "y": 172
-      action_test_6_27:
+      action_test_6_47:
         x: 632
         "y": 332
     graph_id: a18b0fbb-d966-432c-aba7-4f7361da8d29
@@ -1597,10 +1597,10 @@ variables:
   _cafe_metadata:
     version: 1
     nodes:
-      trigger_test_0_19:
+      trigger_test_0_39:
         x: 12
         "y": 12
-      action_test_1_20:
+      action_test_1_40:
         x: 312
         "y": 12
     graph_id: a18b0fbb-d966-432c-aba7-4f7361da8d29
@@ -1630,13 +1630,13 @@ variables:
   _cafe_metadata:
     version: 1
     nodes:
-      trigger_test_0_16:
+      trigger_test_0_36:
         x: 12
         "y": 22
-      condition_test_1_17:
+      condition_test_1_37:
         x: 312
         "y": 12
-      action_test_2_18:
+      action_test_2_38:
         x: 632
         "y": 22
     graph_id: a18b0fbb-d966-432c-aba7-4f7361da8d29
@@ -1676,16 +1676,16 @@ variables:
   _cafe_metadata:
     version: 1
     nodes:
-      trigger_test_0_12:
+      trigger_test_0_32:
         x: 12
         "y": 22
-      condition_test_1_13:
+      condition_test_1_33:
         x: 312
         "y": 12
-      action_test_2_14:
+      action_test_2_34:
         x: 632
         "y": 22
-      action_test_3_15:
+      action_test_3_35:
         x: 932
         "y": 22
     graph_id: a18b0fbb-d966-432c-aba7-4f7361da8d29
@@ -1713,10 +1713,10 @@ variables:
   _cafe_metadata:
     version: 1
     nodes:
-      trigger_test_0_10:
+      trigger_test_0_30:
         x: 12
         "y": 12
-      delay_test_1_11:
+      delay_test_1_31:
         x: 312
         "y": 17
     graph_id: a18b0fbb-d966-432c-aba7-4f7361da8d29
@@ -1745,10 +1745,10 @@ variables:
   _cafe_metadata:
     version: 1
     nodes:
-      trigger_test_0_8:
+      trigger_test_0_28:
         x: 12
         "y": 12
-      action_test_1_9:
+      action_test_1_29:
         x: 312
         "y": 12
     graph_id: a18b0fbb-d966-432c-aba7-4f7361da8d29
@@ -1781,13 +1781,13 @@ variables:
   _cafe_metadata:
     version: 1
     nodes:
-      trigger_test_0_5:
+      trigger_test_0_25:
         x: 12
         "y": 12
-      action_test_1_6:
+      action_test_1_26:
         x: 312
         "y": 12
-      action_test_2_7:
+      action_test_2_27:
         x: 612
         "y": 12
     graph_id: a18b0fbb-d966-432c-aba7-4f7361da8d29
@@ -1863,21 +1863,206 @@ variables:
   _cafe_metadata:
     version: 1
     nodes:
-      trigger_test_0_0:
+      trigger_test_0_20:
         x: 12
         "y": 22
-      set_variables_test_1_1:
+      set_variables_test_1_21:
         x: 312
         "y": 22
-      action_test_2_2:
+      action_test_2_22:
         x: 612
         "y": 22
-      condition_test_3_3:
+      condition_test_3_23:
         x: 912
         "y": 12
-      action_test_4_4:
+      action_test_4_24:
         x: 1232
         "y": 22
+    graph_id: a18b0fbb-d966-432c-aba7-4f7361da8d29
+    graph_version: 1
+    strategy: native
+"
+`;
+
+exports[`YAML round-trip (fixtures) > round-trips 25-repeat-while.yaml to identical YAML 1`] = `
+"alias: Repeat While Test
+description: Test repeat while loop
+triggers:
+  - trigger: state
+    entity_id: binary_sensor.motion
+    to: "on"
+actions:
+  - repeat:
+      while:
+        - condition: state
+          entity_id: binary_sensor.motion
+          state: "on"
+      sequence:
+        - service: light.turn_on
+          target:
+            entity_id: light.living_room
+        - delay:
+            seconds: 5
+mode: single
+variables:
+  _cafe_metadata:
+    version: 1
+    nodes:
+      trigger_test_0_16:
+        x: 12
+        "y": 32.5
+      condition_test_1_17:
+        x: 312
+        "y": 22.5
+      action_test_2_18:
+        x: 632
+        "y": 53
+      delay_test_3_19:
+        x: 932
+        "y": 37.5
+    graph_id: a18b0fbb-d966-432c-aba7-4f7361da8d29
+    graph_version: 1
+    strategy: native
+"
+`;
+
+exports[`YAML round-trip (fixtures) > round-trips 26-repeat-until.yaml to identical YAML 1`] = `
+"alias: Repeat Until Test
+description: Test repeat until loop
+triggers:
+  - trigger: state
+    entity_id: binary_sensor.door
+    to: "on"
+actions:
+  - repeat:
+      until:
+        - condition: state
+          entity_id: binary_sensor.door
+          state: "off"
+      sequence:
+        - service: notify.mobile_app
+          data:
+            message: Door is still open!
+        - delay:
+            minutes: 1
+mode: single
+variables:
+  _cafe_metadata:
+    version: 1
+    nodes:
+      trigger_test_0_12:
+        x: 12
+        "y": 27.5
+      action_test_1_13:
+        x: 312
+        "y": 27.5
+      delay_test_2_14:
+        x: 612
+        "y": 53
+      condition_test_3_15:
+        x: 892
+        "y": 17.5
+    graph_id: a18b0fbb-d966-432c-aba7-4f7361da8d29
+    graph_version: 1
+    strategy: native
+"
+`;
+
+exports[`YAML round-trip (fixtures) > round-trips 27-repeat-count.yaml to identical YAML 1`] = `
+"alias: Repeat Count Test
+description: Test repeat count loop
+triggers:
+  - trigger: state
+    entity_id: input_boolean.test
+    to: "on"
+actions:
+  - repeat:
+      count: 3
+      sequence:
+        - service: light.toggle
+          target:
+            entity_id: light.living_room
+        - delay:
+            seconds: 1
+mode: single
+variables:
+  _cafe_metadata:
+    version: 1
+    nodes:
+      trigger_test_0_6:
+        x: 12
+        "y": 202.5
+      set_variables_test_1_7:
+        x: 322
+        "y": 233
+      action_test_2_8:
+        x: 632
+        "y": 143
+      delay_test_3_9:
+        x: 932
+        "y": 127.5
+      set_variables_test_4_10:
+        x: 12
+        "y": 42.5
+      condition_test_5_11:
+        x: 312
+        "y": 53
+    graph_id: a18b0fbb-d966-432c-aba7-4f7361da8d29
+    graph_version: 1
+    strategy: native
+"
+`;
+
+exports[`YAML round-trip (fixtures) > round-trips 28-repeat-nested-if.yaml to identical YAML 1`] = `
+"alias: Repeat Inside If
+description: Test repeat block nested inside if/then/else
+triggers:
+  - trigger: time
+    at: "08:00:00"
+actions:
+  - if:
+      - condition: state
+        entity_id: binary_sensor.workday
+        state: "on"
+    then:
+      - repeat:
+          while:
+            - condition: state
+              entity_id: input_boolean.reminder_needed
+              state: "on"
+          sequence:
+            - service: notify.mobile_app
+              data:
+                message: Time to get ready!
+            - delay:
+                minutes: 5
+    else:
+      - service: notify.mobile_app
+        data:
+          message: Enjoy your day off!
+mode: single
+variables:
+  _cafe_metadata:
+    version: 1
+    nodes:
+      trigger_test_0_0:
+        x: 12
+        "y": 102
+      condition_test_1_1:
+        x: 312
+        "y": 92
+      condition_test_2_2:
+        x: 632
+        "y": 172
+      action_test_3_3:
+        x: 952
+        "y": 122.5
+      delay_test_4_4:
+        x: 1252
+        "y": 107
+      action_test_5_5:
+        x: 632
+        "y": 12
     graph_id: a18b0fbb-d966-432c-aba7-4f7361da8d29
     graph_version: 1
     strategy: native

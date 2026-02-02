@@ -10,7 +10,31 @@ import type {
 } from '@cafe/shared';
 import { isDeviceAction } from '@cafe/shared';
 import type { TopologyAnalysis } from '../analyzer/topology';
+import { findBackEdges } from '../analyzer/topology';
 import { BaseStrategy, type HAYamlOutput } from './base';
+
+/**
+ * Describes a detected repeat pattern in the flow graph
+ */
+interface RepeatPattern {
+  type: 'while' | 'until' | 'count';
+  /** The node ID that serves as the entry point to this repeat pattern */
+  entryNodeId: string;
+  /** Condition node IDs in the repeat (for while/until) */
+  conditionNodeIds: string[];
+  /** Body node IDs (the sequence inside the loop) */
+  bodyNodeIds: string[];
+  /** The source node of the back-edge */
+  backEdgeSourceId: string;
+  /** For count: the init set_vars node ID */
+  initNodeId?: string;
+  /** For count: the increment set_vars node ID */
+  incrementNodeId?: string;
+  /** For count: the count value */
+  count?: number | string;
+  /** The node ID where flow continues after the loop */
+  exitNodeId: string | null;
+}
 
 /**
  * Native strategy for simple tree-shaped automations
@@ -24,8 +48,28 @@ export class NativeStrategy extends BaseStrategy {
     return analysis.isTree;
   }
 
+  /** Repeat patterns detected in the current flow */
+  private repeatPatterns: Map<string, RepeatPattern> = new Map();
+  /** Set of all node IDs that are internal to a repeat pattern */
+  private repeatInternalNodeIds: Set<string> = new Set();
+  /** Set of back-edge IDs detected via DFS */
+  private backEdgeIds: Set<string> = new Set();
+
   generate(flow: FlowGraph, analysis: TopologyAnalysis): HAYamlOutput {
     const warnings: string[] = [];
+
+    // Structurally detect back-edges using DFS
+    this.backEdgeIds = findBackEdges(flow);
+
+    // Pre-detect repeat patterns from structural back-edges
+    this.repeatPatterns = this.detectRepeatPatterns(flow);
+    this.repeatInternalNodeIds = new Set();
+    for (const pattern of this.repeatPatterns.values()) {
+      for (const id of pattern.bodyNodeIds) this.repeatInternalNodeIds.add(id);
+      for (const id of pattern.conditionNodeIds) this.repeatInternalNodeIds.add(id);
+      if (pattern.initNodeId) this.repeatInternalNodeIds.add(pattern.initNodeId);
+      if (pattern.incrementNodeId) this.repeatInternalNodeIds.add(pattern.incrementNodeId);
+    }
 
     // Extract triggers from the flow
     const triggers = this.extractTriggers(flow);
@@ -135,6 +179,395 @@ export class NativeStrategy extends BaseStrategy {
   }
 
   /**
+   * Detect repeat patterns by structurally analyzing back-edges in the graph.
+   * Classification rules:
+   * - Back-edge target is a condition, source is NOT a condition → while
+   * - Back-edge source is a condition with sourceHandle='false' → until
+   * - Back-edge source is a condition with sourceHandle='true' → count
+   */
+  private detectRepeatPatterns(flow: FlowGraph): Map<string, RepeatPattern> {
+    const patterns = new Map<string, RepeatPattern>();
+
+    for (const edge of flow.edges) {
+      if (!this.backEdgeIds.has(edge.id)) continue;
+
+      const sourceNode = this.getNode(flow, edge.source);
+      const targetNode = this.getNode(flow, edge.target);
+      if (!sourceNode || !targetNode) continue;
+
+      if (targetNode.type === 'condition' && sourceNode.type !== 'condition') {
+        // ── while pattern ──
+        // Back-edge: last body node → first condition node
+        const firstCondId = edge.target;
+        const backEdgeSourceId = edge.source;
+
+        // Collect condition chain: follow true edges from condition to condition
+        const conditionNodeIds: string[] = [];
+        let currentId = firstCondId;
+        while (currentId) {
+          const node = this.getNode(flow, currentId);
+          if (node?.type !== 'condition') break;
+          conditionNodeIds.push(currentId);
+          const trueEdge = flow.edges.find(
+            (e) => e.source === currentId && e.sourceHandle === 'true' && !this.backEdgeIds.has(e.id)
+          );
+          if (!trueEdge) break;
+          const nextNode = this.getNode(flow, trueEdge.target);
+          if (nextNode?.type === 'condition' && conditionNodeIds.indexOf(trueEdge.target) === -1) {
+            currentId = trueEdge.target;
+          } else {
+            break;
+          }
+        }
+
+        // Body nodes: everything between last condition's true target and back-edge source
+        const lastCondId = conditionNodeIds[conditionNodeIds.length - 1];
+        const bodyNodeIds = this.collectBodyNodes(
+          flow,
+          lastCondId,
+          'true',
+          new Set(conditionNodeIds),
+          backEdgeSourceId
+        );
+
+        // Exit: first condition's false path
+        const falseEdge = flow.edges.find(
+          (e) => e.source === firstCondId && e.sourceHandle === 'false' && !this.backEdgeIds.has(e.id)
+        );
+
+        patterns.set(firstCondId, {
+          type: 'while',
+          entryNodeId: firstCondId,
+          conditionNodeIds,
+          bodyNodeIds,
+          backEdgeSourceId,
+          exitNodeId: falseEdge?.target ?? null,
+        });
+      } else if (sourceNode.type === 'condition' && edge.sourceHandle === 'false') {
+        // ── until pattern ──
+        // Back-edge: condition →(false)→ first body node
+        const firstBodyId = edge.target;
+        const firstCondId = edge.source;
+
+        const conditionNodeIds: string[] = [];
+        let condId: string | null = firstCondId;
+        while (condId) {
+          const node = this.getNode(flow, condId);
+          if (node?.type !== 'condition') break;
+          conditionNodeIds.push(condId);
+          const trueEdge = flow.edges.find(
+            (e) => e.source === condId && e.sourceHandle === 'true' && !this.backEdgeIds.has(e.id)
+          );
+          if (!trueEdge) break;
+          const nextNode = this.getNode(flow, trueEdge.target);
+          if (nextNode?.type === 'condition' && conditionNodeIds.indexOf(trueEdge.target) === -1) {
+            condId = trueEdge.target;
+          } else {
+            break;
+          }
+        }
+
+        // Body nodes: traverse forward from firstBodyId until we hit the condition
+        const bodyNodeIds = this.collectNodesUntil(
+          flow,
+          firstBodyId,
+          new Set(conditionNodeIds)
+        );
+
+        // Exit: last condition's true path
+        const lastCondId = conditionNodeIds[conditionNodeIds.length - 1];
+        const trueEdge = flow.edges.find(
+          (e) => e.source === lastCondId && e.sourceHandle === 'true' && !this.backEdgeIds.has(e.id)
+        );
+
+        patterns.set(firstBodyId, {
+          type: 'until',
+          entryNodeId: firstBodyId,
+          conditionNodeIds,
+          bodyNodeIds,
+          backEdgeSourceId: firstCondId,
+          exitNodeId: trueEdge?.target ?? null,
+        });
+      } else if (sourceNode.type === 'condition' && edge.sourceHandle === 'true') {
+        // ── count pattern ──
+        // Back-edge: condition →(true)→ first body node
+        const loopTargetId = edge.target;
+        const condId = edge.source;
+
+        const conditionNodeIds = [condId];
+
+        // Find the increment node: it's a set_variables predecessor of the condition
+        const condPredEdges = flow.edges.filter(
+          (e) => e.target === condId && !this.backEdgeIds.has(e.id)
+        );
+        const incrementNodeId = condPredEdges.length > 0 ? condPredEdges[0].source : undefined;
+
+        // Body nodes: from loopTargetId to incrementNodeId
+        const stopSet = new Set<string>([condId]);
+        if (incrementNodeId) stopSet.add(incrementNodeId);
+        const bodyNodeIds = this.collectNodesUntil(flow, loopTargetId, stopSet);
+
+        // Find the init node: predecessor of the first body node that is set_variables
+        const initCandidates = flow.edges
+          .filter((e) => e.target === loopTargetId && !this.backEdgeIds.has(e.id))
+          .map((e) => e.source);
+        const initNodeId = initCandidates.find((id) => {
+          const n = this.getNode(flow, id);
+          return n?.type === 'set_variables';
+        });
+
+        // Extract count from the condition's value_template
+        const condNode = this.getNode(flow, condId);
+        let countValue: number | string | undefined;
+        if (condNode?.type === 'condition' && condNode.data.condition === 'template') {
+          const tmpl = condNode.data.value_template;
+          if (typeof tmpl === 'string') {
+            // Extract N from "{{ _repeat_counter_xxx < N }}"
+            const match = tmpl.match(/<\s*(\d+)\s*\}\}/);
+            if (match) {
+              countValue = Number.parseInt(match[1], 10);
+            }
+          }
+        }
+
+        // Exit: condition's false path
+        const falseEdge = flow.edges.find(
+          (e) => e.source === condId && e.sourceHandle === 'false' && !this.backEdgeIds.has(e.id)
+        );
+
+        // Entry is the init node if it exists, otherwise the first body node
+        const entryNodeId = initNodeId ?? loopTargetId;
+
+        patterns.set(entryNodeId, {
+          type: 'count',
+          entryNodeId,
+          conditionNodeIds,
+          bodyNodeIds,
+          backEdgeSourceId: condId,
+          initNodeId,
+          incrementNodeId,
+          count: countValue,
+          exitNodeId: falseEdge?.target ?? null,
+        });
+      }
+    }
+
+    return patterns;
+  }
+
+  /**
+   * Collect body node IDs starting from a condition's specified handle path
+   * until reaching the backEdgeSource (inclusive)
+   */
+  private collectBodyNodes(
+    flow: FlowGraph,
+    condNodeId: string,
+    handle: 'true' | 'false',
+    excludeIds: Set<string>,
+    backEdgeSourceId: string
+  ): string[] {
+    const startEdge = flow.edges.find(
+      (e) => e.source === condNodeId && e.sourceHandle === handle && !this.backEdgeIds.has(e.id)
+    );
+    if (!startEdge) return [];
+
+    const bodyIds: string[] = [];
+    const queue = [startEdge.target];
+    const visited = new Set<string>();
+
+    while (queue.length > 0) {
+      const id = queue.shift()!;
+      if (visited.has(id) || excludeIds.has(id)) continue;
+      visited.add(id);
+      bodyIds.push(id);
+
+      if (id === backEdgeSourceId) continue; // Don't traverse beyond back-edge source
+
+      const outgoing = flow.edges.filter((e) => e.source === id && !this.backEdgeIds.has(e.id));
+      for (const e of outgoing) {
+        if (!visited.has(e.target) && !excludeIds.has(e.target)) {
+          queue.push(e.target);
+        }
+      }
+    }
+
+    return bodyIds;
+  }
+
+  /**
+   * Collect node IDs by traversing forward until hitting any node in stopIds
+   */
+  private collectNodesUntil(
+    flow: FlowGraph,
+    startId: string,
+    stopIds: Set<string>
+  ): string[] {
+    const bodyIds: string[] = [];
+    const queue = [startId];
+    const visited = new Set<string>();
+
+    while (queue.length > 0) {
+      const id = queue.shift()!;
+      if (visited.has(id) || stopIds.has(id)) continue;
+      visited.add(id);
+      bodyIds.push(id);
+
+      const outgoing = flow.edges.filter((e) => e.source === id && !this.backEdgeIds.has(e.id));
+      for (const e of outgoing) {
+        if (!visited.has(e.target) && !stopIds.has(e.target)) {
+          queue.push(e.target);
+        }
+      }
+    }
+
+    return bodyIds;
+  }
+
+  /**
+   * Build a repeat: YAML block from a detected repeat pattern
+   */
+  private buildRepeatBlock(
+    flow: FlowGraph,
+    pattern: RepeatPattern,
+    visited: Set<string>
+  ): Record<string, unknown> | null {
+    // Mark all pattern nodes as visited
+    for (const id of pattern.conditionNodeIds) visited.add(id);
+    for (const id of pattern.bodyNodeIds) visited.add(id);
+    if (pattern.initNodeId) visited.add(pattern.initNodeId);
+    if (pattern.incrementNodeId) visited.add(pattern.incrementNodeId);
+    visited.add(pattern.entryNodeId);
+
+    // Build the body sequence
+    const bodySequence: unknown[] = [];
+    for (const bodyNodeId of pattern.bodyNodeIds) {
+      const bodyNode = this.getNode(flow, bodyNodeId);
+      if (!bodyNode) continue;
+
+      if (bodyNode.type === 'condition') {
+        // Check if this condition has branching within the loop body
+        const outgoing = flow.edges.filter(
+          (e) => e.source === bodyNodeId && !this.backEdgeIds.has(e.id)
+        );
+        const truePath = outgoing.find((e) => e.sourceHandle === 'true');
+        const falsePath = outgoing.find((e) => e.sourceHandle === 'false');
+
+        if (truePath || falsePath) {
+          // Build as if/then/else within the loop body
+          const condAction: Record<string, unknown> = {
+            if: [this.buildCondition(bodyNode as ConditionNode)],
+            then: [],
+            else: [],
+          };
+          if (truePath && pattern.bodyNodeIds.includes(truePath.target)) {
+            condAction.then = this.buildBodySubsequence(flow, truePath.target, pattern, visited);
+          }
+          if (falsePath && pattern.bodyNodeIds.includes(falsePath.target)) {
+            condAction.else = this.buildBodySubsequence(flow, falsePath.target, pattern, visited);
+          }
+          bodySequence.push(condAction);
+        } else {
+          // Inline condition guard
+          bodySequence.push(this.buildCondition(bodyNode as ConditionNode));
+        }
+      } else {
+        const action = this.buildNodeAction(bodyNode);
+        if (action) {
+          bodySequence.push(action);
+        }
+      }
+    }
+
+    // Get alias from the first condition (while) or from the init node (count)
+    let alias: string | undefined;
+
+    if (pattern.type === 'while') {
+      // Build while conditions
+      const whileConditions = pattern.conditionNodeIds.map((id) => {
+        const node = this.getNode(flow, id) as ConditionNode;
+        if (!alias && node?.data?.alias) alias = node.data.alias;
+        return this.buildCondition(node);
+      });
+
+      const result: Record<string, unknown> = {
+        repeat: {
+          while: whileConditions,
+          sequence: bodySequence,
+        },
+      };
+      if (alias) result.alias = alias;
+      return result;
+    }
+
+    if (pattern.type === 'until') {
+      const untilConditions = pattern.conditionNodeIds.map((id) => {
+        const node = this.getNode(flow, id) as ConditionNode;
+        return this.buildCondition(node);
+      });
+
+      const result: Record<string, unknown> = {
+        repeat: {
+          until: untilConditions,
+          sequence: bodySequence,
+        },
+      };
+      if (alias) result.alias = alias;
+      return result;
+    }
+
+    if (pattern.type === 'count') {
+      if (pattern.initNodeId) {
+        const initNode = this.getNode(flow, pattern.initNodeId);
+        if (initNode?.data && 'alias' in initNode.data) {
+          alias = initNode.data.alias as string | undefined;
+        }
+      }
+
+      const result: Record<string, unknown> = {
+        repeat: {
+          count: pattern.count,
+          sequence: bodySequence,
+        },
+      };
+      if (alias) result.alias = alias;
+      return result;
+    }
+
+    return null;
+  }
+
+  /**
+   * Build a sub-sequence within a repeat body for branching paths
+   */
+  private buildBodySubsequence(
+    flow: FlowGraph,
+    startId: string,
+    pattern: RepeatPattern,
+    visited: Set<string>
+  ): unknown[] {
+    const sequence: unknown[] = [];
+    let currentId: string | null = startId;
+
+    while (currentId && pattern.bodyNodeIds.includes(currentId) && !visited.has(currentId)) {
+      visited.add(currentId);
+      const node = this.getNode(flow, currentId);
+      if (!node) break;
+
+      const action = this.buildNodeAction(node);
+      if (action) {
+        sequence.push(action);
+      }
+
+      const outgoing = flow.edges.filter(
+        (e) => e.source === currentId && !this.backEdgeIds.has(e.id)
+      );
+      currentId = outgoing.length === 1 ? outgoing[0].target : null;
+    }
+
+    return sequence;
+  }
+
+  /**
    * Extract trigger configurations from trigger nodes
    */
   private extractTriggers(flow: FlowGraph): unknown[] {
@@ -215,7 +648,11 @@ export class NativeStrategy extends BaseStrategy {
       const node = this.getNode(flow, currentId);
       if (!node || node.type !== 'condition') break;
 
-      const outgoing = this.getOutgoingEdges(flow, currentId);
+      // Don't promote conditions that are part of a repeat pattern
+      if (this.repeatPatterns.has(currentId) || this.repeatInternalNodeIds.has(currentId)) break;
+
+      const allOutgoing = this.getOutgoingEdges(flow, currentId);
+      const outgoing = allOutgoing.filter((e) => !this.backEdgeIds.has(e.id));
       const truePath = outgoing.find((edge) => edge.sourceHandle === 'true');
       const falsePath = outgoing.find((edge) => edge.sourceHandle === 'false');
 
@@ -272,7 +709,7 @@ export class NativeStrategy extends BaseStrategy {
     visited: Set<string>
   ): ConditionNode[] {
     const sources = flow.edges
-      .filter((e) => e.target === targetNodeId && e.sourceHandle === handleType)
+      .filter((e) => e.target === targetNodeId && e.sourceHandle === handleType && !this.backEdgeIds.has(e.id))
       .map((e) => this.getNode(flow, e.source))
       .filter((n): n is ConditionNode => n?.type === 'condition' && !visited.has(n.id));
 
@@ -365,11 +802,32 @@ export class NativeStrategy extends BaseStrategy {
       return sequence;
     }
 
+    // Check if this node is the entry point of a repeat pattern
+    const repeatPattern = this.repeatPatterns.get(nodeId);
+    if (repeatPattern) {
+      const repeatBlock = this.buildRepeatBlock(flow, repeatPattern, visited);
+      if (repeatBlock) {
+        sequence.push(repeatBlock);
+        // Continue from the exit node
+        if (repeatPattern.exitNodeId) {
+          const afterRepeat = this.buildSequenceFromNode(
+            flow,
+            repeatPattern.exitNodeId,
+            new Set(visited)
+          );
+          sequence.push(...afterRepeat);
+        }
+        return sequence;
+      }
+    }
+
     // Normal processing - add to visited now
     visited.add(nodeId);
 
-    // Get outgoing edges
-    const outgoing = this.getOutgoingEdges(flow, nodeId);
+    // Get outgoing edges (excluding repeat back-edges)
+    const outgoing = this.getOutgoingEdges(flow, nodeId).filter(
+      (e) => !this.backEdgeIds.has(e.id)
+    );
 
     if (node.type === 'condition') {
       // ===== Condition Chain Logic =====
@@ -382,7 +840,7 @@ export class NativeStrategy extends BaseStrategy {
 
       // The 'else' path is taken from the very first condition in the chain
       const originalElsePath = this.getOutgoingEdges(flow, node.id).find(
-        (edge) => edge.sourceHandle === 'false'
+        (edge) => edge.sourceHandle === 'false' && !this.backEdgeIds.has(edge.id)
       );
       if (originalElsePath) {
         elseNodeId = originalElsePath.target;
@@ -394,7 +852,7 @@ export class NativeStrategy extends BaseStrategy {
         conditions.push(this.buildCondition(currentNode as ConditionNode));
 
         const truePath = this.getOutgoingEdges(flow, currentNode.id).find(
-          (edge) => edge.sourceHandle === 'true'
+          (edge) => edge.sourceHandle === 'true' && !this.backEdgeIds.has(edge.id)
         );
 
         if (!truePath) {
@@ -405,10 +863,16 @@ export class NativeStrategy extends BaseStrategy {
         const nextNode = this.getNode(flow, truePath.target);
 
         // If the next node is a condition and not visited, check if we should continue chaining
-        if (nextNode?.type === 'condition' && !visited.has(nextNode.id)) {
+        // Never chain conditions that are part of a repeat pattern
+        if (
+          nextNode?.type === 'condition' &&
+          !visited.has(nextNode.id) &&
+          !this.repeatPatterns.has(nextNode.id) &&
+          !this.repeatInternalNodeIds.has(nextNode.id)
+        ) {
           // Check if the next condition has a false path
           const nextFalsePath = this.getOutgoingEdges(flow, nextNode.id).find(
-            (edge) => edge.sourceHandle === 'false'
+            (edge) => edge.sourceHandle === 'false' && !this.backEdgeIds.has(edge.id)
           );
 
           // Only continue chaining if:
@@ -616,8 +1080,10 @@ export class NativeStrategy extends BaseStrategy {
       sequence.push(action);
     }
 
-    // Get outgoing edges
-    const outgoing = this.getOutgoingEdges(flow, nodeId);
+    // Get outgoing edges (excluding repeat back-edges)
+    const outgoing = this.getOutgoingEdges(flow, nodeId).filter(
+      (e) => !this.backEdgeIds.has(e.id)
+    );
 
     if (node.type === 'condition') {
       // Condition nodes are handled specially
@@ -812,6 +1278,22 @@ export class NativeStrategy extends BaseStrategy {
       return action;
     }
 
+    // Check if this is a fallback repeat action (opaque repeat block)
+    if (node.data.repeat) {
+      const repeatData = node.data.repeat;
+      const action: Record<string, unknown> = {
+        repeat: {
+          ...(repeatData.count !== undefined ? { count: repeatData.count } : {}),
+          ...(repeatData.while ? { while: repeatData.while } : {}),
+          ...(repeatData.until ? { until: repeatData.until } : {}),
+          sequence: repeatData.sequence ?? [],
+        },
+      };
+      if (node.data.alias) action.alias = node.data.alias;
+      if (node.data.enabled === false) action.enabled = false;
+      return action;
+    }
+
     // Standard service call format
     // Use spread pattern to preserve unknown properties from custom integrations
     const {
@@ -824,6 +1306,7 @@ export class NativeStrategy extends BaseStrategy {
       response_variable,
       continue_on_error,
       enabled,
+      repeat: _repeat,
       ...extraProps
     } = node.data;
     const action: Record<string, unknown> = {

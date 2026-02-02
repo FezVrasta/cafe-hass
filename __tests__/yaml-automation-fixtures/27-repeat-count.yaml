@@ -1,0 +1,16 @@
+alias: Repeat Count Test
+description: Test repeat count loop
+triggers:
+  - trigger: state
+    entity_id: input_boolean.test
+    to: "on"
+actions:
+  - repeat:
+      count: 3
+      sequence:
+        - action: light.toggle
+          target:
+            entity_id: light.living_room
+        - delay:
+            seconds: 1
+mode: single

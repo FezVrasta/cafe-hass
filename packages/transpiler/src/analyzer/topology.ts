@@ -1,9 +1,65 @@
-import type { FlowGraph } from '@cafe/shared';
+import type { FlowEdge, FlowGraph } from '@cafe/shared';
 import graphlib from 'graphlib';
 
 const { Graph, alg } = graphlib;
 
 type GraphInstance = InstanceType<typeof Graph>;
+
+/**
+ * Find back-edges in the flow graph using DFS.
+ * A back-edge is an edge that goes from a node to one of its ancestors
+ * in the DFS tree, creating a cycle. Removing all back-edges makes the
+ * graph acyclic.
+ *
+ * This is used to identify repeat/loop patterns structurally without
+ * requiring any edge metadata.
+ */
+export function findBackEdges(flow: FlowGraph): Set<string> {
+  const backEdgeIds = new Set<string>();
+  const visited = new Set<string>();
+  const inStack = new Set<string>();
+
+  // Build adjacency map
+  const outgoing = new Map<string, FlowEdge[]>();
+  for (const edge of flow.edges) {
+    const existing = outgoing.get(edge.source) || [];
+    existing.push(edge);
+    outgoing.set(edge.source, existing);
+  }
+
+  // Find entry nodes (no incoming edges)
+  const incomingTargets = new Set(flow.edges.map((e) => e.target));
+  const entryNodes = flow.nodes.filter((n) => !incomingTargets.has(n.id)).map((n) => n.id);
+
+  function dfs(nodeId: string): void {
+    if (visited.has(nodeId)) return;
+    visited.add(nodeId);
+    inStack.add(nodeId);
+
+    for (const edge of outgoing.get(nodeId) || []) {
+      if (inStack.has(edge.target)) {
+        backEdgeIds.add(edge.id);
+      } else if (!visited.has(edge.target)) {
+        dfs(edge.target);
+      }
+    }
+
+    inStack.delete(nodeId);
+  }
+
+  for (const entry of entryNodes) {
+    dfs(entry);
+  }
+
+  // Handle disconnected components
+  for (const node of flow.nodes) {
+    if (!visited.has(node.id)) {
+      dfs(node.id);
+    }
+  }
+
+  return backEdgeIds;
+}
 
 /**
  * Result of topology analysis
@@ -61,22 +117,51 @@ export interface TopologyAnalysis {
 export function analyzeTopology(flow: FlowGraph): TopologyAnalysis {
   const g = new Graph({ directed: true });
 
-  // Build the graph
+  // Structurally detect back-edges (loop edges) using DFS
+  const backEdgeIds = findBackEdges(flow);
+
+  // Build a node type lookup for classifying back-edges
+  const nodeTypeMap = new Map(flow.nodes.map((n) => [n.id, n.type]));
+
+  // Only exclude back-edges that form repeat patterns (involve a condition node).
+  // True cycles (action→action loops) should still be detected as cycles.
+  const repeatBackEdgeIds = new Set<string>();
+  for (const edge of flow.edges) {
+    if (!backEdgeIds.has(edge.id)) continue;
+    const sourceType = nodeTypeMap.get(edge.source);
+    const targetType = nodeTypeMap.get(edge.target);
+    // Repeat patterns always involve a condition node at one end
+    if (sourceType === 'condition' || targetType === 'condition') {
+      repeatBackEdgeIds.add(edge.id);
+    }
+  }
+
+  // Filter out repeat back-edges for acyclic structural analysis
+  const forwardEdges = flow.edges.filter((e) => !repeatBackEdgeIds.has(e.id));
+  // Create a filtered flow view for analysis functions that operate on flow.edges
+  const filteredFlow: FlowGraph = { ...flow, edges: forwardEdges };
+
+  // Build the graph (excluding back-edges)
   for (const node of flow.nodes) {
     g.setNode(node.id, node);
   }
-  for (const edge of flow.edges) {
+  for (const edge of forwardEdges) {
     g.setEdge(edge.source, edge.target, edge);
   }
 
-  // Detect cycles using graphlib's isAcyclic
+  // Detect cycles using graphlib's isAcyclic (back-edges excluded)
   const hasCycles = !alg.isAcyclic(g);
 
-  // Find entry points (nodes with no incoming edges)
+  // Find entry points (nodes with no incoming forward edges)
   const entryNodes = flow.nodes.filter((n) => g.predecessors(n.id)?.length === 0).map((n) => n.id);
 
-  // Find exit points (nodes with no outgoing edges)
-  const exitNodes = flow.nodes.filter((n) => g.successors(n.id)?.length === 0).map((n) => n.id);
+  // Find exit points (nodes with no outgoing forward edges)
+  const exitNodes = flow.nodes
+    .filter((n) => {
+      const forwardOutgoing = forwardEdges.filter((e) => e.source === n.id);
+      return forwardOutgoing.length === 0;
+    })
+    .map((n) => n.id);
 
   // Get topological order if acyclic
   let topologicalOrder: string[] | null = null;
@@ -89,14 +174,14 @@ export function analyzeTopology(flow: FlowGraph): TopologyAnalysis {
     }
   }
 
-  // Check for cross-links (edges that skip levels)
-  const hasCrossLinks = detectCrossLinks(g, flow, topologicalOrder);
+  // Check for cross-links (edges that skip levels) - use filtered flow
+  const hasCrossLinks = detectCrossLinks(g, filteredFlow, topologicalOrder);
 
-  // Check for converging paths (multiple edges pointing to same node)
-  const hasConvergingPaths = detectConvergingPaths(flow);
+  // Check for converging paths (multiple edges pointing to same node) - use filtered flow
+  const hasConvergingPaths = detectConvergingPaths(filteredFlow);
 
   // Check for divergent trigger paths (different triggers → different actions)
-  const hasDivergentTriggerPaths = detectDivergentTriggerPaths(g, flow);
+  const hasDivergentTriggerPaths = detectDivergentTriggerPaths(g, filteredFlow);
 
   // A tree structure has:
   // - No cycles
