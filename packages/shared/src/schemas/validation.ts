@@ -154,6 +154,13 @@ export const TriggerNodeValidationSchema = z
             path: ['device_id'],
           });
         }
+        if (!hasEntityId(data.entity_id)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: 'Entity is required for device triggers',
+            path: ['entity_id'],
+          });
+        }
         break;
 
       case 'zone':

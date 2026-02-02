@@ -10,7 +10,7 @@ export interface DeviceTrigger {
   device_id: string;
   type: string;
   subtype?: string;
-  entity_id?: string;
+  entity_id: string;
   metadata?: Record<string, unknown>;
 }
 
