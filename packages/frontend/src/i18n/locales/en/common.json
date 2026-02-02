@@ -146,5 +146,34 @@
       "warning": "Warning",
       "critical": "Critical"
     }
+  },
+  "toolbar": {
+    "runAction": "Run Action",
+    "cut": "Cut",
+    "copy": "Copy",
+    "paste": "Paste",
+    "duplicate": "Duplicate",
+    "toggleEnabled": "Toggle Enabled/Disabled",
+    "enable": "Enable",
+    "disable": "Disable",
+    "disconnect": "Disconnect",
+    "alignLeft": "Align Left",
+    "alignCenter": "Align Center",
+    "alignRight": "Align Right",
+    "alignTop": "Align Top",
+    "alignBottom": "Align Bottom",
+    "deleteNode": "Delete Node",
+    "duplicateNode": "Duplicate Node",
+    "selectAll": "Select All"
+  },
+  "shortcuts": {
+    "cmd": "Cmd",
+    "ctrl": "Ctrl",
+    "shift": "Shift",
+    "alt": "Alt",
+    "arrowUp": "Arrow Up",
+    "arrowDown": "Arrow Down",
+    "arrowLeft": "Arrow Left",
+    "arrowRight": "Arrow Right"
   }
 }

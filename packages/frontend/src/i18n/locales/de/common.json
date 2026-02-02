@@ -119,5 +119,34 @@
   "deviceSelector": {
     "enterId": "Geräte-ID manuell eingeben",
     "noDevices": "Keine Geräte gefunden. Geben Sie die Geräte-ID manuell ein oder überprüfen Sie Ihre Home Assistant-Verbindung."
+  },
+  "toolbar": {
+    "runAction": "Aktion ausführen",
+    "cut": "Ausschneiden",
+    "copy": "Kopieren",
+    "paste": "Einfügen",
+    "duplicate": "Duplizieren",
+    "toggleEnabled": "Ein-/Ausschalten",
+    "enable": "Aktivieren",
+    "disable": "Deaktivieren",
+    "disconnect": "Trennen",
+    "alignLeft": "Links ausrichten",
+    "alignCenter": "Zentrieren",
+    "alignRight": "Rechts ausrichten",
+    "alignTop": "Oben ausrichten",
+    "alignBottom": "Unten ausrichten",
+    "deleteNode": "Knoten löschen",
+    "duplicateNode": "Knoten duplizieren",
+    "selectAll": "Alles auswählen"
+  },
+  "shortcuts": {
+    "cmd": "Cmd",
+    "ctrl": "Strg",
+    "shift": "Umschalt",
+    "alt": "Alt",
+    "arrowUp": "Pfeil nach oben",
+    "arrowDown": "Pfeil nach unten",
+    "arrowLeft": "Pfeil nach links",
+    "arrowRight": "Pfeil nach rechts"
   }
 }
