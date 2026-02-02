@@ -331,6 +331,22 @@ export class StateMachineStrategy extends BaseStrategy {
       return action;
     }
 
+    // Check if this is a fallback repeat action (opaque repeat block)
+    if (node.data.repeat) {
+      const repeatData = node.data.repeat;
+      const actionCall: Record<string, unknown> = {
+        repeat: {
+          ...(repeatData.count !== undefined ? { count: repeatData.count } : {}),
+          ...(repeatData.while ? { while: repeatData.while } : {}),
+          ...(repeatData.until ? { until: repeatData.until } : {}),
+          sequence: repeatData.sequence ?? [],
+        },
+      };
+      if (node.data.alias) actionCall.alias = node.data.alias;
+      if (node.data.enabled === false) actionCall.enabled = false;
+      return actionCall;
+    }
+
     // Standard service call format
     // Use spread pattern to preserve unknown properties from custom integrations
     const {
@@ -343,6 +359,7 @@ export class StateMachineStrategy extends BaseStrategy {
       response_variable,
       continue_on_error,
       enabled,
+      repeat: _repeat,
       ...extraProps
     } = node.data;
     const actionCall: Record<string, unknown> = {

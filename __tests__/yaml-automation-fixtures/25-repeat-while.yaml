@@ -1,0 +1,19 @@
+alias: Repeat While Test
+description: Test repeat while loop
+triggers:
+  - trigger: state
+    entity_id: binary_sensor.motion
+    to: "on"
+actions:
+  - repeat:
+      while:
+        - condition: state
+          entity_id: binary_sensor.motion
+          state: "on"
+      sequence:
+        - action: light.turn_on
+          target:
+            entity_id: light.living_room
+        - delay:
+            seconds: 5
+mode: single

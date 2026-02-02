@@ -1460,41 +1460,336 @@ export class YamlParser {
         createEdgesFromCurrent(nodeId);
         currentNodeIds = [nodeId];
       } else if (isRepeatAction(action)) {
-        // Repeat block - create an action node that represents the entire repeat
+        // Repeat block - explode into individual nodes with loop-back edges
         const act = action as Record<string, unknown>;
         const repeat = act.repeat as Record<string, unknown>;
         const repeatSequence = Array.isArray(repeat.sequence) ? repeat.sequence : [];
+        const blockAlias = typeof act.alias === 'string' ? act.alias : undefined;
+        const blockEnabled = getNodeEnabled(
+          typeof act.enabled === 'boolean' ? act.enabled : undefined
+        );
 
-        // Create an action node that represents the repeat block
-        const nodeId = getNextNodeId('action');
-        const actionNode: ActionNode = {
-          id: nodeId,
-          type: 'action',
-          position: { x: 0, y: 0 },
-          data: {
-            alias: typeof act.alias === 'string' ? act.alias : undefined,
-            // Store the repeat data directly in the action for round-trip preservation
-            repeat: {
-              count:
-                typeof repeat.count === 'string' || typeof repeat.count === 'number'
-                  ? repeat.count
-                  : undefined,
-              while: Array.isArray(repeat.while) ? (repeat.while as HACondition[]) : undefined,
-              until: Array.isArray(repeat.until)
-                ? (repeat.until as HACondition[] | string[])
-                : typeof repeat.until === 'string'
-                  ? repeat.until
-                  : undefined,
-              // Include the original sequence for round-trip
-              sequence: repeatSequence as Record<string, unknown>[],
+        if (Array.isArray(repeat.while) && repeat.while.length > 0) {
+          // ── repeat.while ──
+          // condition_node →(true)→ body... →(back-edge)→ condition_node
+          // condition_node →(false)→ [continues]
+          const whileConditions = repeat.while as HACondition[];
+
+          // Create condition nodes (chain them like if-block conditions)
+          const conditionNodes: ConditionNode[] = [];
+          for (let ci = 0; ci < whileConditions.length; ci++) {
+            const condId = getNextNodeId('condition');
+            let parsedData: ConditionNode['data'];
+            try {
+              parsedData = HAConditionSchema.parse(whileConditions[ci]);
+            } catch {
+              parsedData = {
+                condition: 'template',
+                value_template: JSON.stringify(whileConditions[ci]),
+              };
+            }
+            if (ci === 0 && blockAlias) {
+              parsedData.alias = blockAlias;
+            }
+            parsedData.enabled = blockEnabled;
+            const condNode: ConditionNode = {
+              id: condId,
+              type: 'condition',
+              position: { x: 0, y: 0 },
+              data: parsedData,
+            };
+            conditionNodes.push(condNode);
+            nodes.push(condNode);
+            localConditionNodeIds.add(condId);
+          }
+
+          // Connect previous nodes → first condition
+          createEdgesFromCurrent(conditionNodes[0].id);
+
+          // Chain condition nodes together with 'true' edges
+          for (let ci = 0; ci < conditionNodes.length - 1; ci++) {
+            edges.push(
+              this.createEdge(conditionNodes[ci].id, conditionNodes[ci + 1].id, 'true')
+            );
+          }
+
+          const lastCondId = conditionNodes[conditionNodes.length - 1].id;
+
+          // Parse body sequence from last condition's TRUE path
+          const bodyResult = this.parseActions(
+            repeatSequence as (HAAction | HACondition)[],
+            {
+              warnings,
+              previousNodeIds: [lastCondId],
+              getNextNodeId,
+              conditionNodeIds: localConditionNodeIds,
+              inheritedEnabled: blockEnabled,
+            }
+          );
+          nodes.push(...bodyResult.nodes);
+          edges.push(...bodyResult.edges);
+
+          // Fix the first edge from last condition to body to use 'true' handle
+          if (bodyResult.nodes.length > 0) {
+            const firstBodyId = bodyResult.nodes[0].id;
+            const trueEdge = edges.find(
+              (e) => e.source === lastCondId && e.target === firstBodyId
+            );
+            if (trueEdge) {
+              trueEdge.sourceHandle = 'true';
+            }
+          }
+
+          // Find the last node in the body sequence
+          const bodyNodeIds = new Set(bodyResult.nodes.map((n) => n.id));
+          const bodySourceIds = new Set(bodyResult.edges.map((e) => e.source));
+          const bodyLastNodes = bodyResult.nodes.filter(
+            (n) => !bodySourceIds.has(n.id) || ![...bodyResult.edges].some(
+              (e) => e.source === n.id && bodyNodeIds.has(e.target)
+            )
+          );
+          const lastBodyNodeId =
+            bodyLastNodes.length > 0
+              ? bodyLastNodes[bodyLastNodes.length - 1].id
+              : bodyResult.nodes.length > 0
+                ? bodyResult.nodes[bodyResult.nodes.length - 1].id
+                : lastCondId;
+
+          // Create back-edge from last body node → first condition
+          if (bodyResult.nodes.length > 0) {
+            const backEdge = this.createEdge(lastBodyNodeId, conditionNodes[0].id);
+            edges.push(backEdge);
+          }
+
+          // Output continues from first condition's FALSE path
+          currentNodeIds = [conditionNodes[0].id];
+          falsePathConditionIds.add(conditionNodes[0].id);
+        } else if (
+          (Array.isArray(repeat.until) && repeat.until.length > 0) ||
+          typeof repeat.until === 'string'
+        ) {
+          // ── repeat.until ──
+          // body... → condition_node →(true)→ [continues]
+          // condition_node →(false, back-edge)→ first body node
+
+          // Parse body sequence first
+          const bodyResult = this.parseActions(
+            repeatSequence as (HAAction | HACondition)[],
+            {
+              warnings,
+              previousNodeIds: currentNodeIds,
+              getNextNodeId,
+              conditionNodeIds: localConditionNodeIds,
+              inheritedEnabled: blockEnabled,
+            }
+          );
+          nodes.push(...bodyResult.nodes);
+          edges.push(...bodyResult.edges);
+
+          // Find the first body node
+          const firstBodyNodeId =
+            bodyResult.nodes.length > 0 ? bodyResult.nodes[0].id : null;
+
+          // Find the last body node
+          const bodyNodeIds = new Set(bodyResult.nodes.map((n) => n.id));
+          const bodySourceIds = new Set(
+            bodyResult.edges
+              .filter((e) => bodyNodeIds.has(e.target))
+              .map((e) => e.source)
+          );
+          const bodyLastNodes = bodyResult.nodes.filter(
+            (n) => !bodySourceIds.has(n.id) || !bodyResult.edges.some(
+              (e) => e.source === n.id && bodyNodeIds.has(e.target)
+            )
+          );
+          const lastBodyNodeId =
+            bodyLastNodes.length > 0
+              ? bodyLastNodes[bodyLastNodes.length - 1].id
+              : bodyResult.nodes.length > 0
+                ? bodyResult.nodes[bodyResult.nodes.length - 1].id
+                : null;
+
+          // Create condition nodes from until conditions
+          const untilConditions: HACondition[] = typeof repeat.until === 'string'
+            ? [{ condition: 'template', value_template: repeat.until }]
+            : (repeat.until as HACondition[]);
+
+          const conditionNodes: ConditionNode[] = [];
+          for (let ci = 0; ci < untilConditions.length; ci++) {
+            const condId = getNextNodeId('condition');
+            let parsedData: ConditionNode['data'];
+            try {
+              parsedData = HAConditionSchema.parse(untilConditions[ci]);
+            } catch {
+              parsedData = {
+                condition: 'template',
+                value_template: JSON.stringify(untilConditions[ci]),
+              };
+            }
+            if (ci === 0 && blockAlias && bodyResult.nodes.length === 0) {
+              parsedData.alias = blockAlias;
+            }
+            parsedData.enabled = blockEnabled;
+            const condNode: ConditionNode = {
+              id: condId,
+              type: 'condition',
+              position: { x: 0, y: 0 },
+              data: parsedData,
+            };
+            conditionNodes.push(condNode);
+            nodes.push(condNode);
+            localConditionNodeIds.add(condId);
+          }
+
+          // Connect last body node → first condition
+          if (lastBodyNodeId) {
+            const lastBodyNode = bodyResult.nodes.find((n) => n.id === lastBodyNodeId);
+            const sourceHandle = lastBodyNode && localConditionNodeIds.has(lastBodyNodeId)
+              ? 'true'
+              : undefined;
+            edges.push(this.createEdge(lastBodyNodeId, conditionNodes[0].id, sourceHandle));
+          } else {
+            // Empty body - connect previous nodes directly to condition
+            createEdgesFromCurrent(conditionNodes[0].id);
+          }
+
+          // Chain condition nodes together with 'true' edges
+          for (let ci = 0; ci < conditionNodes.length - 1; ci++) {
+            edges.push(
+              this.createEdge(conditionNodes[ci].id, conditionNodes[ci + 1].id, 'true')
+            );
+          }
+
+          const lastCondId = conditionNodes[conditionNodes.length - 1].id;
+
+          // Create back-edge from first condition →(false)→ first body node
+          if (firstBodyNodeId) {
+            const backEdge = this.createEdge(conditionNodes[0].id, firstBodyNodeId, 'false');
+            edges.push(backEdge);
+          }
+
+          // Output continues from last condition's TRUE path
+          currentNodeIds = [lastCondId];
+        } else if (repeat.count !== undefined) {
+          // ── repeat.count ──
+          // set_vars(counter=0) → body... → set_vars(counter+1) → condition(counter < N)
+          //                        ↑                                     │(true)    │(false)
+          //                        └──── back-edge (repeatType=count) ──┘           → [continues]
+          const countValue = repeat.count;
+          const counterId = getNextNodeId('set_variables');
+          const counterVarName = `_repeat_counter_${counterId.replace(/[^a-zA-Z0-9_]/g, '_')}`;
+
+          // Create init set_variables node: counter = 0
+          const initNode: SetVariablesNode = {
+            id: counterId,
+            type: 'set_variables',
+            position: { x: 0, y: 0 },
+            data: {
+              alias: blockAlias,
+              variables: { [counterVarName]: 0 },
+              enabled: blockEnabled,
             },
-            enabled: getNodeEnabled(typeof act.enabled === 'boolean' ? act.enabled : undefined),
-          },
-        };
+          };
+          nodes.push(initNode);
+          createEdgesFromCurrent(counterId);
 
-        nodes.push(actionNode);
-        createEdgesFromCurrent(nodeId);
-        currentNodeIds = [nodeId];
+          // Parse body sequence
+          const bodyResult = this.parseActions(
+            repeatSequence as (HAAction | HACondition)[],
+            {
+              warnings,
+              previousNodeIds: [counterId],
+              getNextNodeId,
+              conditionNodeIds: localConditionNodeIds,
+              inheritedEnabled: blockEnabled,
+            }
+          );
+          nodes.push(...bodyResult.nodes);
+          edges.push(...bodyResult.edges);
+
+          // Find last body node
+          const bodyNodeIds = new Set(bodyResult.nodes.map((n) => n.id));
+          const bodySourceIds = new Set(
+            bodyResult.edges
+              .filter((e) => bodyNodeIds.has(e.target))
+              .map((e) => e.source)
+          );
+          const bodyLastNodes = bodyResult.nodes.filter(
+            (n) => !bodySourceIds.has(n.id) || !bodyResult.edges.some(
+              (e) => e.source === n.id && bodyNodeIds.has(e.target)
+            )
+          );
+          const lastBodyNodeId =
+            bodyLastNodes.length > 0
+              ? bodyLastNodes[bodyLastNodes.length - 1].id
+              : bodyResult.nodes.length > 0
+                ? bodyResult.nodes[bodyResult.nodes.length - 1].id
+                : counterId;
+
+          // Create increment set_variables node: counter = counter + 1
+          const incrId = getNextNodeId('set_variables');
+          const incrNode: SetVariablesNode = {
+            id: incrId,
+            type: 'set_variables',
+            position: { x: 0, y: 0 },
+            data: {
+              variables: { [counterVarName]: `{{ ${counterVarName} + 1 }}` },
+              enabled: blockEnabled,
+            },
+          };
+          nodes.push(incrNode);
+          if (bodyResult.nodes.length > 0) {
+            const lastBodyNode = bodyResult.nodes.find((n) => n.id === lastBodyNodeId);
+            const sourceHandle = lastBodyNode && localConditionNodeIds.has(lastBodyNodeId)
+              ? 'true'
+              : undefined;
+            edges.push(this.createEdge(lastBodyNodeId, incrId, sourceHandle));
+          } else {
+            edges.push(this.createEdge(counterId, incrId));
+          }
+
+          // Create condition node: counter < N
+          const condId = getNextNodeId('condition');
+          const condNode: ConditionNode = {
+            id: condId,
+            type: 'condition',
+            position: { x: 0, y: 0 },
+            data: {
+              condition: 'template',
+              value_template: `{{ ${counterVarName} < ${countValue} }}`,
+              enabled: blockEnabled,
+            },
+          };
+          nodes.push(condNode);
+          localConditionNodeIds.add(condId);
+          edges.push(this.createEdge(incrId, condId));
+
+          // Back-edge: condition →(true)→ first body node (or init if no body)
+          const loopTargetId =
+            bodyResult.nodes.length > 0 ? bodyResult.nodes[0].id : incrId;
+          const backEdge = this.createEdge(condId, loopTargetId, 'true');
+          edges.push(backEdge);
+
+          // Output continues from condition's FALSE path
+          currentNodeIds = [condId];
+          falsePathConditionIds.add(condId);
+        } else {
+          // Unknown repeat type - create opaque action node as fallback
+          const nodeId = getNextNodeId('action');
+          const actionNode: ActionNode = {
+            id: nodeId,
+            type: 'action',
+            position: { x: 0, y: 0 },
+            data: {
+              alias: blockAlias,
+              repeat: repeat as ActionNode['data']['repeat'],
+              enabled: blockEnabled,
+            },
+          };
+          nodes.push(actionNode);
+          createEdgesFromCurrent(nodeId);
+          currentNodeIds = [nodeId];
+        }
       } else if (isServiceAction(action)) {
         // Regular service call action (support both 'service' and 'action' fields)
         const nodeId = getNextNodeId('action');
