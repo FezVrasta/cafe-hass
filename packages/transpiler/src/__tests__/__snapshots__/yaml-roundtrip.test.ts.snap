@@ -111,7 +111,7 @@ actions:
                   value_template: "{{ current_node == \\"condition_test_1_143\\" }}"
               sequence:
                 - variables:
-                    current_node: "{% if states('sensor.brightness_sensor') | float > 120 %}\\"condition_test_2_144\\"{% else %}\\"END\\"{% endif %}"
+                    current_node: "{% if states('sensor.brightness_sensor') | float > 120 %}condition_test_2_144{% else %}END{% endif %}"
             - conditions:
                 - condition: template
                   value_template: "{{ current_node == \\"condition_test_2_144\\" }}"
@@ -130,13 +130,13 @@ actions:
                   value_template: "{{ current_node == \\"condition_test_3_145\\" }}"
               sequence:
                 - variables:
-                    current_node: "{% if (state_attr('media_player.tv','media_content_type') or '') | lower == 'movie' %}\\"condition_test_4_146\\"{% else %}\\"END\\"{% endif %}"
+                    current_node: "{% if (state_attr('media_player.tv','media_content_type') or '') | lower == 'movie' %}condition_test_4_146{% else %}END{% endif %}"
             - conditions:
                 - condition: template
                   value_template: "{{ current_node == \\"condition_test_4_146\\" }}"
               sequence:
                 - variables:
-                    current_node: "{% if states('cover.velux_blind') != 'closed' %}\\"action_test_5_147\\"{% else %}\\"condition_test_6_148\\"{% endif %}"
+                    current_node: "{% if states('cover.velux_blind') != 'closed' %}action_test_5_147{% else %}condition_test_6_148{% endif %}"
             - conditions:
                 - condition: template
                   value_template: "{{ current_node == \\"action_test_5_147\\" }}"
@@ -151,7 +151,7 @@ actions:
                   value_template: "{{ current_node == \\"condition_test_6_148\\" }}"
               sequence:
                 - variables:
-                    current_node: "{% if states('cover.main_blind') != 'closed' %}\\"action_test_7_149\\"{% else %}\\"END\\"{% endif %}"
+                    current_node: "{% if states('cover.main_blind') != 'closed' %}action_test_7_149{% else %}END{% endif %}"
             - conditions:
                 - condition: template
                   value_template: "{{ current_node == \\"action_test_7_149\\" }}"
@@ -421,13 +421,13 @@ actions:
                   value_template: "{{ current_node == \\"condition_test_1_107\\" }}"
               sequence:
                 - variables:
-                    current_node: "{% if trigger.payload == 1 %}\\"condition_test_2_108\\"{% else %}\\"END\\"{% endif %}"
+                    current_node: "{% if trigger.payload == 1 %}condition_test_2_108{% else %}END{% endif %}"
             - conditions:
                 - condition: template
                   value_template: "{{ current_node == \\"condition_test_2_108\\" }}"
               sequence:
                 - variables:
-                    current_node: "{% if target_light is not none %}\\"wait_test_3_109\\"{% else %}\\"END\\"{% endif %}"
+                    current_node: "{% if target_light is not none %}wait_test_3_109{% else %}END{% endif %}"
             - conditions:
                 - condition: template
                   value_template: "{{ current_node == \\"wait_test_3_109\\" }}"
@@ -441,7 +441,7 @@ actions:
                   value_template: "{{ current_node == \\"condition_test_4_110\\" }}"
               sequence:
                 - variables:
-                    current_node: "{% if is_state(target_light, 'on') %}\\"action_test_5_111\\"{% else %}\\"END\\"{% endif %}"
+                    current_node: "{% if is_state(target_light, 'on') %}action_test_5_111{% else %}END{% endif %}"
             - conditions:
                 - condition: template
                   value_template: "{{ current_node == \\"action_test_5_111\\" }}"
@@ -506,7 +506,7 @@ actions:
                   value_template: "{{ current_node == \\"condition_test_11_117\\" }}"
               sequence:
                 - variables:
-                    current_node: "{% if is_state(target_light, 'on') and (color_after_1 == color_before) %}\\"action_test_12_118\\"{% else %}\\"set_variables_test_14_120\\"{% endif %}"
+                    current_node: "{% if is_state(target_light, 'on') and (color_after_1 == color_before) %}action_test_12_118{% else %}set_variables_test_14_120{% endif %}"
             - conditions:
                 - condition: template
                   value_template: "{{ current_node == \\"action_test_12_118\\" }}"
@@ -543,7 +543,7 @@ actions:
                   value_template: "{{ current_node == \\"condition_test_15_121\\" }}"
               sequence:
                 - variables:
-                    current_node: "{% if is_state(target_light, 'on') and (color_after_2 == color_before) %}\\"action_test_16_122\\"{% else %}\\"END\\"{% endif %}"
+                    current_node: "{% if is_state(target_light, 'on') and (color_after_2 == color_before) %}action_test_16_122{% else %}END{% endif %}"
             - conditions:
                 - condition: template
                   value_template: "{{ current_node == \\"action_test_16_122\\" }}"

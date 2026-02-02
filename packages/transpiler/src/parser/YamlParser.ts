@@ -765,8 +765,8 @@ export class YamlParser {
             nodeType = 'condition';
 
             // Extract true and false targets
-            const trueMatch = currentNodeValue.match(/{%\s*if[^%]*%}\s*["']([^"']+)["']/);
-            const falseMatch = currentNodeValue.match(/{%\s*else\s*%}\s*["']([^"']+)["']/);
+            const trueMatch = currentNodeValue.match(/{%\s*if[^%]*%}\s*"?([^"'{%]+?)"?(?=\s*{%)/);
+            const falseMatch = currentNodeValue.match(/{%\s*else\s*%}\s*"?([^"'{%]+?)"?(?=\s*{%)/);
 
             trueTarget = trueMatch ? trueMatch[1] : null;
             falseTarget = falseMatch ? falseMatch[1] : null;

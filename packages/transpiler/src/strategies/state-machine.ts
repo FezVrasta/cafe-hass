@@ -448,7 +448,7 @@ export class StateMachineStrategy extends BaseStrategy {
         {
           alias: node.data.alias,
           variables: {
-            current_node: `{% if ${conditionTemplate} %}"${trueTarget}"{% else %}"${falseTarget}"{% endif %}`,
+            current_node: `{% if ${conditionTemplate} %}${trueTarget}{% else %}${falseTarget}{% endif %}`,
           },
         },
       ],
