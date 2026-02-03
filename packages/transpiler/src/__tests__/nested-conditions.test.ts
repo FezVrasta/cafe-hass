@@ -942,6 +942,278 @@ describe('Nested Conditions', () => {
     });
   });
 
+  describe('Sibling Conditions (Fan-out)', () => {
+    it('should include all sibling conditions connected to the same true handle', () => {
+      // This tests the fan-out pattern: one condition branches to multiple conditions on the same handle
+      // trigger → cond_parent (true)→ cond_a → action_a
+      //                       (true)→ cond_b → action_b
+      //                       (true)→ cond_c → action_c
+      const graph = createBaseGraph(
+        [
+          {
+            id: 'trigger',
+            type: 'trigger',
+            position: { x: 0, y: 0 },
+            data: { trigger: 'state', entity_id: 'media_player.htpc' },
+          },
+          {
+            id: 'cond_parent',
+            type: 'condition',
+            position: { x: 200, y: 0 },
+            data: { condition: 'state', entity_id: 'media_player.htpc', state: 'playing' },
+          },
+          {
+            id: 'cond_a',
+            type: 'condition',
+            position: { x: 400, y: -100 },
+            data: { condition: 'state', entity_id: 'binary_sensor.switch_a', state: 'on' },
+          },
+          {
+            id: 'cond_b',
+            type: 'condition',
+            position: { x: 400, y: 0 },
+            data: { condition: 'state', entity_id: 'binary_sensor.switch_b', state: 'on' },
+          },
+          {
+            id: 'cond_c',
+            type: 'condition',
+            position: { x: 400, y: 100 },
+            data: { condition: 'state', entity_id: 'binary_sensor.switch_c', state: 'on' },
+          },
+          {
+            id: 'action_a',
+            type: 'action',
+            position: { x: 600, y: -100 },
+            data: { service: 'light.turn_off', target: { entity_id: ['light.a'] } },
+          },
+          {
+            id: 'action_b',
+            type: 'action',
+            position: { x: 600, y: 0 },
+            data: { service: 'light.turn_off', target: { entity_id: ['light.b'] } },
+          },
+          {
+            id: 'action_c',
+            type: 'action',
+            position: { x: 600, y: 100 },
+            data: { service: 'light.turn_off', target: { entity_id: ['light.c'] } },
+          },
+        ],
+        [
+          { id: 'e1', source: 'trigger', target: 'cond_parent' },
+          // All three conditions branch from the same true handle
+          { id: 'e2', source: 'cond_parent', target: 'cond_a', sourceHandle: 'true' },
+          { id: 'e3', source: 'cond_parent', target: 'cond_b', sourceHandle: 'true' },
+          { id: 'e4', source: 'cond_parent', target: 'cond_c', sourceHandle: 'true' },
+          // Each condition leads to its own action
+          { id: 'e5', source: 'cond_a', target: 'action_a', sourceHandle: 'true' },
+          { id: 'e6', source: 'cond_b', target: 'action_b', sourceHandle: 'true' },
+          { id: 'e7', source: 'cond_c', target: 'action_c', sourceHandle: 'true' },
+        ]
+      );
+
+      const transpiler = new FlowTranspiler();
+      const result = transpiler.transpile(graph);
+
+      expect(result.success).toBe(true);
+      expect(result.errors ?? []).toHaveLength(0);
+
+      const yaml = result.yaml ?? '';
+
+      // All three switch sensors should be present in the YAML
+      expect(yaml).toContain('binary_sensor.switch_a');
+      expect(yaml).toContain('binary_sensor.switch_b');
+      expect(yaml).toContain('binary_sensor.switch_c');
+
+      // All three lights should be present in the YAML
+      expect(yaml).toContain('light.a');
+      expect(yaml).toContain('light.b');
+      expect(yaml).toContain('light.c');
+
+      // There should be multiple if blocks (one for parent, one for each sibling)
+      const ifMatches = yaml.match(/if:/g);
+      expect(ifMatches?.length).toBeGreaterThanOrEqual(3);
+    });
+
+    it('should include all sibling conditions connected to the same false handle', () => {
+      // trigger → cond_parent (false)→ cond_a → action_a
+      //                       (false)→ cond_b → action_b
+      const graph = createBaseGraph(
+        [
+          {
+            id: 'trigger',
+            type: 'trigger',
+            position: { x: 0, y: 0 },
+            data: { trigger: 'state', entity_id: 'media_player.htpc' },
+          },
+          {
+            id: 'cond_parent',
+            type: 'condition',
+            position: { x: 200, y: 0 },
+            data: { condition: 'state', entity_id: 'media_player.htpc', state: 'playing' },
+          },
+          {
+            id: 'cond_a',
+            type: 'condition',
+            position: { x: 400, y: 100 },
+            data: { condition: 'state', entity_id: 'binary_sensor.switch_a', state: 'on' },
+          },
+          {
+            id: 'cond_b',
+            type: 'condition',
+            position: { x: 400, y: 200 },
+            data: { condition: 'state', entity_id: 'binary_sensor.switch_b', state: 'on' },
+          },
+          {
+            id: 'action_a',
+            type: 'action',
+            position: { x: 600, y: 100 },
+            data: { service: 'light.turn_on', target: { entity_id: ['light.a'] } },
+          },
+          {
+            id: 'action_b',
+            type: 'action',
+            position: { x: 600, y: 200 },
+            data: { service: 'light.turn_on', target: { entity_id: ['light.b'] } },
+          },
+        ],
+        [
+          { id: 'e1', source: 'trigger', target: 'cond_parent' },
+          // Both conditions branch from the false handle
+          { id: 'e2', source: 'cond_parent', target: 'cond_a', sourceHandle: 'false' },
+          { id: 'e3', source: 'cond_parent', target: 'cond_b', sourceHandle: 'false' },
+          // Each condition leads to its own action
+          { id: 'e4', source: 'cond_a', target: 'action_a', sourceHandle: 'true' },
+          { id: 'e5', source: 'cond_b', target: 'action_b', sourceHandle: 'true' },
+        ]
+      );
+
+      const transpiler = new FlowTranspiler();
+      const result = transpiler.transpile(graph);
+
+      expect(result.success).toBe(true);
+      expect(result.errors ?? []).toHaveLength(0);
+
+      const yaml = result.yaml ?? '';
+
+      // Both switch sensors should be present
+      expect(yaml).toContain('binary_sensor.switch_a');
+      expect(yaml).toContain('binary_sensor.switch_b');
+
+      // Both lights should be present
+      expect(yaml).toContain('light.a');
+      expect(yaml).toContain('light.b');
+    });
+
+    it('should handle both true and false fan-out simultaneously', () => {
+      // trigger → cond_parent (true)→ cond_t1 → action_t1
+      //                       (true)→ cond_t2 → action_t2
+      //                       (false)→ cond_f1 → action_f1
+      //                       (false)→ cond_f2 → action_f2
+      const graph = createBaseGraph(
+        [
+          {
+            id: 'trigger',
+            type: 'trigger',
+            position: { x: 0, y: 0 },
+            data: { trigger: 'state', entity_id: 'media_player.htpc' },
+          },
+          {
+            id: 'cond_parent',
+            type: 'condition',
+            position: { x: 200, y: 0 },
+            data: { condition: 'state', entity_id: 'media_player.htpc', state: 'playing' },
+          },
+          // True branch conditions
+          {
+            id: 'cond_t1',
+            type: 'condition',
+            position: { x: 400, y: -100 },
+            data: { condition: 'state', entity_id: 'binary_sensor.true_switch_1', state: 'on' },
+          },
+          {
+            id: 'cond_t2',
+            type: 'condition',
+            position: { x: 400, y: 0 },
+            data: { condition: 'state', entity_id: 'binary_sensor.true_switch_2', state: 'on' },
+          },
+          // False branch conditions
+          {
+            id: 'cond_f1',
+            type: 'condition',
+            position: { x: 400, y: 100 },
+            data: { condition: 'state', entity_id: 'binary_sensor.false_switch_1', state: 'on' },
+          },
+          {
+            id: 'cond_f2',
+            type: 'condition',
+            position: { x: 400, y: 200 },
+            data: { condition: 'state', entity_id: 'binary_sensor.false_switch_2', state: 'on' },
+          },
+          // Actions
+          {
+            id: 'action_t1',
+            type: 'action',
+            position: { x: 600, y: -100 },
+            data: { service: 'light.turn_off', target: { entity_id: ['light.t1'] } },
+          },
+          {
+            id: 'action_t2',
+            type: 'action',
+            position: { x: 600, y: 0 },
+            data: { service: 'light.turn_off', target: { entity_id: ['light.t2'] } },
+          },
+          {
+            id: 'action_f1',
+            type: 'action',
+            position: { x: 600, y: 100 },
+            data: { service: 'light.turn_on', target: { entity_id: ['light.f1'] } },
+          },
+          {
+            id: 'action_f2',
+            type: 'action',
+            position: { x: 600, y: 200 },
+            data: { service: 'light.turn_on', target: { entity_id: ['light.f2'] } },
+          },
+        ],
+        [
+          { id: 'e1', source: 'trigger', target: 'cond_parent' },
+          // True branch fan-out
+          { id: 'e2', source: 'cond_parent', target: 'cond_t1', sourceHandle: 'true' },
+          { id: 'e3', source: 'cond_parent', target: 'cond_t2', sourceHandle: 'true' },
+          // False branch fan-out
+          { id: 'e4', source: 'cond_parent', target: 'cond_f1', sourceHandle: 'false' },
+          { id: 'e5', source: 'cond_parent', target: 'cond_f2', sourceHandle: 'false' },
+          // Actions
+          { id: 'e6', source: 'cond_t1', target: 'action_t1', sourceHandle: 'true' },
+          { id: 'e7', source: 'cond_t2', target: 'action_t2', sourceHandle: 'true' },
+          { id: 'e8', source: 'cond_f1', target: 'action_f1', sourceHandle: 'true' },
+          { id: 'e9', source: 'cond_f2', target: 'action_f2', sourceHandle: 'true' },
+        ]
+      );
+
+      const transpiler = new FlowTranspiler();
+      const result = transpiler.transpile(graph);
+
+      expect(result.success).toBe(true);
+      expect(result.errors ?? []).toHaveLength(0);
+
+      const yaml = result.yaml ?? '';
+
+      // All switch sensors should be present
+      expect(yaml).toContain('binary_sensor.true_switch_1');
+      expect(yaml).toContain('binary_sensor.true_switch_2');
+      expect(yaml).toContain('binary_sensor.false_switch_1');
+      expect(yaml).toContain('binary_sensor.false_switch_2');
+
+      // All lights should be present
+      expect(yaml).toContain('light.t1');
+      expect(yaml).toContain('light.t2');
+      expect(yaml).toContain('light.f1');
+      expect(yaml).toContain('light.f2');
+    });
+  });
+
   describe('OR Conditions', () => {
     it('should combine parallel conditions with converging true paths into OR', () => {
       // Graph: trigger → (cond1, cond2 in parallel) → both true paths to action

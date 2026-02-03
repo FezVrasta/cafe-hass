@@ -647,13 +647,18 @@ export class NativeStrategy extends BaseStrategy {
 
       const allOutgoing = this.getOutgoingEdges(flow, currentId);
       const outgoing = allOutgoing.filter((e) => !this.backEdgeIds.has(e.id));
-      const truePath = outgoing.find((edge) => edge.sourceHandle === 'true');
-      const falsePath = outgoing.find((edge) => edge.sourceHandle === 'false');
+      const truePaths = outgoing.filter((edge) => edge.sourceHandle === 'true');
+      const falsePaths = outgoing.filter((edge) => edge.sourceHandle === 'false');
 
       // Can only promote if the condition has a single path (no branching)
-      if (truePath && falsePath) break;
+      // If both handles are used, or if there's fan-out (multiple edges on same handle), stop promotion
+      if (truePaths.length > 0 && falsePaths.length > 0) break;
+      if (truePaths.length > 1 || falsePaths.length > 1) break; // Fan-out pattern
       // Must have at least one path
-      if (!truePath && !falsePath) break;
+      if (truePaths.length === 0 && falsePaths.length === 0) break;
+
+      const truePath = truePaths[0];
+      const falsePath = falsePaths[0];
 
       // Build the condition object with alias preserved
       const condition = this.buildCondition(node as ConditionNode);
@@ -830,31 +835,40 @@ export class NativeStrategy extends BaseStrategy {
 
       const conditions: unknown[] = [];
       let currentNode: FlowNode = node;
-      let thenNodeId: string | null = null;
-      let elseNodeId: string | null = null;
+      let thenNodeIds: string[] = [];
+      let elseNodeIds: string[] = [];
 
-      // The 'else' path is taken from the very first condition in the chain
-      const originalElsePath = this.getOutgoingEdges(flow, node.id).find(
+      // The 'else' paths are taken from the very first condition in the chain
+      // Use filter to get ALL false edges, not just the first (handles fan-out patterns)
+      const originalElsePaths = this.getOutgoingEdges(flow, node.id).filter(
         (edge) => edge.sourceHandle === 'false' && !this.backEdgeIds.has(edge.id)
       );
-      if (originalElsePath) {
-        elseNodeId = originalElsePath.target;
-      }
+      elseNodeIds = originalElsePaths.map((edge) => edge.target);
 
       // Start traversing the 'true' path to find all sequential conditions
       // Only chain conditions that share the same "else" behavior (no else, or same else target)
       while (currentNode?.type === 'condition') {
         conditions.push(this.buildCondition(currentNode as ConditionNode));
 
-        const truePath = this.getOutgoingEdges(flow, currentNode.id).find(
+        // Get ALL true paths (handles fan-out patterns where multiple conditions branch from same handle)
+        const truePaths = this.getOutgoingEdges(flow, currentNode.id).filter(
           (edge) => edge.sourceHandle === 'true' && !this.backEdgeIds.has(edge.id)
         );
 
-        if (!truePath) {
-          thenNodeId = null;
+        if (truePaths.length === 0) {
+          // No true paths - end of chain
           break;
         }
 
+        // If there are multiple true paths (fan-out), we can't chain conditions
+        // Each branch becomes a separate action in the then sequence
+        if (truePaths.length > 1) {
+          thenNodeIds = truePaths.map((edge) => edge.target);
+          break;
+        }
+
+        // Single true path - check if we can chain to another condition
+        const truePath = truePaths[0];
         const nextNode = this.getNode(flow, truePath.target);
 
         // If the next node is a condition and not visited, check if we should continue chaining
@@ -865,15 +879,17 @@ export class NativeStrategy extends BaseStrategy {
           !this.repeatPatterns.has(nextNode.id) &&
           !this.repeatInternalNodeIds.has(nextNode.id)
         ) {
-          // Check if the next condition has a false path
-          const nextFalsePath = this.getOutgoingEdges(flow, nextNode.id).find(
+          // Check if the next condition has false paths
+          const nextFalsePaths = this.getOutgoingEdges(flow, nextNode.id).filter(
             (edge) => edge.sourceHandle === 'false' && !this.backEdgeIds.has(edge.id)
           );
 
           // Only continue chaining if:
           // 1. The next condition has no false path (it can be merged), OR
-          // 2. The next condition's false path goes to the same target as the first condition's false path
-          const canChain = !nextFalsePath || nextFalsePath.target === elseNodeId;
+          // 2. The next condition has exactly one false path going to one of the original else targets
+          const canChain =
+            nextFalsePaths.length === 0 ||
+            (nextFalsePaths.length === 1 && elseNodeIds.includes(nextFalsePaths[0].target));
 
           if (canChain) {
             currentNode = nextNode;
@@ -881,12 +897,12 @@ export class NativeStrategy extends BaseStrategy {
           } else {
             // The next condition has its own else branch - don't merge it
             // Instead, it becomes part of the "then" sequence as a nested if
-            thenNodeId = truePath.target;
+            thenNodeIds = [truePath.target];
             break;
           }
         } else {
           // End of chain: the target is not a condition or is already visited
-          thenNodeId = truePath.target;
+          thenNodeIds = [truePath.target];
           break;
         }
       }
@@ -899,11 +915,19 @@ export class NativeStrategy extends BaseStrategy {
         else: [],
       };
 
-      if (thenNodeId) {
-        chooseAction.then = this.buildSequenceFromNode(flow, thenNodeId, new Set(visited));
+      // Build sequences for all then branches and combine them (handles fan-out)
+      if (thenNodeIds.length > 0) {
+        const thenActions = thenNodeIds.flatMap((nodeId) =>
+          this.buildSequenceFromNode(flow, nodeId, new Set(visited))
+        );
+        chooseAction.then = thenActions;
       }
-      if (elseNodeId) {
-        chooseAction.else = this.buildSequenceFromNode(flow, elseNodeId, new Set(visited));
+      // Build sequences for all else branches and combine them (handles fan-out)
+      if (elseNodeIds.length > 0) {
+        const elseActions = elseNodeIds.flatMap((nodeId) =>
+          this.buildSequenceFromNode(flow, nodeId, new Set(visited))
+        );
+        chooseAction.else = elseActions;
       }
 
       sequence.push(chooseAction);
