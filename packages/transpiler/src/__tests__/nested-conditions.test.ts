@@ -1020,7 +1020,12 @@ describe('Nested Conditions', () => {
 
       const yaml = result.yaml ?? '';
 
-      // All three switch sensors should be present in the YAML
+      // The parent condition (media_player.htpc state: playing) should be in root conditions block
+      expect(yaml).toContain('conditions:');
+      expect(yaml).toContain('entity_id: media_player.htpc');
+      expect(yaml).toContain('state: playing');
+
+      // All three switch sensors should be present in the YAML (in actions as if-then blocks)
       expect(yaml).toContain('binary_sensor.switch_a');
       expect(yaml).toContain('binary_sensor.switch_b');
       expect(yaml).toContain('binary_sensor.switch_c');
@@ -1030,9 +1035,10 @@ describe('Nested Conditions', () => {
       expect(yaml).toContain('light.b');
       expect(yaml).toContain('light.c');
 
-      // There should be multiple if blocks (one for parent, one for each sibling)
+      // There should be 3 if blocks in actions (one for each sibling condition)
+      // The parent condition should NOT be in an if block - it should be in root conditions
       const ifMatches = yaml.match(/if:/g);
-      expect(ifMatches?.length).toBeGreaterThanOrEqual(3);
+      expect(ifMatches?.length).toBe(3);
     });
 
     it('should include all sibling conditions connected to the same false handle', () => {
