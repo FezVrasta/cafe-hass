@@ -88,14 +88,14 @@ export class NativeStrategy extends BaseStrategy {
     // Conditions directly after triggers with no else/false paths can be placed
     // in the root "conditions:" block so HA properly tracks "Last triggered at".
     let rootConditions: unknown[] | null = null;
-    let actionsStartNodeId: string | null = null;
+    let actionsStartNodeIds: string[] = [];
     let promotedVisited: Set<string> | null = null;
 
     if (uniqueFirstActions.length === 1) {
       const promoted = this.extractLeadingConditions(flow, uniqueFirstActions[0]);
       if (promoted.conditions.length > 0) {
         rootConditions = promoted.conditions;
-        actionsStartNodeId = promoted.nextNodeId;
+        actionsStartNodeIds = promoted.nextNodeIds;
         promotedVisited = promoted.visitedIds;
       }
     }
@@ -103,9 +103,12 @@ export class NativeStrategy extends BaseStrategy {
     // Build the action sequence
     let actions: unknown[];
     if (rootConditions) {
-      // Leading conditions promoted to root - build actions from continuation point
-      if (actionsStartNodeId) {
-        actions = this.buildSequenceFromNode(flow, actionsStartNodeId, promotedVisited!);
+      // Leading conditions promoted to root - build actions from continuation point(s)
+      // If there are multiple starting points (fan-out), build sequences from all of them
+      if (actionsStartNodeIds.length > 0) {
+        actions = actionsStartNodeIds.flatMap((nodeId) =>
+          this.buildSequenceFromNode(flow, nodeId, new Set(promotedVisited!))
+        );
       } else {
         actions = [];
       }
@@ -628,12 +631,14 @@ export class NativeStrategy extends BaseStrategy {
   /**
    * Extract leading condition nodes that can be promoted to the root conditions block.
    * Only conditions with no false/else path are promotable, forming a straight chain
-   * from triggers to actions via true paths only.
+   * from triggers to actions via true paths only (or false paths only for inverted conditions).
+   * Fan-out is allowed when only one handle type is used - the condition is promoted and
+   * all fan-out targets become action starting points.
    */
   private extractLeadingConditions(
     flow: FlowGraph,
     startNodeId: string
-  ): { conditions: unknown[]; nextNodeId: string | null; visitedIds: Set<string> } {
+  ): { conditions: unknown[]; nextNodeIds: string[]; visitedIds: Set<string> } {
     const conditions: unknown[] = [];
     const visitedIds = new Set<string>();
     let currentId: string | null = startNodeId;
@@ -650,15 +655,11 @@ export class NativeStrategy extends BaseStrategy {
       const truePaths = outgoing.filter((edge) => edge.sourceHandle === 'true');
       const falsePaths = outgoing.filter((edge) => edge.sourceHandle === 'false');
 
-      // Can only promote if the condition has a single path (no branching)
-      // If both handles are used, or if there's fan-out (multiple edges on same handle), stop promotion
+      // Can only promote if the condition uses only ONE handle type (no branching to different outcomes)
+      // If both handles are used, it's a full if/then/else and cannot be promoted
       if (truePaths.length > 0 && falsePaths.length > 0) break;
-      if (truePaths.length > 1 || falsePaths.length > 1) break; // Fan-out pattern
       // Must have at least one path
       if (truePaths.length === 0 && falsePaths.length === 0) break;
-
-      const truePath = truePaths[0];
-      const falsePath = falsePaths[0];
 
       // Build the condition object with alias preserved
       const condition = this.buildCondition(node as ConditionNode);
@@ -666,23 +667,33 @@ export class NativeStrategy extends BaseStrategy {
         condition.alias = (node as ConditionNode).data.alias;
       }
 
-      if (falsePath) {
+      if (falsePaths.length > 0) {
         // Connected via false handle only → inverted condition, wrap in "not"
         conditions.push({
           condition: 'not',
           conditions: [condition],
         });
         visitedIds.add(currentId);
-        currentId = falsePath.target;
+
+        // If there's fan-out (multiple false paths), stop extraction and return all targets
+        if (falsePaths.length > 1) {
+          return { conditions, nextNodeIds: falsePaths.map((e) => e.target), visitedIds };
+        }
+        currentId = falsePaths[0].target;
       } else {
         // Connected via true handle only → promote as-is
         conditions.push(condition);
         visitedIds.add(currentId);
-        currentId = truePath!.target;
+
+        // If there's fan-out (multiple true paths), stop extraction and return all targets
+        if (truePaths.length > 1) {
+          return { conditions, nextNodeIds: truePaths.map((e) => e.target), visitedIds };
+        }
+        currentId = truePaths[0].target;
       }
     }
 
-    return { conditions, nextNodeId: currentId, visitedIds };
+    return { conditions, nextNodeIds: currentId ? [currentId] : [], visitedIds };
   }
 
   /**
