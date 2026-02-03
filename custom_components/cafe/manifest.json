@@ -1,7 +1,7 @@
 {
   "domain": "cafe",
   "name": "C.A.F.E.",
-  "version": "0.4.2",
+  "version": "0.5.0",
   "codeowners": [],
   "config_flow": true,
   "dependencies": ["frontend", "http"],
