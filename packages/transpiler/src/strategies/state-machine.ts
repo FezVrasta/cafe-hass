@@ -75,9 +75,15 @@ export class StateMachineStrategy extends BaseStrategy {
     }
 
     // Build choose blocks for each non-trigger node
-    const chooseBlocks = flow.nodes
+    const nodeBlocks = flow.nodes
       .filter((n) => n.type !== 'trigger')
       .map((node) => this.generateNodeBlock(flow, node));
+
+    // Generate parallel entry blocks for triggers with multiple targets
+    const parallelEntryBlocks = this.generateParallelEntryBlocks(flow, triggerRouting);
+
+    // Combine node blocks and parallel entry blocks
+    const chooseBlocks = [...parallelEntryBlocks, ...nodeBlocks];
 
     // Warn about potential infinite loops
     if (analysis.hasCycles) {
@@ -164,11 +170,12 @@ export class StateMachineStrategy extends BaseStrategy {
   }
 
   /**
-   * Build a mapping from trigger index to first action node
-   * Returns a Map where key = trigger index, value = first action node ID
+   * Build a mapping from trigger index to target action node(s)
+   * Returns a Map where key = trigger index, value = array of target node IDs
+   * When a trigger has multiple targets, they should execute in parallel
    */
-  private buildTriggerRouting(flow: FlowGraph): Map<number, string> {
-    const routing = new Map<number, string>();
+  private buildTriggerRouting(flow: FlowGraph): Map<number, string[]> {
+    const routing = new Map<number, string[]>();
 
     // Get trigger nodes in order (they will be output in this order)
     const triggerNodes = flow.nodes.filter((n): n is TriggerNode => n.type === 'trigger');
@@ -176,7 +183,10 @@ export class StateMachineStrategy extends BaseStrategy {
     triggerNodes.forEach((trigger, index) => {
       const outgoing = this.getOutgoingEdges(flow, trigger.id);
       if (outgoing.length > 0) {
-        routing.set(index, outgoing[0].target);
+        routing.set(
+          index,
+          outgoing.map((e) => e.target)
+        );
       }
     });
 
@@ -184,12 +194,31 @@ export class StateMachineStrategy extends BaseStrategy {
   }
 
   /**
+   * Get the effective entry point for a trigger
+   * If trigger has single target, return that target ID
+   * If trigger has multiple targets (parallel), return synthetic parallel entry ID
+   */
+  private getEffectiveEntryPoint(triggerIndex: number, targets: string[]): string {
+    if (targets.length === 1) {
+      return targets[0];
+    }
+    // Multiple targets - use synthetic parallel entry point
+    return `__parallel_trigger_${triggerIndex}`;
+  }
+
+  /**
    * Generate the entry node expression for initialization
    * If all triggers lead to the same node, return that node ID
    * Otherwise, return a Jinja2 template that routes based on trigger.idx
    */
-  private generateEntryNodeExpression(triggerRouting: Map<number, string>): string {
-    const uniqueTargets = new Set(triggerRouting.values());
+  private generateEntryNodeExpression(triggerRouting: Map<number, string[]>): string {
+    // Convert to effective entry points (handling parallel branches)
+    const effectiveEntries = new Map<number, string>();
+    for (const [idx, targets] of triggerRouting) {
+      effectiveEntries.set(idx, this.getEffectiveEntryPoint(idx, targets));
+    }
+
+    const uniqueTargets = new Set(effectiveEntries.values());
 
     // If all triggers lead to the same node (or there's only one trigger)
     if (uniqueTargets.size === 1) {
@@ -198,7 +227,7 @@ export class StateMachineStrategy extends BaseStrategy {
 
     // Multiple different targets - generate routing template
     // Using trigger.idx which is 0-based index of which trigger fired
-    const entries = [...triggerRouting.entries()].sort((a, b) => a[0] - b[0]);
+    const entries = [...effectiveEntries.entries()].sort((a, b) => a[0] - b[0]);
 
     // Build a Jinja2 if/elif chain
     // Note: trigger.idx is a string in HA, so compare with quoted string values
@@ -220,6 +249,65 @@ export class StateMachineStrategy extends BaseStrategy {
     }
 
     return parts.join('');
+  }
+
+  /**
+   * Generate choose blocks for parallel entry points
+   * When a trigger has multiple targets, we create a synthetic state that
+   * executes all targets in a parallel block
+   */
+  private generateParallelEntryBlocks(
+    flow: FlowGraph,
+    triggerRouting: Map<number, string[]>
+  ): Record<string, unknown>[] {
+    const parallelBlocks: Record<string, unknown>[] = [];
+
+    for (const [idx, targets] of triggerRouting) {
+      // Only generate parallel blocks for triggers with multiple targets
+      if (targets.length <= 1) {
+        continue;
+      }
+
+      const parallelEntryId = `__parallel_trigger_${idx}`;
+
+      // Build parallel action calls for all target nodes
+      const parallelActions = targets.map((targetId) => {
+        const targetNode = flow.nodes.find((n) => n.id === targetId);
+        if (!targetNode) {
+          return { service: 'system_log.write', data: { message: `Unknown node: ${targetId}` } };
+        }
+
+        // Generate the action call based on node type
+        if (targetNode.type === 'action') {
+          return this.buildActionCall(targetNode as ActionNode);
+        }
+
+        // For non-action nodes, we need to execute them and continue
+        // This is a simplified case - complex parallel branches would need more work
+        return { service: 'system_log.write', data: { message: `Node: ${targetId}` } };
+      });
+
+      parallelBlocks.push({
+        conditions: [
+          {
+            condition: 'template',
+            value_template: `{{ current_node == "${parallelEntryId}" }}`,
+          },
+        ],
+        sequence: [
+          {
+            parallel: parallelActions,
+          },
+          {
+            variables: {
+              current_node: 'END',
+            },
+          },
+        ],
+      });
+    }
+
+    return parallelBlocks;
   }
 
   /**
