@@ -22,7 +22,7 @@ import {
   getDisconnectAction,
   getDuplicateAction,
   getPasteAction,
-  //getRunAction,
+  getRunAction,
   getSelectAllAction,
   getToggleEnabledAction,
 } from '../actions';
@@ -123,7 +123,7 @@ export function NodeToolbar() {
   // New actions should be added here as needed!
   const allActions = useMemo(
     () => [
-      //getRunAction(t),
+      getRunAction(t),
       getDuplicateAction(t),
       getCopyAction(t),
       getCutAction(t),

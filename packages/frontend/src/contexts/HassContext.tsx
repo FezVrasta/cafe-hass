@@ -348,7 +348,7 @@ export const HassProvider: FC<
 
           return await response.json();
         },
-        callService: async (domain, service, data) => {
+        callService: async (domain, service, data, target) => {
           if (!wsConnection) {
             throw new Error('WebSocket connection not available');
           }
@@ -357,6 +357,7 @@ export const HassProvider: FC<
             domain,
             service,
             service_data: data || {},
+            ...(target && { target }),
           });
         },
       } satisfies HomeAssistant;
