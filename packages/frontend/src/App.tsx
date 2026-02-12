@@ -49,6 +49,7 @@ import { ResizablePanel } from '@/components/ui/resizable-panel';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
+import { getHomeAssistantAPI } from '@/lib/ha-api';
 import { version } from '../../../custom_components/cafe/manifest.json';
 import { useHass } from './contexts/HassContext';
 import { useDarkMode } from './hooks/useDarkMode';
@@ -115,6 +116,11 @@ function App() {
     win.addEventListener('resize', handleResize);
     return () => win.removeEventListener('resize', handleResize);
   }, []);
+
+  useEffect(() => {
+    if (!hass && !config.url && !config.token) return;
+    getHomeAssistantAPI(hass, config);
+  }, [hass, config.url, config.token]);
 
   const handleImport = () => {
     const input = document.createElement('input');
