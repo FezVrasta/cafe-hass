@@ -130,6 +130,24 @@ export class IndexedDBStorage implements StateStorage<Promise<void>> {
     setItem: (name: string, value: StorageValue<S>) => Promise<void>;
     removeItem: (name: string) => Promise<void>;
   } {
+    // In Node (test) environments IndexedDB is not available. Fall back to an
+    // in-memory Map implementation to allow tests to run without a browser.
+    if (!('indexedDB' in globalThis)) {
+      const mem = new Map<string, string>();
+      return {
+        getItem: async (name: string) => {
+          const v = mem.get(name) ?? null;
+          return v ? (JSON.parse(v) as StorageValue<S>) : null;
+        },
+        setItem: async (name: string, value: StorageValue<S>) => {
+          mem.set(name, JSON.stringify(value));
+        },
+        removeItem: async (name: string) => {
+          mem.delete(name);
+        },
+      };
+    }
+
     const storage = new IndexedDBStorage(dbName, storeName);
 
     return {
