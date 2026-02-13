@@ -1,7 +1,9 @@
 import { useTranslation } from 'react-i18next';
 import { FormField } from '@/components/forms/FormField';
+import { EntitySelector } from '@/components/ui/EntitySelector';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { MultiEntitySelector } from '@/components/ui/MultiEntitySelector';
 import {
   Select,
   SelectContent,
@@ -126,6 +128,50 @@ export function ServiceDataFields({
                 )}
               </Label>
             </div>
+          );
+        }
+
+        if (selectorType === 'entity') {
+          const config = selectorConfig as { multiple?: boolean };
+          const isMultiple = config.multiple === true;
+
+          if (isMultiple) {
+            // Normalize value to array for multi-entity selector
+            const arrayValue = Array.isArray(currentValue)
+              ? (currentValue as string[])
+              : currentValue
+                ? [String(currentValue)]
+                : [];
+
+            return (
+              <FormField
+                key={fieldName}
+                label={fieldLabel}
+                required={field.required}
+                description={field.description}
+              >
+                <MultiEntitySelector
+                  value={arrayValue}
+                  onChange={(value) => onChange(fieldName, value)}
+                  placeholder={field.example !== undefined ? String(field.example) : undefined}
+                />
+              </FormField>
+            );
+          }
+
+          return (
+            <FormField
+              key={fieldName}
+              label={fieldLabel}
+              required={field.required}
+              description={field.description}
+            >
+              <EntitySelector
+                value={String(currentValue ?? '')}
+                onChange={(value) => onChange(fieldName, value)}
+                placeholder={field.example !== undefined ? String(field.example) : undefined}
+              />
+            </FormField>
           );
         }
 
