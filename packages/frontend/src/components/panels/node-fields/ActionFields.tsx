@@ -97,7 +97,7 @@ export function ActionFields({ node, onChange, entities }: ActionFieldsProps) {
 
   return (
     <>
-      <FormField label="Service" required>
+      <FormField label="Action" required>
         <Combobox
           options={getAllServices().map(({ domain, service }) => ({
             value: `${domain}.${service}`,
@@ -105,7 +105,7 @@ export function ActionFields({ node, onChange, entities }: ActionFieldsProps) {
           }))}
           value={serviceName}
           onChange={handleServiceChange}
-          placeholder="Select service..."
+          placeholder="Select action..."
         />
         <FieldError message={getFieldError('service')} />
       </FormField>
