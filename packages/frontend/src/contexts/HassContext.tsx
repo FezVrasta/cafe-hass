@@ -292,7 +292,9 @@ export const HassProvider: FC<
       // Note: states/services/devices accessed via refs so hass object doesn't recreate on updates
       return {
         auth: null as unknown as HomeAssistant['auth'],
-        connected: wsConnection.connected,
+        get connected() {
+          return wsConnection.connected;
+        },
         config: {} as unknown as HomeAssistant['config'],
         themes: { darkMode: false },
         panels: {},
