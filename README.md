@@ -20,6 +20,7 @@
 > "THIS Home Assistant Automation Integration Is Absolutely INCREDIBLE!"
 > — **Byte of Geek** [![Watch the review](https://img.shields.io/badge/YouTube-Watch%20Review-red?logo=youtube)](https://www.youtube.com/watch?v=9PVBo0CtHz0)
 
+> "A german tutorial!" - **Tristans Smartes Heim** [![Watch the review](https://img.shields.io/badge/YouTube-Watch%20Review-red?logo=youtube)](https://youtu.be/BvHk5PmGhWA)
 ---
 
 ## 🧐 Why C.A.F.E.?
