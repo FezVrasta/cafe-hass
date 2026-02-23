@@ -177,7 +177,7 @@ function App() {
     if (actualIsLoading) {
       return {
         label: t('status.connecting'),
-        className: 'bg-blue-100 text-blue-700',
+        className: 'bg-muted text-muted-foreground',
         icon: <Loader2 className="h-3 w-3 animate-spin" />,
       };
     }
@@ -281,7 +281,7 @@ function App() {
   const renderExplorerItem = (automation: ExplorerAutomationItem) => (
     <div
       key={automation.entity_id}
-      className="flex items-center justify-between rounded border border-border bg-card p-2"
+      className="flex items-center justify-between rounded-md border border-border/60 bg-background/40 p-2.5 transition-colors hover:bg-muted/40"
     >
       <div className="min-w-0">
         <div className="truncate font-medium text-xs">{automation.friendly_name}</div>
@@ -462,7 +462,7 @@ function App() {
                 </TabsList>
 
                 <TabsContent value="automations" className="mt-0 flex min-h-0 flex-1 flex-col">
-                  <div className="flex-1 space-y-3 overflow-auto px-3 pb-3">
+                  <div className="flex-1 space-y-3.5 overflow-auto px-3 pb-3">
                     <div className="relative">
                       <Search className="absolute top-1/2 left-2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
                       <Input
@@ -473,18 +473,18 @@ function App() {
                       />
                     </div>
 
-                    <div className="space-y-2">
+                    <div className="space-y-2.5">
                       <h4 className="font-semibold text-[11px] uppercase tracking-wide text-muted-foreground">
                         {t('labels.areas')}
                       </h4>
                       {areaSections.length > 0 ? (
                         areaSections.map((section) => (
-                          <div key={section.id} className="space-y-1">
+                          <div key={section.id} className="space-y-1.5">
                             <div className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
                               <button
                                 type="button"
                                 onClick={() => toggleAreaCollapsed(section.id)}
-                                className="flex min-w-0 items-center gap-1 text-left hover:text-foreground"
+                                className="flex min-w-0 items-center gap-1 rounded-sm px-1 py-0.5 text-left transition-colors hover:bg-muted hover:text-foreground"
                                 title={section.label}
                               >
                                 {isAreaCollapsed(section.id) ? (
@@ -499,7 +499,7 @@ function App() {
                               </Badge>
                             </div>
                             {!isAreaCollapsed(section.id) && (
-                              <div className="space-y-1">
+                              <div className="space-y-1.5 pl-1">
                                 {section.automations.map((automation) => renderExplorerItem(automation))}
                               </div>
                             )}
@@ -512,15 +512,15 @@ function App() {
                       )}
                     </div>
 
-                    <div className="space-y-2">
+                    <div className="space-y-2.5">
                       <h4 className="font-semibold text-[11px] uppercase tracking-wide text-muted-foreground">
                         {t('labels.zones')}
                       </h4>
                       {zoneSections.length > 0 ? (
                         zoneSections.map((section) => (
-                          <div key={section.id} className="space-y-1">
-                            <div className="text-[11px] text-muted-foreground">{section.label}</div>
-                            <div className="space-y-1">
+                          <div key={section.id} className="space-y-1.5">
+                            <div className="px-1 text-[11px] text-muted-foreground">{section.label}</div>
+                            <div className="space-y-1.5 pl-1">
                               {section.automations.map((automation) => renderExplorerItem(automation))}
                             </div>
                           </div>
@@ -532,12 +532,12 @@ function App() {
                       )}
                     </div>
 
-                    <div className="space-y-2">
+                    <div className="space-y-2.5">
                       <h4 className="font-semibold text-[11px] uppercase tracking-wide text-muted-foreground">
                         {t('labels.unassigned')}
                       </h4>
                       {unassigned.length > 0 ? (
-                        <div className="space-y-1">
+                        <div className="space-y-1.5 pl-1">
                           {unassigned.map((automation) => renderExplorerItem(automation))}
                         </div>
                       ) : (
