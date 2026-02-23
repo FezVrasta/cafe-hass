@@ -8,6 +8,40 @@ export interface CafeMetadata {
   graph_version: number;
 }
 
+export interface AreaRegistryEntry {
+  area_id: string;
+  name: string;
+  [key: string]: unknown;
+}
+
+export interface EntityRegistryEntry {
+  entity_id: string;
+  area_id?: string | null;
+  [key: string]: unknown;
+}
+
+export interface ZoneCatalogItem {
+  entity_id: string;
+  zone_id: string;
+  name: string;
+  latitude?: number;
+  longitude?: number;
+  radius?: number;
+  passive?: boolean;
+}
+
+export interface AutomationCatalogItem {
+  entity_id: string;
+  automation_id: string;
+  friendly_name: string;
+  enabled: boolean;
+  last_triggered?: string;
+  description: string;
+  mode?: string;
+  area_id?: string;
+  tags: string[];
+}
+
 export interface TraceStep {
   path: string;
   timestamp: string;
@@ -134,6 +168,16 @@ export class HomeAssistantAPI {
     if (!states) return [];
 
     return Object.values(states).filter((entity) => entity.entity_id.startsWith('automation.'));
+  }
+
+  private normalizeTags(tags: unknown): string[] {
+    if (Array.isArray(tags)) {
+      return tags.filter((tag): tag is string => typeof tag === 'string');
+    }
+    if (typeof tags === 'string' && tags.trim()) {
+      return [tags];
+    }
+    return [];
   }
 
   /**
@@ -572,6 +616,127 @@ export class HomeAssistantAPI {
       console.error('Failed to get entities:', error);
       return [];
     }
+  }
+
+  /**
+   * Get zones from current states
+   */
+  async getZones(): Promise<ZoneCatalogItem[]> {
+    try {
+      const states = this.getStates();
+      if (!states) return [];
+
+      return Object.values(states)
+        .filter((entity) => entity.entity_id.startsWith('zone.'))
+        .map((entity) => {
+          const zoneId = entity.entity_id.replace('zone.', '');
+          return {
+            entity_id: entity.entity_id,
+            zone_id: zoneId,
+            name:
+              typeof entity.attributes.friendly_name === 'string'
+                ? entity.attributes.friendly_name
+                : zoneId,
+            latitude:
+              typeof entity.attributes.latitude === 'number' ? entity.attributes.latitude : undefined,
+            longitude:
+              typeof entity.attributes.longitude === 'number'
+                ? entity.attributes.longitude
+                : undefined,
+            radius: typeof entity.attributes.radius === 'number' ? entity.attributes.radius : undefined,
+            passive:
+              typeof entity.attributes.passive === 'boolean' ? entity.attributes.passive : undefined,
+          };
+        });
+    } catch (error) {
+      console.error('Failed to get zones:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Build a normalized automation catalog for import/explorer views
+   */
+  async getAutomationCatalog(): Promise<AutomationCatalogItem[]> {
+    try {
+      const [entityRegistryResult] = await Promise.all([this.getEntities()]);
+      const entityRegistry = Array.isArray(entityRegistryResult)
+        ? (entityRegistryResult as EntityRegistryEntry[])
+        : [];
+
+      const entityIdToAreaId = new Map<string, string>();
+      for (const entry of entityRegistry) {
+        if (entry.entity_id && entry.area_id) {
+          entityIdToAreaId.set(entry.entity_id, entry.area_id);
+        }
+      }
+
+      return this.getAutomations().map((entity) => {
+        const friendlyName =
+          typeof entity.attributes.friendly_name === 'string'
+            ? entity.attributes.friendly_name
+            : entity.entity_id;
+        const automationId =
+          typeof entity.attributes.id === 'string' || typeof entity.attributes.id === 'number'
+            ? String(entity.attributes.id)
+            : entity.entity_id.replace('automation.', '');
+
+        return {
+          entity_id: entity.entity_id,
+          automation_id: automationId,
+          friendly_name: friendlyName,
+          enabled: entity.state === 'on',
+          last_triggered:
+            typeof entity.attributes.last_triggered === 'string'
+              ? entity.attributes.last_triggered
+              : undefined,
+          description:
+            typeof entity.attributes.description === 'string' ? entity.attributes.description : '',
+          mode: typeof entity.attributes.mode === 'string' ? entity.attributes.mode : undefined,
+          area_id: entityIdToAreaId.get(entity.entity_id),
+          tags: this.normalizeTags(entity.attributes.tags),
+        } satisfies AutomationCatalogItem;
+      });
+    } catch (error) {
+      console.error('Failed to build automation catalog:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get multiple automation configurations with bounded concurrency
+   */
+  async getAutomationConfigsBatch(
+    ids: string[],
+    maxConcurrency = 4
+  ): Promise<Record<string, AutomationConfig | null>> {
+    const automationIds = Array.from(new Set(ids.filter(Boolean)));
+    const results: Record<string, AutomationConfig | null> = {};
+    if (automationIds.length === 0) {
+      return results;
+    }
+
+    const queue = [...automationIds];
+    const workerCount = Math.max(1, Math.min(maxConcurrency, queue.length));
+
+    const workers = Array.from({ length: workerCount }).map(async () => {
+      while (queue.length > 0) {
+        const nextId = queue.shift();
+        if (!nextId) {
+          continue;
+        }
+
+        try {
+          results[nextId] = await this.getAutomationConfigWithFallback(nextId);
+        } catch (error) {
+          console.warn(`Failed to fetch automation config for ${nextId}:`, error);
+          results[nextId] = null;
+        }
+      }
+    });
+
+    await Promise.all(workers);
+    return results;
   }
 
   /**
