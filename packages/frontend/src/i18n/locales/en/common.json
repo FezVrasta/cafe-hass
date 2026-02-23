@@ -44,7 +44,13 @@
     "triggerType": "Trigger Type",
     "entityId": "Entity ID",
     "warning": "Warning",
-    "requiredAsterisk": "*"
+    "requiredAsterisk": "*",
+    "automations": "Automations",
+    "nodes": "Nodes",
+    "areas": "Areas",
+    "zones": "Zones",
+    "unassigned": "Unassigned",
+    "workspaceSources": "Merged Sources"
   },
   "status": {
     "connecting": "Connecting...",
@@ -88,7 +94,9 @@
     "updateAutomation": "Update automation in Home Assistant",
     "saveAutomation": "Save automation to Home Assistant",
     "exportJson": "Export flow as JSON",
-    "clickToConfigure": "Click to configure Home Assistant connection"
+    "clickToConfigure": "Click to configure Home Assistant connection",
+    "openDetached": "Open detached window",
+    "removeSource": "Remove source from merged workspace"
   },
   "strategy": {
     "auto": "Auto",

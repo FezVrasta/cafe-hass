@@ -44,7 +44,13 @@
     "triggerType": "Tipo Trigger",
     "entityId": "ID Entità",
     "warning": "Attenzione",
-    "requiredAsterisk": "*"
+    "requiredAsterisk": "*",
+    "automations": "Automazioni",
+    "nodes": "Nodi",
+    "areas": "Aree",
+    "zones": "Zone",
+    "unassigned": "Non assegnate",
+    "workspaceSources": "Sorgenti unite"
   },
   "status": {
     "connecting": "Connessione in corso...",
@@ -88,7 +94,9 @@
     "updateAutomation": "Aggiorna automazione in Home Assistant",
     "saveAutomation": "Salva automazione in Home Assistant",
     "exportJson": "Esporta flow come JSON",
-    "clickToConfigure": "Clicca per configurare la connessione a Home Assistant"
+    "clickToConfigure": "Clicca per configurare la connessione a Home Assistant",
+    "openDetached": "Apri finestra separata",
+    "removeSource": "Rimuovi sorgente dal workspace unito"
   },
   "strategy": {
     "auto": "Auto",

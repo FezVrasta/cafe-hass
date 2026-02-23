@@ -1,4 +1,5 @@
 import { ReactFlowProvider } from '@xyflow/react';
+import { transpiler } from '@cafe/transpiler';
 import {
   AlertCircle,
   ChevronDown,
@@ -9,11 +10,15 @@ import {
   FolderOpenDotIcon,
   Loader2,
   Menu,
+  Minus,
+  Plus,
+  Search,
   Save,
   Settings,
   Wifi,
 } from 'lucide-react';
 
+import { dump as yamlDump } from 'js-yaml';
 import { useEffect, useState } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
 import { useTranslation } from 'react-i18next';
@@ -48,6 +53,10 @@ import {
 import { ResizablePanel } from '@/components/ui/resizable-panel';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
+import type { ExplorerAutomationItem } from '@/hooks/useAutomationExplorer';
+import { useAutomationExplorer } from '@/hooks/useAutomationExplorer';
+import { getHomeAssistantAPI } from '@/lib/ha-api';
 import { cn } from '@/lib/utils';
 import { version } from '../../../custom_components/cafe/manifest.json';
 import { useHass } from './contexts/HassContext';
@@ -70,16 +79,18 @@ function App() {
     isRemote: actualIsRemote,
     isLoading: actualIsLoading,
     connectionError: actualConnectionError,
+    entities,
     config,
     setConfig,
   } = useHass();
 
   const {
     flowName,
-    toFlowGraph,
     fromFlowGraph,
     reset,
     automationId,
+    setFlowName,
+    setAutomationId,
     hasUnsavedChanges,
     isSaving,
     simulationSpeed,
@@ -92,6 +103,9 @@ function App() {
   const [automationImportOpen, setAutomationImportOpen] = useState(false);
   const [importDropdownOpen, setImportDropdownOpen] = useState(false);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [leftTab, setLeftTab] = useState<'automations' | 'nodes'>('automations');
+  const [explorerSearchTerm, setExplorerSearchTerm] = useState('');
+  const [collapsedAreaIds, setCollapsedAreaIds] = useState<Record<string, boolean>>({});
   const [parentWidth, setParentWidth] = useState(() => {
     const win = window.parent ?? window;
     return win.innerWidth;
@@ -137,7 +151,7 @@ function App() {
   };
 
   const handleExport = () => {
-    const graph = toFlowGraph();
+    const graph = useFlowStore.getState().toFlowGraph();
     const blob = new Blob([JSON.stringify(graph, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -146,6 +160,17 @@ function App() {
     a.click();
     URL.revokeObjectURL(url);
   };
+
+  const { areaSections, zoneSections, unassigned } = useAutomationExplorer({
+    hass,
+    hassConfig: config,
+    entities,
+    searchTerm: explorerSearchTerm,
+    labels: {
+      noArea: t('dialogs:import.noArea'),
+      otherArea: t('dialogs:import.otherArea'),
+    },
+  });
 
   // Determine connection status display
   const getConnectionStatus = () => {
@@ -181,6 +206,106 @@ function App() {
   const reloadApp = () => {
     window.location.reload();
   };
+
+  const formatLastTriggered = (timestamp?: string) => {
+    if (!timestamp) return t('dialogs:import.never');
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffMins < 1) return t('dialogs:import.justNow');
+    if (diffMins < 60) return t('dialogs:import.minutesAgo', { count: diffMins });
+    if (diffHours < 24) return t('dialogs:import.hoursAgo', { count: diffHours });
+    if (diffDays < 7) return t('dialogs:import.daysAgo', { count: diffDays });
+    return date.toLocaleDateString();
+  };
+
+  const openAutomationFromExplorer = async (automation: ExplorerAutomationItem) => {
+    try {
+      if (
+        hasRealChanges() &&
+        !window.confirm(
+          `${t('dialogs:import.discardTitle')}\n\n${t('dialogs:import.discardDescription')}`
+        )
+      ) {
+        return;
+      }
+
+      const api = getHomeAssistantAPI(hass, config);
+      if (!api.isConnected()) {
+        throw new Error(t('errors:connection.noConnection'));
+      }
+
+      const automationConfig = await api.getAutomationConfigWithFallback(
+        automation.automation_id,
+        automation.friendly_name
+      );
+
+      reset();
+
+      if (automationConfig) {
+        const yamlString = yamlDump(automationConfig, {
+          indent: 2,
+          lineWidth: -1,
+          quotingType: '"',
+          forceQuotes: false,
+        });
+
+        const result = await transpiler.fromYaml(yamlString);
+        if (!result.success || !result.graph) {
+          throw new Error(result.errors?.join('\n') || t('errors:import.parseFailed'));
+        }
+
+        fromFlowGraph(result.graph);
+      }
+
+      setFlowName(automation.friendly_name || automation.automation_id);
+      setAutomationId(automation.automation_id);
+    } catch (error) {
+      console.error('C.A.F.E.: Failed to open automation from explorer:', error);
+    }
+  };
+
+  const isAreaCollapsed = (areaId: string) => collapsedAreaIds[areaId] ?? true;
+
+  const toggleAreaCollapsed = (areaId: string) => {
+    setCollapsedAreaIds((current) => ({
+      ...current,
+      [areaId]: !(current[areaId] ?? true),
+    }));
+  };
+
+  const renderExplorerItem = (automation: ExplorerAutomationItem) => (
+    <div
+      key={automation.entity_id}
+      className="flex items-center justify-between rounded border border-border bg-card p-2"
+    >
+      <div className="min-w-0">
+        <div className="truncate font-medium text-xs">{automation.friendly_name}</div>
+        <div className="mt-1 flex items-center gap-2 text-[11px] text-muted-foreground">
+          <span
+            className={cn(
+              'inline-block h-2 w-2 rounded-full',
+              automation.enabled ? 'bg-green-500' : 'bg-slate-400'
+            )}
+          />
+          <span className="truncate">{formatLastTriggered(automation.last_triggered)}</span>
+        </div>
+      </div>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-7 w-7"
+        onClick={() => void openAutomationFromExplorer(automation)}
+        title={t('dialogs:import.openSingle')}
+      >
+        <FolderOpenDotIcon className="h-4 w-4" />
+      </Button>
+    </div>
+  );
 
   return (
     <ErrorBoundary
@@ -324,22 +449,125 @@ function App() {
 
           {/* Main content */}
           <div className="flex flex-1 overflow-hidden">
-            {/* Left sidebar - Node palette */}
-            <aside className="flex w-56 flex-col border-border border-r bg-card">
-              <NodePalette />
-              <div className="border-t p-4">
-                <h4 className="mb-2 font-medium text-muted-foreground text-xs">
-                  {t('labels.quickHelp')}
-                </h4>
-                <ul className="space-y-1 text-muted-foreground text-xs">
-                  <li>{t('help.clickNodesToAdd')}</li>
-                  <li>{t('help.dragToConnect')}</li>
-                  <li>{t('help.deleteToRemove')}</li>
-                  <li>{t('help.backspaceDeleteKey')}</li>
-                </ul>
-              </div>
+            {/* Left sidebar - Explorer / Node palette */}
+            <aside className="flex h-full min-h-0 w-72 flex-col border-border border-r bg-card">
+              <Tabs
+                value={leftTab}
+                onValueChange={(value) => setLeftTab(value as 'automations' | 'nodes')}
+                className="flex min-h-0 flex-1 flex-col"
+              >
+                <TabsList className="m-3 grid h-auto grid-cols-2 rounded-md p-1">
+                  <TabsTrigger value="automations">{t('labels.automations')}</TabsTrigger>
+                  <TabsTrigger value="nodes">{t('labels.nodes')}</TabsTrigger>
+                </TabsList>
 
-              <div className="mt-auto flex flex-col gap-2 p-4">
+                <TabsContent value="automations" className="mt-0 flex min-h-0 flex-1 flex-col">
+                  <div className="flex-1 space-y-3 overflow-auto px-3 pb-3">
+                    <div className="relative">
+                      <Search className="absolute top-1/2 left-2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        value={explorerSearchTerm}
+                        onChange={(event) => setExplorerSearchTerm(event.target.value)}
+                        placeholder={t('placeholders.searchAutomations')}
+                        className="h-8 pl-7 text-xs"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <h4 className="font-semibold text-[11px] uppercase tracking-wide text-muted-foreground">
+                        {t('labels.areas')}
+                      </h4>
+                      {areaSections.length > 0 ? (
+                        areaSections.map((section) => (
+                          <div key={section.id} className="space-y-1">
+                            <div className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
+                              <button
+                                type="button"
+                                onClick={() => toggleAreaCollapsed(section.id)}
+                                className="flex min-w-0 items-center gap-1 text-left hover:text-foreground"
+                                title={section.label}
+                              >
+                                {isAreaCollapsed(section.id) ? (
+                                  <Plus className="h-3.5 w-3.5 shrink-0" />
+                                ) : (
+                                  <Minus className="h-3.5 w-3.5 shrink-0" />
+                                )}
+                                <span className="truncate">{section.label}</span>
+                              </button>
+                              <Badge variant="secondary" className="h-4 shrink-0 px-1 text-[10px]">
+                                {section.automations.length}
+                              </Badge>
+                            </div>
+                            {!isAreaCollapsed(section.id) && (
+                              <div className="space-y-1">
+                                {section.automations.map((automation) => renderExplorerItem(automation))}
+                              </div>
+                            )}
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-[11px] text-muted-foreground">
+                          {t('dialogs:import.noAutomations')}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <h4 className="font-semibold text-[11px] uppercase tracking-wide text-muted-foreground">
+                        {t('labels.zones')}
+                      </h4>
+                      {zoneSections.length > 0 ? (
+                        zoneSections.map((section) => (
+                          <div key={section.id} className="space-y-1">
+                            <div className="text-[11px] text-muted-foreground">{section.label}</div>
+                            <div className="space-y-1">
+                              {section.automations.map((automation) => renderExplorerItem(automation))}
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-[11px] text-muted-foreground">
+                          {t('dialogs:import.noAutomations')}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <h4 className="font-semibold text-[11px] uppercase tracking-wide text-muted-foreground">
+                        {t('labels.unassigned')}
+                      </h4>
+                      {unassigned.length > 0 ? (
+                        <div className="space-y-1">
+                          {unassigned.map((automation) => renderExplorerItem(automation))}
+                        </div>
+                      ) : (
+                        <p className="text-[11px] text-muted-foreground">
+                          {t('dialogs:import.noAutomations')}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="nodes" className="mt-0 flex min-h-0 flex-1 flex-col">
+                  <div className="flex-1 overflow-auto">
+                    <NodePalette />
+                    <div className="border-t p-4">
+                      <h4 className="mb-2 font-medium text-muted-foreground text-xs">
+                        {t('labels.quickHelp')}
+                      </h4>
+                      <ul className="space-y-1 text-muted-foreground text-xs">
+                        <li>{t('help.clickNodesToAdd')}</li>
+                        <li>{t('help.dragToConnect')}</li>
+                        <li>{t('help.deleteToRemove')}</li>
+                        <li>{t('help.backspaceDeleteKey')}</li>
+                      </ul>
+                    </div>
+                  </div>
+                </TabsContent>
+              </Tabs>
+
+              <div className="mt-auto flex flex-col gap-2 border-t p-4">
                 <div className="flex items-center gap-4">
                   {actualIsRemote && config.url && (
                     <span className="text-green-600 text-xs">
@@ -359,7 +587,7 @@ function App() {
             </aside>
 
             {/* Canvas */}
-            <main className="flex-1">
+            <main className="flex min-h-0 flex-1 flex-col">
               <FlowCanvas />
             </main>
 

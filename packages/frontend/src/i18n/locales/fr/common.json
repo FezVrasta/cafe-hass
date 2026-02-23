@@ -44,7 +44,13 @@
     "triggerType": "Type de déclencheur",
     "entityId": "ID d'entité",
     "warning": "Avertissement",
-    "requiredAsterisk": "*"
+    "requiredAsterisk": "*",
+    "automations": "Automatisations",
+    "nodes": "Nœuds",
+    "areas": "Zones",
+    "zones": "Zones de présence",
+    "unassigned": "Non assigné",
+    "workspaceSources": "Sources fusionnées"
   },
   "status": {
     "connecting": "Connexion en cours...",
@@ -88,7 +94,9 @@
     "updateAutomation": "Mettre à jour l'automatisation dans Home Assistant",
     "saveAutomation": "Enregistrer l'automatisation dans Home Assistant",
     "exportJson": "Exporter le flux en JSON",
-    "clickToConfigure": "Cliquez pour configurer la connexion Home Assistant"
+    "clickToConfigure": "Cliquez pour configurer la connexion Home Assistant",
+    "openDetached": "Ouvrir une fenêtre détachée",
+    "removeSource": "Retirer la source de l'espace fusionné"
   },
   "strategy": {
     "auto": "Auto",

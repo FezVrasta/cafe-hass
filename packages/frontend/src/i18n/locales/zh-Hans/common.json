@@ -44,7 +44,13 @@
     "triggerType": "触发器类型",
     "entityId": "实体ID",
     "warning": "警告",
-    "requiredAsterisk": "*"
+    "requiredAsterisk": "*",
+    "automations": "自动化",
+    "nodes": "节点",
+    "areas": "区域",
+    "zones": "地理围栏",
+    "unassigned": "未分配",
+    "workspaceSources": "合并来源"
   },
   "status": {
     "connecting": "正在连接...",
@@ -88,7 +94,9 @@
     "updateAutomation": "在Home Assistant中更新自动化",
     "saveAutomation": "将自动化保存到Home Assistant",
     "exportJson": "导出流程为JSON",
-    "clickToConfigure": "点击配置Home Assistant连接"
+    "clickToConfigure": "点击配置Home Assistant连接",
+    "openDetached": "在独立窗口打开",
+    "removeSource": "从合并工作区移除来源"
   },
   "strategy": {
     "auto": "自动",

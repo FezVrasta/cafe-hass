@@ -44,7 +44,13 @@
     "triggerType": "Auslösertyp",
     "entityId": "Entitäts-ID",
     "warning": "Warnung",
-    "requiredAsterisk": "*"
+    "requiredAsterisk": "*",
+    "automations": "Automationen",
+    "nodes": "Knoten",
+    "areas": "Bereiche",
+    "zones": "Zonen",
+    "unassigned": "Nicht zugeordnet",
+    "workspaceSources": "Zusammengeführte Quellen"
   },
   "status": {
     "connecting": "Verbinde...",
@@ -88,7 +94,9 @@
     "updateAutomation": "Automatisierung in Home Assistant aktualisieren",
     "saveAutomation": "Automatisierung in Home Assistant speichern",
     "exportJson": "Flow als JSON exportieren",
-    "clickToConfigure": "Klicken um Home Assistant-Verbindung zu konfigurieren"
+    "clickToConfigure": "Klicken um Home Assistant-Verbindung zu konfigurieren",
+    "openDetached": "Eigenes Fenster öffnen",
+    "removeSource": "Quelle aus dem Merge-Workspace entfernen"
   },
   "strategy": {
     "auto": "Auto",
