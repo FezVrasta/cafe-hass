@@ -12,7 +12,7 @@ import {
   ReactFlow,
   useReactFlow,
 } from '@xyflow/react';
-import { type DragEvent, useCallback, useEffect, useMemo, useRef } from 'react';
+import { type CSSProperties, type DragEvent, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DeletableEdge } from '@/components/edges';
 import {
@@ -28,6 +28,7 @@ import { useDarkMode } from '@/hooks/useDarkMode';
 import { generateNodeId } from '@/lib/utils';
 import { useFlowStore } from '@/store/flow-store';
 import { isMacOS } from '@/utils/useAgentPlatform';
+import { useCanvasInteractions } from './canvas-interactions';
 
 // New node types should be added here as needed!
 const nodeTypes: NodeTypes = {
@@ -60,10 +61,12 @@ export function FlowCanvas() {
     isShowingTrace,
     traceExecutionPath,
     canDeleteEdge,
+    highlightedSourcePrefix,
   } = useFlowStore();
 
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const { screenToFlowPosition, setViewport } = useReactFlow();
+  const { panOnDrag, snapToGrid, snapGrid, cursorClass } = useCanvasInteractions();
 
   // Set initial zoom level
   useEffect(() => {
@@ -135,7 +138,28 @@ export function FlowCanvas() {
     [screenToFlowPosition, addNode]
   );
 
-  // Style edges based on simulation state, trace state, and selected node
+  const styledNodes = useMemo(() => {
+    if (!highlightedSourcePrefix) {
+      return nodes;
+    }
+
+    const prefix = `${highlightedSourcePrefix}__`;
+    return nodes.map((node) => {
+      const isHighlighted = node.id.startsWith(prefix);
+      return {
+        ...node,
+        style: {
+          ...(node.style || {}),
+          opacity: isHighlighted ? 1 : 0.35,
+          boxShadow: isHighlighted
+            ? `0 0 0 2px ${isDarkMode ? '#f59e0b' : '#f97316'}`
+            : undefined,
+        },
+      };
+    });
+  }, [nodes, highlightedSourcePrefix, isDarkMode]);
+
+  // Style edges based on simulation state, trace state, selected node, and source highlighting
   const styledEdges = useMemo(() => {
     return edges.map((edge) => {
       // Check if this edge is part of the execution path during simulation
@@ -165,8 +189,14 @@ export function FlowCanvas() {
         selectedNodeId && (edge.source === selectedNodeId || edge.target === selectedNodeId);
 
       // Determine edge styling based on state (priority: simulation > trace > selection)
-      let edgeStyle = { strokeWidth: 2, stroke: isDarkMode ? '#94a3b8' : '#64748b' };
+      let edgeStyle: CSSProperties = { strokeWidth: 2, stroke: isDarkMode ? '#94a3b8' : '#64748b' };
       let markerEnd = { type: MarkerType.ArrowClosed, color: isDarkMode ? '#94a3b8' : '#64748b' };
+      const hasHighlightedSource = Boolean(highlightedSourcePrefix);
+      const highlightedPrefix = highlightedSourcePrefix ? `${highlightedSourcePrefix}__` : '';
+      const isInHighlightedSource =
+        hasHighlightedSource &&
+        edge.source.startsWith(highlightedPrefix) &&
+        edge.target.startsWith(highlightedPrefix);
 
       if (isActiveInSimulation) {
         // Simulation takes precedence - green for active path
@@ -180,6 +210,12 @@ export function FlowCanvas() {
         // Blue highlighting for connected edges
         edgeStyle = { stroke: '#3b82f6', strokeWidth: 3 };
         markerEnd = { type: MarkerType.ArrowClosed, color: '#3b82f6' };
+      } else if (hasHighlightedSource && !isInHighlightedSource) {
+        edgeStyle = { stroke: isDarkMode ? '#334155' : '#cbd5e1', strokeWidth: 1.5, opacity: 0.3 };
+        markerEnd = {
+          type: MarkerType.ArrowClosed,
+          color: isDarkMode ? '#334155' : '#cbd5e1',
+        };
       }
 
       return {
@@ -198,13 +234,14 @@ export function FlowCanvas() {
     traceExecutionPath,
     selectedNodeId,
     isDarkMode,
+    highlightedSourcePrefix,
   ]);
 
   return (
     <div className="h-full w-full" ref={reactFlowWrapper}>
       <ReactFlow
         colorMode={isDarkMode ? 'dark' : 'light'}
-        nodes={nodes}
+        nodes={styledNodes}
         edges={styledEdges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
@@ -214,6 +251,7 @@ export function FlowCanvas() {
         onDragOver={onDragOver}
         onDrop={onDrop}
         panOnScroll={isMacOS()}
+        panOnDrag={panOnDrag}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         defaultEdgeOptions={{
@@ -229,10 +267,12 @@ export function FlowCanvas() {
         minZoom={0.3}
         fitView
         fitViewOptions={{ maxZoom: 0.75 }}
-        snapToGrid
-        snapGrid={[15, 15]}
+        snapToGrid={snapToGrid}
+        snapGrid={snapGrid}
+        nodesDraggable={!panOnDrag}
+        selectionOnDrag={!panOnDrag}
         deleteKeyCode={null}
-        className={isDarkMode ? 'dark bg-background' : 'bg-muted/30'}
+        className={`${isDarkMode ? 'dark bg-background' : 'bg-muted/30'} ${cursorClass}`}
         proOptions={{ hideAttribution: true }}
       >
         <Background
