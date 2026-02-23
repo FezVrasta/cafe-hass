@@ -3,6 +3,7 @@ import {
   AlertCircle,
   ChevronDown,
   DiamondPlus,
+  ExternalLink,
   FileCode,
   FileDown,
   FileUp,
@@ -49,6 +50,7 @@ import { ResizablePanel } from '@/components/ui/resizable-panel';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
+import { openDetachedAppWindow } from '@/lib/detached-window';
 import { version } from '../../../custom_components/cafe/manifest.json';
 import { useHass } from './contexts/HassContext';
 import { useDarkMode } from './hooks/useDarkMode';
@@ -182,6 +184,10 @@ function App() {
     window.location.reload();
   };
 
+  const handleOpenDetached = () => {
+    openDetachedAppWindow();
+  };
+
   return (
     <ErrorBoundary
       FallbackComponent={({ error }) => (
@@ -267,6 +273,15 @@ function App() {
                   <Settings className="h-5 w-5" />
                 </Button>
               )}
+
+              <Button
+                onClick={handleOpenDetached}
+                variant="ghost"
+                size="icon"
+                title="Open Detached"
+              >
+                <ExternalLink className="h-5 w-5" />
+              </Button>
 
               <Separator orientation="vertical" className="h-6" />
 

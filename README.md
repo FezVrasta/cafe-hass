@@ -59,6 +59,7 @@ C.A.F.E. is architected with strict engineering principles to ensure your home r
 - **Set Variables Node:** Create and update flow-scoped variables dynamically within your automation logic.
 - **Entity Intelligence:** Full autocomplete and state-awareness via the native HASS WebSocket API.
 - **Visual Import:** Load any native automation and see it mapped instantly to nodes.
+- **Detached Mode:** Open C.A.F.E. in a separate browser window (`Open Detached`) while keeping your existing remote/embedded connection settings.
 
 ---
 
