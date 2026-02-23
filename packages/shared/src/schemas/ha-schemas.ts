@@ -263,6 +263,23 @@ export const CafeMetadataSchema = z.object({
   graph_id: z.string(),
   graph_version: z.number(),
   strategy: z.enum(['native', 'state-machine']),
+  workspace: z
+    .object({
+      mode: z.enum(['single', 'merged']).default('single'),
+      sources: z
+        .array(
+          z.object({
+            automation_id: z.string(),
+            entity_id: z.string(),
+            alias: z.string(),
+            node_prefix: z.string(),
+            imported_at: z.string(),
+          })
+        )
+        .default([]),
+    })
+    .optional(),
+  navigator: z.record(z.string(), z.unknown()).optional(),
 });
 export type CafeMetadata = z.infer<typeof CafeMetadataSchema>;
 

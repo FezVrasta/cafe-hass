@@ -39,6 +39,33 @@ export const FlowMetadataSchema = z.object({
 export type FlowMetadata = z.infer<typeof FlowMetadataSchema>;
 
 /**
+ * Source automation reference for merged workspaces
+ */
+export const WorkspaceSourceSchema = z.object({
+  automation_id: z.string().min(1),
+  entity_id: z.string().min(1),
+  alias: z.string().min(1),
+  node_prefix: z.string().min(1),
+  imported_at: z.string(),
+});
+export type WorkspaceSource = z.infer<typeof WorkspaceSourceSchema>;
+
+/**
+ * Workspace metadata for single/merged editing mode
+ */
+export const FlowWorkspaceSchema = z.object({
+  mode: z.enum(['single', 'merged']).default('single'),
+  sources: z.array(WorkspaceSourceSchema).default([]),
+});
+export type FlowWorkspace = z.infer<typeof FlowWorkspaceSchema>;
+
+/**
+ * Optional navigator hints for explorer-oriented UIs
+ */
+export const FlowNavigatorSchema = z.record(z.string(), z.unknown());
+export type FlowNavigator = z.infer<typeof FlowNavigatorSchema>;
+
+/**
  * Complete flow graph schema
  * Represents the entire automation as a graph of nodes and edges
  */
@@ -77,6 +104,14 @@ export const FlowGraphSchema = z.object({
    * excluding _cafe_metadata which is handled separately.
    */
   userVariables: z.record(z.string(), z.unknown()).optional(),
+  /**
+   * Workspace mode and source metadata for merged automation canvases
+   */
+  workspace: FlowWorkspaceSchema.optional(),
+  /**
+   * Optional navigator hints (areas/zones/inference metadata)
+   */
+  navigator: FlowNavigatorSchema.optional(),
 });
 export type FlowGraph = z.infer<typeof FlowGraphSchema>;
 

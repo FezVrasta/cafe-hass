@@ -19,8 +19,14 @@ export { type ConditionEdge, ConditionEdgeSchema, EdgeSchema, type FlowEdge } fr
 export {
   type FlowGraph,
   FlowGraphSchema,
+  type FlowNavigator,
+  FlowNavigatorSchema,
   type FlowMetadata,
   FlowMetadataSchema,
+  type FlowWorkspace,
+  FlowWorkspaceSchema,
+  type WorkspaceSource,
+  WorkspaceSourceSchema,
   validateGraphStructure,
 } from './graph';
 // Home Assistant entity schemas

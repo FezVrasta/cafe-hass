@@ -29,6 +29,7 @@ export function AutomationSaveDialog({ isOpen, onClose, onSaved }: AutomationSav
     flowName,
     flowDescription,
     automationId,
+    flowWorkspace,
     isSaving,
     setFlowName,
     setFlowDescription,
@@ -43,7 +44,7 @@ export function AutomationSaveDialog({ isOpen, onClose, onSaved }: AutomationSav
   const [error, setError] = useState<string | null>(null);
   const [suggestedName, setSuggestedName] = useState<string | null>(null);
 
-  const isUpdate = !!automationId;
+  const isUpdate = !!automationId && flowWorkspace.mode !== 'merged';
 
   // Sync local description with store when dialog opens
   useEffect(() => {

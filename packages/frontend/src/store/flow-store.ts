@@ -1,8 +1,10 @@
 import type {
   FlowEdge,
   FlowGraph,
+  FlowNavigator,
   FlowMetadata,
   FlowNode,
+  FlowWorkspace,
   NodeValidationError,
 } from '@cafe/shared';
 import { validateNodeData } from '@cafe/shared';
@@ -132,6 +134,8 @@ export interface FlowState {
 
   // Automation metadata (mode, max, max_exceeded, etc.)
   flowMetadata: FlowMetadata;
+  flowWorkspace: FlowWorkspace;
+  flowNavigator: FlowNavigator | undefined;
 
   // Selection state
   selectedNodeId: string | null;
@@ -160,6 +164,7 @@ export interface FlowState {
   // Toolbar state
   clipboard: string | null;
   pasteCount: number;
+  highlightedSourcePrefix: string | null;
 
   // Actions
   setNodes: (nodes: Node<FlowNodeData>[]) => void;
@@ -177,6 +182,10 @@ export interface FlowState {
   setFlowName: (name: string) => void;
   setFlowDescription: (description: string) => void;
   setFlowMetadata: (metadata: Partial<FlowMetadata>) => void;
+  setFlowWorkspace: (workspace: FlowWorkspace) => void;
+  setFlowNavigator: (navigator: FlowNavigator | undefined) => void;
+  removeWorkspaceSource: (entityId: string) => void;
+  setHighlightedSourcePrefix: (prefix: string | null) => void;
 
   setClipboard: (data: string | null) => void;
   setPasteCount: (count: number) => void;
@@ -245,9 +254,46 @@ function normalizeNodeData(type: string, data: Record<string, unknown>): Record<
   return data;
 }
 
+function createCafeMetadataFromGraph(
+  graph: FlowGraph,
+  strategy: 'native' | 'state-machine'
+): Record<string, unknown> {
+  const metadata: Record<string, unknown> = {
+    version: 2,
+    strategy,
+    nodes: graph.nodes.reduce(
+      (acc, node) => {
+        acc[node.id] = {
+          x: node.position.x,
+          y: node.position.y,
+        };
+        return acc;
+      },
+      {} as Record<string, { x: number; y: number }>
+    ),
+    graph_id: graph.id,
+    graph_version: graph.version,
+  };
+
+  if (graph.workspace && (graph.workspace.mode === 'merged' || graph.workspace.sources.length > 0)) {
+    metadata.workspace = graph.workspace;
+  }
+
+  if (graph.navigator && Object.keys(graph.navigator).length > 0) {
+    metadata.navigator = graph.navigator;
+  }
+
+  return metadata;
+}
+
 const defaultFlowMetadata: FlowMetadata = {
   mode: 'single',
   initial_state: true,
+};
+
+const defaultFlowWorkspace: FlowWorkspace = {
+  mode: 'single',
+  sources: [],
 };
 
 const initialState = {
@@ -255,6 +301,8 @@ const initialState = {
   flowName: 'Untitled Automation',
   flowDescription: '',
   flowMetadata: defaultFlowMetadata,
+  flowWorkspace: defaultFlowWorkspace,
+  flowNavigator: undefined,
   nodes: [],
   edges: [],
   selectedNodeId: null,
@@ -274,6 +322,7 @@ const initialState = {
   nodeErrors: new Map<string, NodeValidationError[]>(),
   clipboard: null,
   pasteCount: 0,
+  highlightedSourcePrefix: null,
 };
 
 /**
@@ -286,6 +335,8 @@ export type PersistedFlowState = Pick<
   | 'flowName'
   | 'flowDescription'
   | 'flowMetadata'
+  | 'flowWorkspace'
+  | 'flowNavigator'
   | 'nodes'
   | 'edges'
   | 'selectedNodeId'
@@ -300,6 +351,8 @@ const persistSelector = (state: FlowState): PersistedFlowState => ({
   flowName: state.flowName,
   flowDescription: state.flowDescription,
   flowMetadata: state.flowMetadata,
+  flowWorkspace: state.flowWorkspace,
+  flowNavigator: state.flowNavigator,
   nodes: state.nodes,
   edges: state.edges,
   selectedNodeId: state.selectedNodeId,
@@ -393,6 +446,48 @@ export const useFlowStore = create<FlowState>()(
           flowMetadata: { ...state.flowMetadata, ...metadata },
           hasUnsavedChanges: true,
         })),
+      setFlowWorkspace: (workspace) =>
+        set({
+          flowWorkspace: workspace,
+          hasUnsavedChanges: true,
+        }),
+      setFlowNavigator: (navigator) =>
+        set({
+          flowNavigator: navigator,
+          hasUnsavedChanges: true,
+        }),
+      removeWorkspaceSource: (entityId) =>
+        set((state) => {
+          const source = state.flowWorkspace.sources.find((entry) => entry.entity_id === entityId);
+          if (!source) {
+            return {};
+          }
+
+          const prefix = `${source.node_prefix}__`;
+          const filteredNodes = state.nodes.filter((node) => !node.id.startsWith(prefix));
+          const remainingNodeIds = new Set(filteredNodes.map((node) => node.id));
+          const filteredEdges = state.edges.filter(
+            (edge) => remainingNodeIds.has(edge.source) && remainingNodeIds.has(edge.target)
+          );
+          const nextSources = state.flowWorkspace.sources.filter(
+            (entry) => entry.entity_id !== entityId
+          );
+
+          return {
+            nodes: filteredNodes,
+            edges: filteredEdges,
+            flowWorkspace: {
+              mode: nextSources.length > 1 ? 'merged' : 'single',
+              sources: nextSources,
+            },
+            highlightedSourcePrefix:
+              state.highlightedSourcePrefix === source.node_prefix
+                ? null
+                : state.highlightedSourcePrefix,
+            hasUnsavedChanges: true,
+          };
+        }),
+      setHighlightedSourcePrefix: (prefix) => set({ highlightedSourcePrefix: prefix }),
 
       // Save actions
       setAutomationId: (id) => set({ automationId: id }),
@@ -410,6 +505,8 @@ export const useFlowStore = create<FlowState>()(
           flowName: state.flowName,
           flowDescription: state.flowDescription,
           flowMetadata: state.flowMetadata,
+          flowWorkspace: state.flowWorkspace,
+          flowNavigator: state.flowNavigator,
           nodes: state.nodes.map((n) => ({
             id: n.id,
             type: n.type,
@@ -490,6 +587,10 @@ export const useFlowStore = create<FlowState>()(
             throw new Error('Failed to transpile flow to automation config');
           }
 
+          const strategy =
+            result.analysis?.recommendedStrategy === 'state-machine' ? 'state-machine' : 'native';
+          const cafeMetadata = createCafeMetadataFromGraph(graph, strategy);
+
           // Create automation in Home Assistant
           const automationConfig = {
             alias: state.flowName,
@@ -497,22 +598,7 @@ export const useFlowStore = create<FlowState>()(
             ...result.output.automation,
             variables: {
               ...(result.output.automation.variables || {}),
-              _cafe_metadata: {
-                version: 1,
-                strategy: 'native' as const,
-                nodes: graph.nodes.reduce(
-                  (acc, node) => {
-                    acc[node.id] = {
-                      x: node.position.x,
-                      y: node.position.y,
-                    };
-                    return acc;
-                  },
-                  {} as Record<string, { x: number; y: number }>
-                ),
-                graph_id: graph.id,
-                graph_version: 1,
-              },
+              _cafe_metadata: cafeMetadata,
             },
           };
 
@@ -535,6 +621,10 @@ export const useFlowStore = create<FlowState>()(
       updateAutomation: async (hassApi: HomeAssistant) => {
         const state = get();
         const api = getHomeAssistantAPI(hassApi);
+
+        if (state.flowWorkspace.mode === 'merged') {
+          throw new Error('Merged workspaces must be saved as a new automation.');
+        }
 
         if (!state.automationId) {
           throw new Error('No automation ID set. Use saveAutomation() for new automations.');
@@ -599,6 +689,10 @@ export const useFlowStore = create<FlowState>()(
             throw new Error('Failed to transpile flow to automation config');
           }
 
+          const strategy =
+            result.analysis?.recommendedStrategy === 'state-machine' ? 'state-machine' : 'native';
+          const cafeMetadata = createCafeMetadataFromGraph(graph, strategy);
+
           // Update automation in Home Assistant
           const automationConfig = {
             alias: state.flowName,
@@ -606,22 +700,7 @@ export const useFlowStore = create<FlowState>()(
             ...result.output.automation,
             variables: {
               ...(result.output.automation.variables || {}),
-              _cafe_metadata: {
-                version: 1,
-                strategy: 'native' as const,
-                nodes: graph.nodes.reduce(
-                  (acc, node) => {
-                    acc[node.id] = {
-                      x: node.position.x,
-                      y: node.position.y,
-                    };
-                    return acc;
-                  },
-                  {} as Record<string, { x: number; y: number }>
-                ),
-                graph_id: graph.id,
-                graph_version: 1,
-              },
+              _cafe_metadata: cafeMetadata,
             },
           };
 
@@ -748,6 +827,16 @@ export const useFlowStore = create<FlowState>()(
         const state = get();
         const nodeIds = new Set(state.nodes.map((n) => n.id));
 
+        const workspace =
+          state.flowWorkspace.mode === 'merged' || state.flowWorkspace.sources.length > 0
+            ? state.flowWorkspace
+            : undefined;
+
+        const navigator =
+          state.flowNavigator && Object.keys(state.flowNavigator).length > 0
+            ? state.flowNavigator
+            : undefined;
+
         return {
           id: state.flowId,
           name: state.flowName,
@@ -790,6 +879,8 @@ export const useFlowStore = create<FlowState>()(
               label: typeof e.label === 'string' ? e.label : undefined,
             })) as FlowEdge[],
           metadata: state.flowMetadata,
+          workspace,
+          navigator,
           version: 1,
         };
       },
@@ -814,11 +905,14 @@ export const useFlowStore = create<FlowState>()(
           ...defaultFlowMetadata,
           ...graph.metadata,
         };
+        const importedWorkspace: FlowWorkspace = graph.workspace ?? defaultFlowWorkspace;
         // Create snapshot for comparison
         const originalSnapshot = JSON.stringify({
           flowName: graph.name,
           flowDescription: graph.description || '',
           flowMetadata: importedMetadata,
+          flowWorkspace: importedWorkspace,
+          flowNavigator: graph.navigator,
           nodes: nodes.map((n) => ({ id: n.id, type: n.type, position: n.position, data: n.data })),
           edges: edges.map((e) => ({
             id: e.id,
@@ -833,6 +927,8 @@ export const useFlowStore = create<FlowState>()(
           flowName: graph.name,
           flowDescription: graph.description || '',
           flowMetadata: importedMetadata,
+          flowWorkspace: importedWorkspace,
+          flowNavigator: graph.navigator,
           nodes,
           edges,
           selectedNodeId: null,
@@ -840,6 +936,7 @@ export const useFlowStore = create<FlowState>()(
           automationId: null,
           hasUnsavedChanges: false,
           lastSaved: null,
+          highlightedSourcePrefix: null,
           originalSnapshot,
           nodeErrors: new Map(),
         });
@@ -852,6 +949,8 @@ export const useFlowStore = create<FlowState>()(
           ...initialState,
           flowId: generateUUID(),
           flowMetadata: { ...defaultFlowMetadata },
+          flowWorkspace: { ...defaultFlowWorkspace },
+          flowNavigator: undefined,
           originalSnapshot: null,
           nodeErrors: new Map(),
         }),
@@ -909,6 +1008,9 @@ export const useFlowStore = create<FlowState>()(
       version: 1,
       onRehydrateStorage: () => (state) => {
         if (state) {
+          state.flowWorkspace = state.flowWorkspace ?? { ...defaultFlowWorkspace };
+          state.flowNavigator = state.flowNavigator ?? undefined;
+
           // Normalize node data after rehydration (e.g., convert platform to trigger)
           const normalizedNodes = state.nodes.map((n) => ({
             ...n,

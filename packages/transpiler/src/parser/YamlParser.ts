@@ -330,6 +330,8 @@ export class YamlParser {
         version: 1 as const,
         // Preserve user-defined variables for round-trip
         userVariables: Object.keys(userVariables).length > 0 ? userVariables : undefined,
+        workspace: metadata?.workspace ?? { mode: 'single', sources: [] },
+        navigator: metadata?.navigator,
       };
 
       // Step 7: Validate with Zod schema

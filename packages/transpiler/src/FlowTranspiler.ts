@@ -250,13 +250,23 @@ export class FlowTranspiler {
       };
     }
 
-    return {
-      version: 1,
+    const metadata: Record<string, unknown> = {
+      version: 2,
       nodes: nodePositions,
       graph_id: flow.id,
       graph_version: flow.version,
       strategy: strategy.name,
     };
+
+    if (flow.workspace && (flow.workspace.mode === 'merged' || flow.workspace.sources.length > 0)) {
+      metadata.workspace = flow.workspace;
+    }
+
+    if (flow.navigator && Object.keys(flow.navigator).length > 0) {
+      metadata.navigator = flow.navigator;
+    }
+
+    return metadata;
   }
 }
 
