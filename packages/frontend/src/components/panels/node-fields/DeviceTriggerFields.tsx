@@ -174,7 +174,7 @@ export function DeviceTriggerFields({ node, onChange, entities }: DeviceTriggerF
 
       {/* Entity ID - always required for device triggers when device is selected */}
       {deviceId && (
-        <FormField label={t('labels.entityId')} required>
+        <FormField label={t('labels.entityId')}>
           <EntitySelector
             value={entityId || ''}
             onChange={(value) => onChange('entity_id', value)}
