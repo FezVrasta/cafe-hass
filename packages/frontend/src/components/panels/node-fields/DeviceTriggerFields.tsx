@@ -112,7 +112,6 @@ export function DeviceTriggerFields({ node, onChange, entities }: DeviceTriggerF
       {deviceId && availableDeviceTriggers.length > 0 ? (
         <FormField label={t('labels.triggerType')} required>
           <Select
-            // value={selectedTriggerType}
             value={selectedCompositeValue}
             onValueChange={(value) => {
               const [type, subtype] = value.split('::');
@@ -122,7 +121,6 @@ export function DeviceTriggerFields({ node, onChange, entities }: DeviceTriggerF
                 onChange('type', type);
                 onChange('domain', trigger.domain);
                 onChange('subtype', subtype ?? undefined);
-
               }
             }}
           >
@@ -162,10 +160,10 @@ export function DeviceTriggerFields({ node, onChange, entities }: DeviceTriggerF
         selectedTriggerType && (
           <FormField label="Trigger Type">
             <div className="truncate rounded-md border bg-muted px-3 py-2 font-mono text-sm">
-                {selectedTriggerType}
-                {selectedSubtype && (
-                          <span className="text-muted-foreground"> · {selectedSubtype}</span>
-                        )}
+              {selectedTriggerType}
+              {selectedSubtype && (
+                <span className="text-muted-foreground">{" \u00B7 "}{selectedSubtype}</span>
+              )}
               {domain && <span className="text-muted-foreground"> {`(${domain})`}</span>}
             </div>
           </FormField>
@@ -174,7 +172,7 @@ export function DeviceTriggerFields({ node, onChange, entities }: DeviceTriggerF
 
       {/* Entity ID - always required for device triggers when device is selected */}
       {deviceId && (
-        <FormField label={t('labels.entityId')} required>
+        <FormField label={t('labels.entityId')}>
           <EntitySelector
             value={entityId || ''}
             onChange={(value) => onChange('entity_id', value)}
