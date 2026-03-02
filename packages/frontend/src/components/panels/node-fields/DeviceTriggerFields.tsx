@@ -43,6 +43,12 @@ export function DeviceTriggerFields({ node, onChange, entities }: DeviceTriggerF
   const domain = getNodeDataString(node, 'domain');
   const entityId = getNodeDataString(node, 'entity_id');
 
+  const selectedSubtype = getNodeDataString(node, 'subtype');
+  const selectedCompositeValue =
+    selectedTriggerType && selectedSubtype
+      ? `${selectedTriggerType}::${selectedSubtype}`
+      : selectedTriggerType ?? '';
+
   // Fetch triggers when device is selected
   useEffect(() => {
     if (!deviceId) {
@@ -73,7 +79,7 @@ export function DeviceTriggerFields({ node, onChange, entities }: DeviceTriggerF
 
     // Find the full trigger object from the list - HA API needs the complete trigger
     const trigger = availableDeviceTriggers.find(
-      (t) => t.type === selectedTriggerType && t.domain === domain
+      (t) => t.type === selectedTriggerType && t.domain === domain && (t.subtype ?? '') === (selectedSubtype ?? '')
     );
 
     if (!trigger) {
@@ -89,7 +95,7 @@ export function DeviceTriggerFields({ node, onChange, entities }: DeviceTriggerF
         console.error(t('errors:api.loadTriggerCapabilitiesFailed'), error);
         setTriggerCapabilities([]);
       });
-  }, [deviceId, selectedTriggerType, domain, availableDeviceTriggers, getTriggerCapabilities, t]);
+  }, [deviceId, selectedTriggerType, selectedSubtype, domain, availableDeviceTriggers, getTriggerCapabilities, t]);
 
   return (
     <>
@@ -106,13 +112,17 @@ export function DeviceTriggerFields({ node, onChange, entities }: DeviceTriggerF
       {deviceId && availableDeviceTriggers.length > 0 ? (
         <FormField label={t('labels.triggerType')} required>
           <Select
-            value={selectedTriggerType}
+            // value={selectedTriggerType}
+            value={selectedCompositeValue}
             onValueChange={(value) => {
+              const [type, subtype] = value.split('::');
               // Find the selected trigger to get its domain
-              const trigger = availableDeviceTriggers.find((t) => t.type === value);
+              const trigger = availableDeviceTriggers.find((t) => t.type === type && (t.subtype ?? '') === (subtype ?? ''));
               if (trigger) {
-                onChange('type', value);
+                onChange('type', type);
                 onChange('domain', trigger.domain);
+                onChange('subtype', subtype ?? undefined);
+
               }
             }}
           >
@@ -120,14 +130,29 @@ export function DeviceTriggerFields({ node, onChange, entities }: DeviceTriggerF
               <SelectValue placeholder={t('placeholders.selectTriggerType')} />
             </SelectTrigger>
             <SelectContent>
-              {/* Deduplicate triggers by domain+type since multiple entities can have the same trigger type */}
               {Array.from(
-                new Map(availableDeviceTriggers.map((t) => [`${t.domain}-${t.type}`, t])).values()
-              ).map((trigger) => (
-                <SelectItem key={`${trigger.domain}-${trigger.type}`} value={trigger.type}>
-                  {`${trigger.type} (${trigger.domain})`}
-                </SelectItem>
-              ))}
+                new Map(
+                  availableDeviceTriggers.map((t) => [
+                    `${t.domain}-${t.type}-${t.subtype ?? ''}`,
+                    t,
+                  ])
+                ).values()
+              ).map((trigger) => {
+                const compositeValue = trigger.subtype
+                  ? `${trigger.type}::${trigger.subtype}`
+                  : trigger.type;
+                const label = trigger.subtype
+                  ? `${trigger.type}: ${trigger.subtype} (${trigger.domain})`
+                  : `${trigger.type} (${trigger.domain})`;
+                return (
+                  <SelectItem
+                    key={`${trigger.domain}-${trigger.type}-${trigger.subtype ?? ''}`}
+                    value={compositeValue}
+                  >
+                    {label}
+                  </SelectItem>
+                );
+              })}
             </SelectContent>
           </Select>
         </FormField>
@@ -137,7 +162,10 @@ export function DeviceTriggerFields({ node, onChange, entities }: DeviceTriggerF
         selectedTriggerType && (
           <FormField label="Trigger Type">
             <div className="truncate rounded-md border bg-muted px-3 py-2 font-mono text-sm">
-              {selectedTriggerType}
+                {selectedTriggerType}
+                {selectedSubtype && (
+                          <span className="text-muted-foreground"> · {selectedSubtype}</span>
+                        )}
               {domain && <span className="text-muted-foreground"> {`(${domain})`}</span>}
             </div>
           </FormField>
