@@ -56,18 +56,17 @@ function renderApp() {
 
     const root = ReactDOM.createRoot(rootElement);
 
-    // Initial render with current parent hass
-    const renderWithParentHass = () => {
-      const parentHass = getParentHass();
-      logger.debug('Rendering with parent hass', {
-        hasHass: !!parentHass,
-        statesCount: parentHass?.states ? Object.keys(parentHass.states).length : 0,
+    // Function to render the app with a specific hass object
+    const render = (hass?: HomeAssistant) => {
+      logger.debug('Rendering with hass', {
+        hasHass: !!hass,
+        statesCount: hass?.states ? Object.keys(hass.states).length : 0,
       });
 
       root.render(
         <React.StrictMode>
           <I18nextProvider i18n={i18n}>
-            <HassProvider externalHass={parentHass}>
+            <HassProvider externalHass={hass}>
               <App />
             </HassProvider>
           </I18nextProvider>
@@ -75,7 +74,13 @@ function renderApp() {
       );
     };
 
-    renderWithParentHass();
+    // Expose setHass to the parent window (panel-wrapper.ts)
+    (window as any).setHass = (newHass: HomeAssistant) => {
+      render(newHass);
+    };
+
+    // Initial render with current parent hass
+    render(getParentHass());
   } else {
     // Standalone mode - use remote connection
     logger.debug('Running in standalone mode');

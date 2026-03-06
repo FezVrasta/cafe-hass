@@ -20,6 +20,11 @@ class CafePanelWrapper extends HTMLElement {
     this._hass = value;
     // Expose hass on window so iframe can access via window.parent.hass
     window.hass = value;
+
+    // Notify the iframe of the update if it has registered a listener
+    if (this.iframe?.contentWindow && (this.iframe.contentWindow as any).setHass) {
+      (this.iframe.contentWindow as any).setHass(value);
+    }
   }
 
   get hass() {
