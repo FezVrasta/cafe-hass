@@ -204,4 +204,75 @@ mode: single
     const volumeMatches = (yaml.match(/volume_set/g) || []).length;
     expect(volumeMatches).toBe(1);
   });
+
+  it('should connect next action via false path when if has no else branch (issue #188)', async () => {
+    // Sequential if-then blocks without else: each if's false path should connect
+    // to the next action in sequence (not just the true path).
+    const inputYaml = `
+alias: Trigger ID sequential ifs
+triggers:
+  - trigger: state
+    entity_id: binary_sensor.button_a
+    to: "on"
+    id: button_a
+  - trigger: state
+    entity_id: binary_sensor.button_b
+    to: "on"
+    id: button_b
+actions:
+  - if:
+      - condition: trigger
+        id: button_a
+    then:
+      - action: light.turn_on
+        target:
+          entity_id: light.a
+  - if:
+      - condition: trigger
+        id: button_b
+    then:
+      - action: light.turn_on
+        target:
+          entity_id: light.b
+mode: single
+`;
+
+    const transpiler = new FlowTranspiler();
+    const parseResult = await transpiler.fromYaml(inputYaml);
+
+    expect(parseResult.success).toBe(true);
+
+    const graph = parseResult.graph!;
+
+    // Should have 2 condition nodes, 2 action nodes
+    const conditionNodes = graph.nodes.filter((n) => n.type === 'condition');
+    expect(conditionNodes).toHaveLength(2);
+
+    const actionNodes = graph.nodes.filter((n) => n.type === 'action');
+    expect(actionNodes).toHaveLength(2);
+
+    // The second condition node must have an incoming edge from the first condition node
+    // via the 'false' handle — that's how the second if gets reached when button_a doesn't fire
+    const edges = graph.edges;
+    const firstCondId = conditionNodes[0].id;
+    const secondCondId = conditionNodes[1].id;
+
+    const falseEdge = edges.find(
+      (e) => e.source === firstCondId && e.target === secondCondId && e.sourceHandle === 'false'
+    );
+    expect(falseEdge).toBeDefined();
+
+    // Roundtrip: transpile back to YAML
+    const transpileResult = transpiler.transpile(graph);
+    expect(transpileResult.success).toBe(true);
+
+    const yaml = transpileResult.yaml!;
+    // Both ifs should be present, not merged or duplicated
+    const ifMatches = (yaml.match(/^\s+- if:/gm) || []).length;
+    expect(ifMatches).toBe(2);
+
+    // Each light should appear exactly once
+    expect((yaml.match(/light\.a\b/g) || []).length).toBe(1);
+    expect((yaml.match(/light\.b\b/g) || []).length).toBe(1);
+  });
 });

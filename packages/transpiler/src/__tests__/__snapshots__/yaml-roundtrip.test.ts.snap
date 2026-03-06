@@ -97,77 +97,31 @@ triggers:
     entity_id: media_player.tv
     to: playing
     for: "00:00:05"
+conditions:
+  - condition: numeric_state
+    entity_id: sensor.brightness_sensor
+    above: 120
+  - condition: template
+    value_template: "{% set app = (state_attr('media_player.tv', 'app_name') or '') | string %} {% set ok_apps = ['TV','Apple TV','Prime Video','Netflix'] %} {{ app in ok_apps }}"
+  - condition: template
+    value_template: "{{ (state_attr('media_player.tv','media_content_type') or '') | lower == 'movie' }}"
 actions:
-  - variables:
-      current_node: condition_test_1_163
-      flow_context: {}
-  - alias: State Machine Loop
-    repeat:
-      until: "{{ current_node == \\"END\\" }}"
-      sequence:
-        - choose:
-            - conditions:
-                - condition: template
-                  value_template: "{{ current_node == \\"condition_test_1_163\\" }}"
-              sequence:
-                - variables:
-                    current_node: "{% if states('sensor.brightness_sensor') | float > 120 %}condition_test_2_164{% else %}END{% endif %}"
-            - conditions:
-                - condition: template
-                  value_template: "{{ current_node == \\"condition_test_2_164\\" }}"
-              sequence:
-                - if:
-                    - condition: template
-                      value_template: "{% set app = (state_attr('media_player.tv', 'app_name') or '') | string %} {% set ok_apps = ['TV','Apple TV','Prime Video','Netflix'] %} {{ app in ok_apps }}"
-                  then:
-                    - variables:
-                        current_node: condition_test_3_165
-                  else:
-                    - variables:
-                        current_node: END
-            - conditions:
-                - condition: template
-                  value_template: "{{ current_node == \\"condition_test_3_165\\" }}"
-              sequence:
-                - variables:
-                    current_node: "{% if (state_attr('media_player.tv','media_content_type') or '') | lower == 'movie' %}condition_test_4_166{% else %}END{% endif %}"
-            - conditions:
-                - condition: template
-                  value_template: "{{ current_node == \\"condition_test_4_166\\" }}"
-              sequence:
-                - variables:
-                    current_node: "{% if states('cover.velux_blind') != 'closed' %}action_test_5_167{% else %}condition_test_6_168{% endif %}"
-            - conditions:
-                - condition: template
-                  value_template: "{{ current_node == \\"action_test_5_167\\" }}"
-              sequence:
-                - service: cover.close_cover
-                  target:
-                    entity_id: cover.velux_blind
-                - variables:
-                    current_node: condition_test_6_168
-            - conditions:
-                - condition: template
-                  value_template: "{{ current_node == \\"condition_test_6_168\\" }}"
-              sequence:
-                - variables:
-                    current_node: "{% if states('cover.main_blind') != 'closed' %}action_test_7_169{% else %}END{% endif %}"
-            - conditions:
-                - condition: template
-                  value_template: "{{ current_node == \\"action_test_7_169\\" }}"
-              sequence:
-                - service: cover.close_cover
-                  target:
-                    entity_id: cover.main_blind
-                - variables:
-                    current_node: END
-          default:
-            - service: system_log.write
-              data:
-                message: "C.A.F.E.: Unknown state \\"{{ current_node }}\\", ending flow"
-                level: warning
-            - variables:
-                current_node: END
+  - if:
+      - condition: template
+        value_template: "{{ states('cover.velux_blind') != 'closed' }}"
+    then:
+      - service: cover.close_cover
+        target:
+          entity_id: cover.velux_blind
+    else: []
+  - if:
+      - condition: template
+        value_template: "{{ states('cover.main_blind') != 'closed' }}"
+    then:
+      - service: cover.close_cover
+        target:
+          entity_id: cover.main_blind
+    else: []
 mode: single
 variables:
   _cafe_metadata:
@@ -199,7 +153,7 @@ variables:
         "y": 32.5
     graph_id: a18b0fbb-d966-432c-aba7-4f7361da8d29
     graph_version: 1
-    strategy: state-machine
+    strategy: native
 "
 `;
 

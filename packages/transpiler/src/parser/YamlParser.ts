@@ -1307,15 +1307,22 @@ export class YamlParser {
           previousNodeIds: currentNodeIds,
           getNextNodeId,
           conditionNodeIds: localConditionNodeIds,
+          falsePathConditionIds,
           inheritedEnabled,
         });
         nodes.push(...ifResult.nodes);
         edges.push(...ifResult.edges);
-        // Add any new condition nodes to our tracking set
+        // Route condition outputs to the correct handle tracking set
         for (const outId of ifResult.outputNodeIds) {
           const outNode = ifResult.nodes.find((n) => n.id === outId);
           if (outNode?.type === 'condition') {
-            localConditionNodeIds.add(outId);
+            if (ifResult.falsePathOutputIds.includes(outId)) {
+              // This condition's FALSE path should connect to subsequent actions
+              falsePathConditionIds.add(outId);
+            } else {
+              // This condition's TRUE path should connect to subsequent actions
+              localConditionNodeIds.add(outId);
+            }
           }
         }
         currentNodeIds = ifResult.outputNodeIds;
@@ -2125,18 +2132,20 @@ export class YamlParser {
       enabled?: unknown;
     },
     options: ParseOptions
-  ): { nodes: FlowNode[]; edges: FlowEdge[]; outputNodeIds: string[] } {
+  ): { nodes: FlowNode[]; edges: FlowEdge[]; outputNodeIds: string[]; falsePathOutputIds: string[] } {
     const {
       warnings,
       previousNodeIds,
       getNextNodeId,
       conditionNodeIds = new Set(),
+      falsePathConditionIds: incomingFalsePathIds = new Set(),
       inheritedEnabled,
     } = options;
 
     const nodes: FlowNode[] = [];
     const edges: FlowEdge[] = [];
     const outputNodeIds: string[] = [];
+    const falsePathOutputIds: string[] = [];
     const localConditionIds = new Set(conditionNodeIds);
 
     // Compute effective enabled state: if parent is disabled or this block is disabled
@@ -2223,7 +2232,12 @@ export class YamlParser {
     // Connect from previous nodes to the first condition
     const firstConditionId = conditionNodes[0].id;
     for (const prevId of previousNodeIds) {
-      const sourceHandle = localConditionIds.has(prevId) ? 'true' : undefined;
+      let sourceHandle: string | undefined;
+      if (incomingFalsePathIds.has(prevId)) {
+        sourceHandle = 'false';
+      } else if (localConditionIds.has(prevId)) {
+        sourceHandle = 'true';
+      }
       edges.push(this.createEdge(prevId, firstConditionId, sourceHandle));
     }
 
@@ -2297,14 +2311,23 @@ export class YamlParser {
 
       // Track all terminal nodes from else branch
       outputNodeIds.push(...elseResult.terminalNodeIds);
+    } else {
+      // No else branch: every condition node is an implicit false exit.
+      // The first condition's false path skips the entire if block; each subsequent
+      // condition in the AND-chain also exits false when it fails.
+      for (const condNode of conditionNodes) {
+        outputNodeIds.push(condNode.id);
+        falsePathOutputIds.push(condNode.id);
+      }
     }
 
-    // If no outputs were added, the last condition itself is the output
+    // If no outputs were added (empty then + else branch), the last condition is the output
     if (outputNodeIds.length === 0) {
       outputNodeIds.push(lastConditionId);
+      falsePathOutputIds.push(lastConditionId);
     }
 
-    return { nodes, edges, outputNodeIds };
+    return { nodes, edges, outputNodeIds, falsePathOutputIds };
   }
 
   /**

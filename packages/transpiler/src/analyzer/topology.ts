@@ -498,9 +498,17 @@ function checkParallelConvergence(
 
   // Trace back each converging source to find its "branch root" - the condition node
   // that started the branch this source belongs to.
+  // A source that IS itself a condition node is its own branch root (it exits via false path).
   const traceToBranchCondition = (nodeId: string, visited: Set<string>): string | null => {
     if (visited.has(nodeId)) return null;
     visited.add(nodeId);
+
+    // If this node is a condition, it is its own branch root
+    // (it exits the if block via its false path)
+    const selfNode = flow.nodes.find((n) => n.id === nodeId);
+    if (selfNode?.type === 'condition') {
+      return nodeId;
+    }
 
     const incomingEdges = flow.edges.filter((e) => e.target === nodeId);
     if (incomingEdges.length === 0) return null;
