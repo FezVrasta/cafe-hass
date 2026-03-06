@@ -81,4 +81,127 @@ mode: single
     // switch7 should appear 3 times: once in condition, once in then action target, once in else action target
     expect(switch7Matches).toBe(3);
   });
+
+  it('should not duplicate actions that come after an if/then/else block (issue #164)', async () => {
+    // Regression test: when an if/then/else block is followed by more actions at the same level,
+    // those actions were being duplicated into each branch of the condition.
+    const inputYaml = `
+alias: Test actions after condition
+triggers:
+  - trigger: state
+    entity_id: binary_sensor.button
+    to: "on"
+actions:
+  - if:
+      - condition: state
+        entity_id: switch.tv
+        state: "off"
+    then:
+      - action: light.turn_on
+        data:
+          brightness_pct: 30
+    else:
+      - action: light.turn_off
+        target:
+          entity_id: light.main
+  - action: switch.toggle
+    data: {}
+    target:
+      entity_id: switch.tv
+  - action: switch.toggle
+    data: {}
+    target:
+      entity_id: switch.relay
+mode: single
+`;
+
+    const transpiler = new FlowTranspiler();
+    const parseResult = await transpiler.fromYaml(inputYaml);
+
+    expect(parseResult.success).toBe(true);
+
+    const transpileResult = transpiler.transpile(parseResult.graph!);
+    expect(transpileResult.success).toBe(true);
+
+    const yaml = transpileResult.yaml!;
+
+    // switch.toggle should appear exactly twice (once per action), not duplicated into branches
+    const toggleMatches = (yaml.match(/switch\.toggle/g) || []).length;
+    expect(toggleMatches).toBe(2);
+
+    // switch.tv should appear exactly twice: once in condition entity_id, once in toggle target
+    const tvMatches = (yaml.match(/switch\.tv\b/g) || []).length;
+    expect(tvMatches).toBe(2);
+
+    // The if/then/else block should appear (condition not promoted since it has an else branch)
+    expect(yaml).toContain('if:');
+    expect(yaml).toContain('then:');
+    expect(yaml).toContain('else:');
+  });
+
+  it('should not duplicate actions after nested if/then/else inside outer then block (issue #164 full case)', async () => {
+    // The full reported case: outer if/then with nested if/then/else inside then branch,
+    // followed by actions at the same level as the outer if.
+    const inputYaml = `
+alias: Full issue 164 test
+triggers:
+  - trigger: state
+    entity_id: binary_sensor.button
+    to: "on"
+actions:
+  - if:
+      - condition: state
+        entity_id: switch.tv
+        state: "off"
+    then:
+      - action: light.turn_on
+        data:
+          brightness_pct: 30
+      - if:
+          - condition: numeric_state
+            entity_id: sensor.days
+            below: 30
+        then:
+          - action: tts.speak
+            data:
+              message: Many days left
+        else:
+          - action: tts.speak
+            data:
+              message: Few days left
+      - action: media_player.volume_set
+        data:
+          volume_level: 0.5
+        target:
+          entity_id: media_player.tv
+    else: []
+  - action: switch.toggle
+    data: {}
+    target:
+      entity_id: switch.tv
+  - action: switch.toggle
+    data: {}
+    target:
+      entity_id: switch.relay
+mode: single
+`;
+
+    const transpiler = new FlowTranspiler();
+    const parseResult = await transpiler.fromYaml(inputYaml);
+
+    expect(parseResult.success).toBe(true);
+
+    const transpileResult = transpiler.transpile(parseResult.graph!);
+    expect(transpileResult.success).toBe(true);
+
+    const yaml = transpileResult.yaml!;
+
+    // switch.toggle at the end should appear exactly twice (not duplicated into the if branches)
+    const toggleMatches = (yaml.match(/switch\.toggle/g) || []).length;
+    expect(toggleMatches).toBe(2);
+
+    // media_player.volume_set should appear exactly once (inside the outer then, after inner if)
+    const volumeMatches = (yaml.match(/volume_set/g) || []).length;
+    expect(volumeMatches).toBe(1);
+  });
 });

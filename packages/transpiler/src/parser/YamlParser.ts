@@ -1055,7 +1055,7 @@ export class YamlParser {
   private parseActions(
     actions: (HAAction | HACondition)[],
     options: ParseOptions
-  ): { nodes: FlowNode[]; edges: FlowEdge[] } {
+  ): { nodes: FlowNode[]; edges: FlowEdge[]; terminalNodeIds: string[] } {
     const {
       warnings,
       previousNodeIds,
@@ -1869,7 +1869,7 @@ export class YamlParser {
       }
     });
 
-    return { nodes, edges };
+    return { nodes, edges, terminalNodeIds: currentNodeIds };
   }
 
   /**
@@ -2259,10 +2259,9 @@ export class YamlParser {
         }
       }
 
-      // Track output nodes from then branch
-      if (thenResult.nodes.length > 0) {
-        outputNodeIds.push(thenResult.nodes[thenResult.nodes.length - 1].id);
-      }
+      // Track all terminal nodes from then branch (not just the last created node,
+      // as the last action in the sequence may itself be an if/then/else with multiple exits)
+      outputNodeIds.push(...thenResult.terminalNodeIds);
     }
 
     // Parse 'else' sequence (false branch) - connects from FIRST condition only
@@ -2296,10 +2295,8 @@ export class YamlParser {
       // Add remaining edges from else result
       edges.push(...elseResult.edges);
 
-      // Track output nodes from else branch
-      if (elseResult.nodes.length > 0) {
-        outputNodeIds.push(elseResult.nodes[elseResult.nodes.length - 1].id);
-      }
+      // Track all terminal nodes from else branch
+      outputNodeIds.push(...elseResult.terminalNodeIds);
     }
 
     // If no outputs were added, the last condition itself is the output

@@ -21,6 +21,10 @@ export {
   FlowGraphSchema,
   type FlowMetadata,
   FlowMetadataSchema,
+  type FlowWorkspace,
+  FlowWorkspaceSchema,
+  type FlowWorkspaceSource,
+  FlowWorkspaceSourceSchema,
   validateGraphStructure,
 } from './graph';
 // Home Assistant entity schemas

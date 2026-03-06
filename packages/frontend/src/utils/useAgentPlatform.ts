@@ -1,8 +1,9 @@
 export function isMacOS() {
-  if (navigator.userAgentData?.platform) {
+  const nav = navigator as Navigator & { userAgentData?: { platform?: string } };
+  if (nav.userAgentData?.platform) {
     // navigator.userAgentData.platform is a low-entropy hint available sync
     // In many 2026 browsers, it returns "macOS" directly
-    return (navigator.userAgentData as { platform: string }).platform === 'macOS';
+    return nav.userAgentData.platform === 'macOS';
   }
 
   // Fallback for Safari/Firefox/Legacy

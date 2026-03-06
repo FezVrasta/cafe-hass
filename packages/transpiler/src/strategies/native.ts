@@ -926,22 +926,49 @@ export class NativeStrategy extends BaseStrategy {
         else: [],
       };
 
-      // Build sequences for all then branches and combine them (handles fan-out)
-      if (thenNodeIds.length > 0) {
-        const thenActions = thenNodeIds.flatMap((nodeId) =>
-          this.buildSequenceFromNode(flow, nodeId, new Set(visited))
-        );
-        chooseAction.then = thenActions;
-      }
-      // Build sequences for all else branches and combine them (handles fan-out)
-      if (elseNodeIds.length > 0) {
-        const elseActions = elseNodeIds.flatMap((nodeId) =>
-          this.buildSequenceFromNode(flow, nodeId, new Set(visited))
-        );
-        chooseAction.else = elseActions;
-      }
+      // Find convergence point between then and else branches.
+      // When both branches lead to the same continuation node, that node should
+      // appear AFTER the if/then/else block, not duplicated inside each branch.
+      const allBranchStarts = [...thenNodeIds, ...elseNodeIds];
+      const convergencePoint =
+        thenNodeIds.length > 0 && elseNodeIds.length > 0
+          ? this.findConvergencePoint(flow, allBranchStarts)
+          : null;
 
-      sequence.push(chooseAction);
+      if (convergencePoint) {
+        // Build each branch only up to the convergence point
+        if (thenNodeIds.length > 0) {
+          const thenActions = thenNodeIds.flatMap((id) =>
+            this.buildSequenceUntilNode(flow, id, convergencePoint, new Set(visited))
+          );
+          chooseAction.then = thenActions;
+        }
+        if (elseNodeIds.length > 0) {
+          const elseActions = elseNodeIds.flatMap((id) =>
+            this.buildSequenceUntilNode(flow, id, convergencePoint, new Set(visited))
+          );
+          chooseAction.else = elseActions;
+        }
+        sequence.push(chooseAction);
+        // Continue from the convergence point after the condition block
+        const afterCondition = this.buildSequenceFromNode(flow, convergencePoint, new Set(visited));
+        sequence.push(...afterCondition);
+      } else {
+        // No convergence — build each branch independently
+        if (thenNodeIds.length > 0) {
+          const thenActions = thenNodeIds.flatMap((id) =>
+            this.buildSequenceFromNode(flow, id, new Set(visited))
+          );
+          chooseAction.then = thenActions;
+        }
+        if (elseNodeIds.length > 0) {
+          const elseActions = elseNodeIds.flatMap((id) =>
+            this.buildSequenceFromNode(flow, id, new Set(visited))
+          );
+          chooseAction.else = elseActions;
+        }
+        sequence.push(chooseAction);
+      }
     } else {
       // ===== Default Logic for Non-Condition Nodes =====
       const action = this.buildNodeAction(node);

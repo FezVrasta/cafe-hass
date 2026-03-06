@@ -496,6 +496,48 @@ function checkParallelConvergence(
     return flow.edges.filter((e) => e.target === nodeId).map((e) => e.source);
   };
 
+  // Trace back each converging source to find its "branch root" - the condition node
+  // that started the branch this source belongs to.
+  const traceToBranchCondition = (nodeId: string, visited: Set<string>): string | null => {
+    if (visited.has(nodeId)) return null;
+    visited.add(nodeId);
+
+    const incomingEdges = flow.edges.filter((e) => e.target === nodeId);
+    if (incomingEdges.length === 0) return null;
+    // If multiple predecessors, this node is itself a convergence point — stop tracing
+    if (incomingEdges.length > 1) return null;
+
+    const pred = incomingEdges[0].source;
+    const predNode = flow.nodes.find((n) => n.id === pred);
+
+    // If the predecessor is a condition node, this source is a direct branch exit
+    if (predNode?.type === 'condition') {
+      return pred;
+    }
+
+    return traceToBranchCondition(pred, visited);
+  };
+
+  // Check if all converging sources trace back to the same condition node.
+  // This is an if/then/else continuation pattern: condition → (true) branch → convergence
+  //                                                        → (false) branch → convergence
+  // This CAN be represented natively in HA YAML (actions after the if/then/else block).
+  const branchConditions = new Set<string>();
+  let allTraceToCondition = true;
+  for (const sourceId of convergingSources) {
+    const conditionRoot = traceToBranchCondition(sourceId, new Set());
+    if (conditionRoot) {
+      branchConditions.add(conditionRoot);
+    } else {
+      allTraceToCondition = false;
+      break;
+    }
+  }
+  if (allTraceToCondition && branchConditions.size === 1) {
+    // All branches originate from the same condition - this is a valid if/then/else continuation
+    return true;
+  }
+
   // Check if edges from a node are parallel (not condition branching)
   const isParallelSource = (nodeId: string): boolean => {
     const node = flow.nodes.find((n) => n.id === nodeId);

@@ -1838,6 +1838,7 @@ actions:
       current_source: |
         {{ state_attr(default_receiver, 'source') }}
   - event: universal_controller_command
+    alias: Emit Generic Universal Controller Command Event
     event_data:
       source_device: sofabaton
       action_type: "{{ action_type }}"
@@ -1846,7 +1847,6 @@ actions:
       area_key: "{{ sofabaton_area }}"
       data_payload: "{{ incoming_payload }}"
       overrides: {}
-    alias: Emit Generic Universal Controller Command Event
   - if:
       - condition: template
         enabled: false

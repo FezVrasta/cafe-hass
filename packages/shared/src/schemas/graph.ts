@@ -39,6 +39,24 @@ export const FlowMetadataSchema = z.object({
 export type FlowMetadata = z.infer<typeof FlowMetadataSchema>;
 
 /**
+ * Workspace metadata for merged automations
+ */
+export const FlowWorkspaceSourceSchema = z.object({
+  automation_id: z.string(),
+  entity_id: z.string(),
+  alias: z.string(),
+  node_prefix: z.string(),
+  imported_at: z.string(),
+});
+export type FlowWorkspaceSource = z.infer<typeof FlowWorkspaceSourceSchema>;
+
+export const FlowWorkspaceSchema = z.object({
+  mode: z.literal('merged'),
+  sources: z.array(FlowWorkspaceSourceSchema),
+});
+export type FlowWorkspace = z.infer<typeof FlowWorkspaceSchema>;
+
+/**
  * Complete flow graph schema
  * Represents the entire automation as a graph of nodes and edges
  */
@@ -77,6 +95,10 @@ export const FlowGraphSchema = z.object({
    * excluding _cafe_metadata which is handled separately.
    */
   userVariables: z.record(z.string(), z.unknown()).optional(),
+  /**
+   * Workspace metadata for merged automations
+   */
+  workspace: FlowWorkspaceSchema.optional(),
 });
 export type FlowGraph = z.infer<typeof FlowGraphSchema>;
 
