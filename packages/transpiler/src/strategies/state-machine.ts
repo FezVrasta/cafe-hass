@@ -435,6 +435,17 @@ export class StateMachineStrategy extends BaseStrategy {
       return actionCall;
     }
 
+    // Check if this is a fire event action
+    if (typeof node.data.event === 'string' && node.data.event.trim() !== '') {
+      const actionCall: Record<string, unknown> = { event: node.data.event };
+      if (node.data.alias) actionCall.alias = node.data.alias;
+      if (node.data.event_data && Object.keys(node.data.event_data).length > 0) {
+        actionCall.event_data = node.data.event_data;
+      }
+      if (node.data.enabled === false) actionCall.enabled = false;
+      return actionCall;
+    }
+
     // Standard service call format
     // Use spread pattern to preserve unknown properties from custom integrations
     const {

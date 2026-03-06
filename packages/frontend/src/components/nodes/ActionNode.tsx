@@ -1,6 +1,7 @@
 import { Handle, type NodeProps, Position } from '@xyflow/react';
 import { AlertCircle, Ban, Play } from 'lucide-react';
 import { memo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNodeErrors } from '@/hooks/useNodeErrors';
 import { cn } from '@/lib/utils';
 import type { ActionNodeData } from '@/store/flow-store';
@@ -11,6 +12,7 @@ interface ActionNodeProps extends NodeProps {
 }
 
 export const ActionNode = memo(function ActionNode({ id, data, selected }: ActionNodeProps) {
+  const { t } = useTranslation(['nodes']);
   const activeNodeId = useFlowStore((s) => s.activeNodeId);
   const getExecutionStepNumber = useFlowStore((s) => s.getExecutionStepNumber);
   const { hasErrors, errorMessages } = useNodeErrors(id);
@@ -24,6 +26,8 @@ export const ActionNode = memo(function ActionNode({ id, data, selected }: Actio
   if (typeof data.service === 'string' && data.service.includes('.')) {
     [domain, serviceName] = data.service.split('.');
   }
+
+  const isEventAction = typeof data.event === 'string' && data.event.trim() !== '';
 
   // Get target entity display
   const targetDisplay = (() => {
@@ -70,7 +74,7 @@ export const ActionNode = memo(function ActionNode({ id, data, selected }: Actio
           <Play className="h-4 w-4 text-green-700" />
         </div>
         <span className="font-semibold text-green-900 text-sm">
-          {data.alias || serviceName || 'Action'}
+          {data.alias || (isEventAction ? data.event : serviceName) || 'Action'}
         </span>
         {stepNumber && (
           <div className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-green-600 font-bold text-white text-xs">
@@ -81,11 +85,17 @@ export const ActionNode = memo(function ActionNode({ id, data, selected }: Actio
 
       <div className="space-y-0.5 text-green-700 text-xs">
         <div className="font-medium">
-          <span className="opacity-60">
-            {domain}
-            {'.'}
-          </span>
-          {serviceName}
+          {isEventAction ? (
+            <span className="opacity-60">{t('nodes:actions.fireEvent')}</span>
+          ) : (
+            <>
+              <span className="opacity-60">
+                {domain}
+                {'.'}
+              </span>
+              {serviceName}
+            </>
+          )}
         </div>
         {targetDisplay && <div className="truncate opacity-75">{targetDisplay}</div>}
       </div>

@@ -80,7 +80,9 @@ export interface ConditionNodeData {
 
 export interface ActionNodeData {
   alias?: string;
-  service: string;
+  service?: string;
+  event?: string;
+  event_data?: Record<string, unknown>;
   target?: {
     entity_id?: string | string[];
     area_id?: string | string[];

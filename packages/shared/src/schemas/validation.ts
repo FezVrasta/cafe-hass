@@ -31,16 +31,36 @@ export const WaitNodeValidationSchema = z
   );
 
 /**
- * Action node validation - requires service in domain.service format.
+ * Action node validation - requires either:
+ *   - service in domain.service format (service call action), or
+ *   - event string (fire event action)
  */
 export const ActionNodeValidationSchema = z
   .object({
-    service: z.string(),
+    service: z.string().optional(),
+    event: z.string().optional(),
   })
   .passthrough()
-  .refine((data) => data.service.includes('.'), {
-    message: 'Service must be in domain.service format (e.g., light.turn_on)',
-    path: ['service'],
+  .superRefine((data, ctx) => {
+    const hasEvent = typeof data.event === 'string' && data.event.trim() !== '';
+    const hasService = typeof data.service === 'string' && data.service.trim() !== '';
+
+    if (!hasEvent && !hasService) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Either a service (e.g. light.turn_on) or an event name is required',
+        path: ['service'],
+      });
+      return;
+    }
+
+    if (hasService && !data.service!.includes('.')) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Service must be in domain.service format (e.g., light.turn_on)',
+        path: ['service'],
+      });
+    }
   });
 
 /**

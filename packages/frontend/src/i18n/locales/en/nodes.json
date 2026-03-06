@@ -75,7 +75,25 @@
     "no": "No"
   },
   "actions": {
-    "serviceLabel": "Service"
+    "serviceLabel": "Service",
+    "actionTypeLabel": "Action Type",
+    "actionTypes": {
+      "service": "Call Service",
+      "event": "Fire Event"
+    },
+    "actionLabel": "Action",
+    "eventNameLabel": "Event Name",
+    "eventNamePlaceholder": "e.g. pico_subscription",
+    "selectAction": "Select action...",
+    "targetEntities": "Target Entities",
+    "selectTargetEntities": "Select target entities...",
+    "targetDevices": "Target Devices",
+    "targetDevicesDescription": "Device IDs to target",
+    "addDeviceId": "Add device ID...",
+    "targetAreas": "Target Areas",
+    "targetAreasDescription": "Area IDs to target",
+    "addAreaId": "Add area ID...",
+    "fireEvent": "fire event"
   },
   "variables": {
     "variableCount_one": "{{count}} variable",

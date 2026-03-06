@@ -161,6 +161,8 @@ export interface HATriggerInput {
 export interface HAAction {
   service?: string;
   action?: string;
+  event?: string;
+  event_data?: Record<string, unknown>;
   id?: string;
   alias?: string;
   target?: Record<string, unknown>;
@@ -291,6 +293,8 @@ export const HAActionSchema: z.ZodType<HAAction> = z.lazy(() =>
   z.looseObject({
     service: z.string().optional(),
     action: z.string().optional(),
+    event: z.string().optional(),
+    event_data: z.record(z.string(), z.unknown()).optional(),
     id: z.string().optional(),
     alias: z.string().optional(),
     target: z.record(z.string(), z.unknown()).optional(),

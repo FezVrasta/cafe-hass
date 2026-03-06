@@ -1322,6 +1322,17 @@ export class NativeStrategy extends BaseStrategy {
       return action;
     }
 
+    // Check if this is a fire event action
+    if (typeof node.data.event === 'string' && node.data.event.trim() !== '') {
+      const action: Record<string, unknown> = { event: node.data.event };
+      if (node.data.alias) action.alias = node.data.alias;
+      if (node.data.event_data && Object.keys(node.data.event_data).length > 0) {
+        action.event_data = node.data.event_data;
+      }
+      if (node.data.enabled === false) action.enabled = false;
+      return action;
+    }
+
     // Standard service call format
     // Use spread pattern to preserve unknown properties from custom integrations
     const {

@@ -1,10 +1,19 @@
 import type { FlowNode } from '@cafe/shared';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FieldError } from '@/components/forms/FieldError';
 import { FormField } from '@/components/forms/FormField';
 import { Combobox } from '@/components/ui/Combobox';
 import { IdList } from '@/components/ui/IdList';
 import { MultiEntitySelector } from '@/components/ui/MultiEntitySelector';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useHass } from '@/contexts/HassContext';
 import { useNodeErrors } from '@/hooks/useNodeErrors';
 import type { HassEntity } from '@/types/hass';
@@ -36,19 +45,37 @@ interface ActionFieldsProps {
 }
 
 export function ActionFields({ node, onChange, entities }: ActionFieldsProps) {
+  const { t } = useTranslation(['nodes']);
   const { getAllServices, getServiceDefinition } = useHass();
   const { getFieldError } = useNodeErrors(node.id);
   const serviceName = getNodeDataString(node, 'service');
+  const eventName = getNodeDataString(node, 'event');
   const serviceDefinition = getServiceDefinition(serviceName);
   const serviceFields = serviceDefinition?.fields || {};
   const currentData = getNodeDataObject(node, 'data', {});
   const responseVariable = getNodeDataString(node, 'response_variable');
   const [showResponseVariable, setShowResponseVariable] = useState(!!responseVariable);
 
+  // Determine action type: 'event' if node has an event field set, else 'service'
+  const actionType = eventName ? 'event' : 'service';
+
   // Keep toggle in sync if node changes externally
   useEffect(() => {
     setShowResponseVariable(!!responseVariable);
   }, [responseVariable]);
+
+  const handleActionTypeChange = (type: string) => {
+    if (type === 'event') {
+      // Switch to fire event: clear service fields
+      onChange('service', undefined);
+      onChange('target', undefined);
+      onChange('data', undefined);
+    } else {
+      // Switch to service call: clear event fields
+      onChange('event', undefined);
+      onChange('event_data', undefined);
+    }
+  };
 
   const handleServiceChange = (value: string) => {
     onChange('service', value);
@@ -112,73 +139,109 @@ export function ActionFields({ node, onChange, entities }: ActionFieldsProps) {
   const hasDeviceTargets = targetDeviceIdArray.length > 0;
   const hasAreaTargets = targetAreaIdArray.length > 0;
 
-
   return (
     <>
-      <FormField label="Action" required>
-        <Combobox
-          options={getAllServices().map(({ domain, service }) => ({
-            value: `${domain}.${service}`,
-            label: `${domain}.${service}`,
-          }))}
-          value={serviceName}
-          onChange={handleServiceChange}
-          placeholder="Select action..."
-        />
-        <FieldError message={getFieldError('service')} />
+      {/* Action type selector */}
+      <FormField label={t('nodes:actions.actionTypeLabel')} required>
+        <Select value={actionType} onValueChange={handleActionTypeChange}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="service">{t('nodes:actions.actionTypes.service')}</SelectItem>
+            <SelectItem value="event">{t('nodes:actions.actionTypes.event')}</SelectItem>
+          </SelectContent>
+        </Select>
       </FormField>
 
-      {/* Target Entities */}
-      {(serviceDefinition?.target || targetEntityIdArray.length > 0) && (
-        <FormField label="Target Entities">
-          <MultiEntitySelector
-            value={targetEntityIdArray}
-            onChange={handleEntityTargetChange}
-            entities={getTargetEntities(serviceName, entities)}
-            placeholder="Select target entities..."
+      {actionType === 'event' ? (
+        <>
+          {/* Fire event fields */}
+          <FormField label={t('nodes:actions.eventNameLabel')} required>
+            <Input
+              type="text"
+              value={eventName}
+              onChange={(e) => onChange('event', e.target.value || undefined)}
+              placeholder={t('nodes:actions.eventNamePlaceholder')}
+            />
+            <FieldError message={getFieldError('event')} />
+          </FormField>
+        </>
+      ) : (
+        <>
+          {/* Call service fields */}
+          <FormField label={t('nodes:actions.actionLabel')} required>
+            <Combobox
+              options={getAllServices().map(({ domain, service }) => ({
+                value: `${domain}.${service}`,
+                label: `${domain}.${service}`,
+              }))}
+              value={serviceName}
+              onChange={handleServiceChange}
+              placeholder={t('nodes:actions.selectAction')}
+            />
+            <FieldError message={getFieldError('service')} />
+          </FormField>
+
+          {/* Target Entities */}
+          {(serviceDefinition?.target || targetEntityIdArray.length > 0) && (
+            <FormField label={t('nodes:actions.targetEntities')}>
+              <MultiEntitySelector
+                value={targetEntityIdArray}
+                onChange={handleEntityTargetChange}
+                entities={getTargetEntities(serviceName, entities)}
+                placeholder={t('nodes:actions.selectTargetEntities')}
+              />
+            </FormField>
+          )}
+
+          {/* Target Devices - show if we have device targets or service supports targets */}
+          {(hasDeviceTargets || serviceDefinition?.target) && (
+            <FormField
+              label={t('nodes:actions.targetDevices')}
+              description={t('nodes:actions.targetDevicesDescription')}
+            >
+              <IdList
+                values={targetDeviceIdArray}
+                onChange={handleDeviceTargetChange}
+                placeholder={t('nodes:actions.addDeviceId')}
+              />
+            </FormField>
+          )}
+
+          {/* Target Areas - show if we have area targets or service supports targets */}
+          {(hasAreaTargets || serviceDefinition?.target) && (
+            <FormField
+              label={t('nodes:actions.targetAreas')}
+              description={t('nodes:actions.targetAreasDescription')}
+            >
+              <IdList
+                values={targetAreaIdArray}
+                onChange={handleAreaTargetChange}
+                placeholder={t('nodes:actions.addAreaId')}
+              />
+            </FormField>
+          )}
+
+          {/* Dynamic service fields */}
+          <ServiceDataFields
+            serviceFields={serviceFields}
+            currentData={currentData}
+            onChange={handleDataFieldChange}
           />
-        </FormField>
-      )}
 
-      {/* Target Devices - show if we have device targets or service supports targets */}
-      {(hasDeviceTargets || serviceDefinition?.target) && (
-        <FormField label="Target Devices" description="Device IDs to target">
-          <IdList
-            values={targetDeviceIdArray}
-            onChange={handleDeviceTargetChange}
-            placeholder="Add device ID..."
-          />
-        </FormField>
-      )}
-
-      {/* Target Areas - show if we have area targets or service supports targets */}
-      {(hasAreaTargets || serviceDefinition?.target) && (
-        <FormField label="Target Areas" description="Area IDs to target">
-          <IdList
-            values={targetAreaIdArray}
-            onChange={handleAreaTargetChange}
-            placeholder="Add area ID..."
-          />
-        </FormField>
-      )}
-
-      {/* Dynamic service fields */}
-      <ServiceDataFields
-        serviceFields={serviceFields}
-        currentData={currentData}
-        onChange={handleDataFieldChange}
-      />
-
-      {/* Response Variable (show if response exists, toggle if optional, always input if not) */}
-      {serviceDefinition?.response && (
-        <ResponseVariableField
-          response={serviceDefinition.response}
-          responseVariable={responseVariable}
-          showResponseVariable={showResponseVariable}
-          setShowResponseVariable={setShowResponseVariable}
-          onChange={onChange}
-          handleResponseVariableChange={handleResponseVariableChange}
-        />
+          {/* Response Variable (show if response exists, toggle if optional, always input if not) */}
+          {serviceDefinition?.response && (
+            <ResponseVariableField
+              response={serviceDefinition.response}
+              responseVariable={responseVariable}
+              showResponseVariable={showResponseVariable}
+              setShowResponseVariable={setShowResponseVariable}
+              onChange={onChange}
+              handleResponseVariableChange={handleResponseVariableChange}
+            />
+          )}
+        </>
       )}
     </>
   );
