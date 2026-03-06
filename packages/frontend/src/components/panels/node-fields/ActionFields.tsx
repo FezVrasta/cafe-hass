@@ -12,6 +12,23 @@ import { getNodeDataObject, getNodeDataString } from '@/utils/nodeData';
 import { ResponseVariableField } from './ResponseVariableField';
 import { ServiceDataFields } from './ServiceDataFields';
 
+// Domains where any entity type can be targeted — don't filter
+const MULTI_DOMAIN_SERVICES = new Set(['homeassistant', 'group']);
+
+/**
+ * Filter entities for the target selector based on the selected service.
+ * For most services (e.g. scene.turn_on), only entities in the same domain
+ * are valid targets. For generic services (homeassistant.*), all entities apply.
+ */
+function getTargetEntities(serviceName: string, entities: HassEntity[]): HassEntity[] {
+  if (!serviceName || !serviceName.includes('.')) return entities;
+  const domain = serviceName.split('.')[0];
+  if (MULTI_DOMAIN_SERVICES.has(domain)) return entities;
+  const filtered = entities.filter((e) => e.entity_id.startsWith(`${domain}.`));
+  // Fall back to all entities if the domain has no matching entities
+  return filtered.length > 0 ? filtered : entities;
+}
+
 interface ActionFieldsProps {
   node: FlowNode;
   onChange: (key: string, value: unknown) => void;
@@ -95,6 +112,7 @@ export function ActionFields({ node, onChange, entities }: ActionFieldsProps) {
   const hasDeviceTargets = targetDeviceIdArray.length > 0;
   const hasAreaTargets = targetAreaIdArray.length > 0;
 
+
   return (
     <>
       <FormField label="Action" required>
@@ -116,7 +134,7 @@ export function ActionFields({ node, onChange, entities }: ActionFieldsProps) {
           <MultiEntitySelector
             value={targetEntityIdArray}
             onChange={handleEntityTargetChange}
-            entities={entities}
+            entities={getTargetEntities(serviceName, entities)}
             placeholder="Select target entities..."
           />
         </FormField>
