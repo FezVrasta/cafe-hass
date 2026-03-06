@@ -20,22 +20,17 @@ describe('Device Trigger Validation', () => {
     );
   });
 
-  it('should require entity_id for device triggers', () => {
-    const deviceTriggerWithoutEntityId = {
+  it('should NOT require entity_id for device triggers (e.g. ZHA remotes)', () => {
+    const zhaDeviceTrigger = {
       trigger: 'device',
       device_id: 'some-device-id',
-      type: 'turned_on',
-      domain: 'light',
+      domain: 'zha',
+      type: 'remote_button_short_press',
+      subtype: 'turn_on',
     };
 
-    const result = TriggerNodeValidationSchema.safeParse(deviceTriggerWithoutEntityId);
-    expect(result.success).toBe(false);
-    expect(result.error?.issues).toContainEqual(
-      expect.objectContaining({
-        message: 'Entity is required for device triggers',
-        path: ['entity_id'],
-      })
-    );
+    const result = TriggerNodeValidationSchema.safeParse(zhaDeviceTrigger);
+    expect(result.success).toBe(true);
   });
 
   it('should accept valid device trigger with both device_id and entity_id', () => {
@@ -64,41 +59,15 @@ describe('Device Trigger Validation', () => {
     expect(result.success).toBe(true);
   });
 
-  it('should reject device trigger with empty string entity_id', () => {
-    const deviceTriggerWithEmptyEntityId = {
+  it('should accept device trigger without entity_id for standard domain triggers', () => {
+    const deviceTriggerWithoutEntityId = {
       trigger: 'device',
       device_id: 'some-device-id',
-      entity_id: '',
       type: 'turned_on',
       domain: 'light',
     };
 
-    const result = TriggerNodeValidationSchema.safeParse(deviceTriggerWithEmptyEntityId);
-    expect(result.success).toBe(false);
-    expect(result.error?.issues).toContainEqual(
-      expect.objectContaining({
-        message: 'Entity is required for device triggers',
-        path: ['entity_id'],
-      })
-    );
-  });
-
-  it('should reject device trigger with empty array entity_id', () => {
-    const deviceTriggerWithEmptyArrayEntityId = {
-      trigger: 'device',
-      device_id: 'some-device-id',
-      entity_id: [],
-      type: 'turned_on',
-      domain: 'light',
-    };
-
-    const result = TriggerNodeValidationSchema.safeParse(deviceTriggerWithEmptyArrayEntityId);
-    expect(result.success).toBe(false);
-    expect(result.error?.issues).toContainEqual(
-      expect.objectContaining({
-        message: 'Entity is required for device triggers',
-        path: ['entity_id'],
-      })
-    );
+    const result = TriggerNodeValidationSchema.safeParse(deviceTriggerWithoutEntityId);
+    expect(result.success).toBe(true);
   });
 });
