@@ -15,10 +15,18 @@ export function getNodeData<T = unknown>(node: FlowNode, key: string, defaultVal
 }
 
 /**
- * Get a string value from node data
+ * Get a string value from node data.
+ * Coerces legacy {value, label} option objects (stored by old code) to their `.value` string
+ * to prevent React error #31 when such objects are rendered as children.
  */
 export function getNodeDataString(node: FlowNode, key: string, defaultValue = ''): string {
-  return getNodeData(node, key, defaultValue);
+  const raw = getNodeData<unknown>(node, key, defaultValue);
+  if (typeof raw === 'string') return raw;
+  if (typeof raw === 'object' && raw !== null && !Array.isArray(raw)) {
+    const obj = raw as Record<string, unknown>;
+    if (typeof obj.value === 'string') return obj.value;
+  }
+  return defaultValue;
 }
 
 /**
