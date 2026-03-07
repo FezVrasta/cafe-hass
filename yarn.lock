@@ -349,7 +349,7 @@ __metadata:
     home-assistant-js-websocket: "npm:^9.6.0"
     i18next: "npm:^25.8.0"
     js-yaml: "npm:^4.1.1"
-    lucide-react: "npm:^0.460.0"
+    lucide-react: "npm:^0.577.0"
     postcss: "npm:^8.4.0"
     react: "npm:^18.3.0"
     react-dom: "npm:^18.3.0"
@@ -3817,12 +3817,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"lucide-react@npm:^0.460.0":
-  version: 0.460.0
-  resolution: "lucide-react@npm:0.460.0"
+"lucide-react@npm:^0.577.0":
+  version: 0.577.0
+  resolution: "lucide-react@npm:0.577.0"
   peerDependencies:
-    react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0-rc
-  checksum: 10c0/7f54cbc1ab88276f79cfb8c3ac440de9db013d76e386abc68deda4b04ea51e826f1ad5df22983619b970adff7430d892d4e990dbdf6eceb7243eb2e9a2762704
+    react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
+  checksum: 10c0/f5f56d66d5072b69ab74af2196833e35b888c18d92906d75aff81afc0aeabf00a4092a5b9dbc1bddd250bf54ec3c5d5933c7353589b5cb7efd75b21651cda399
   languageName: node
   linkType: hard
 

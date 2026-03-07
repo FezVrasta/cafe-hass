@@ -93,6 +93,7 @@
     "settings": "Settings",
     "updateAutomation": "Update automation in Home Assistant",
     "saveAutomation": "Save automation to Home Assistant",
+    "clearAutomation": "Clear current automation",
     "exportJson": "Export flow as JSON",
     "clickToConfigure": "Click to configure Home Assistant connection",
     "openDetached": "Open detached window",

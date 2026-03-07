@@ -37,7 +37,7 @@
     "fuse.js": "^7.1.0",
     "home-assistant-js-websocket": "^9.6.0",
     "i18next": "^25.8.0",
-    "lucide-react": "^0.460.0",
+    "lucide-react": "^0.577.0",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
     "react-error-boundary": "^6.0.3",

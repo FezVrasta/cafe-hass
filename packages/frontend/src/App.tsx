@@ -1,6 +1,7 @@
 import { ReactFlowProvider } from '@xyflow/react';
 import {
   AlertCircle,
+  BrushCleaning,
   ChevronDown,
   DiamondPlus,
   FileCode,
@@ -13,7 +14,6 @@ import {
   Settings,
   Wifi,
 } from 'lucide-react';
-
 
 import { useEffect, useState } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
@@ -92,6 +92,7 @@ function App() {
   const [automationImportOpen, setAutomationImportOpen] = useState(false);
   const [importDropdownOpen, setImportDropdownOpen] = useState(false);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
   const [parentWidth, setParentWidth] = useState(() => {
     const win = window.parent ?? window;
     return win.innerWidth;
@@ -304,6 +305,15 @@ function App() {
               </div>
 
               <Button
+                onClick={() => setClearConfirmOpen(true)}
+                variant="ghost"
+                size="icon"
+                title={t('titles.clearAutomation')}
+              >
+                <BrushCleaning className="h-5 w-5" />
+              </Button>
+
+              <Button
                 onClick={() => setSaveDialogOpen(true)}
                 variant={hasUnsavedChanges ? 'default' : 'ghost'}
                 size="icon"
@@ -467,6 +477,30 @@ function App() {
             /* TODO: Handle automation save */
           }}
         />
+
+        {/* Clear confirm dialog */}
+        <Dialog open={clearConfirmOpen} onOpenChange={setClearConfirmOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>{t('dialogs:import.discardTitle')}</DialogTitle>
+              <DialogDescription>{t('dialogs:import.discardDescription')}</DialogDescription>
+            </DialogHeader>
+            <div className="flex justify-end gap-2 pt-4">
+              <Button variant="outline" onClick={() => setClearConfirmOpen(false)}>
+                {t('buttons.cancel')}
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  reset();
+                  setClearConfirmOpen(false);
+                }}
+              >
+                {t('dialogs:import.confirmDiscard')}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         <Toaster />
       </ReactFlowProvider>

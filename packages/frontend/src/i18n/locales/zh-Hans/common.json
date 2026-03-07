@@ -93,6 +93,7 @@
     "settings": "设置",
     "updateAutomation": "在Home Assistant中更新自动化",
     "saveAutomation": "将自动化保存到Home Assistant",
+    "clearAutomation": "清除当前自动化",
     "exportJson": "导出流程为JSON",
     "clickToConfigure": "点击配置Home Assistant连接",
     "openDetached": "在独立窗口打开",
