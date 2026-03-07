@@ -15,6 +15,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -341,19 +342,21 @@ export function AutomationImportDialog({ isOpen, onClose }: AutomationImportDial
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
-                onClick={handleOpenSingleSelection}
-                disabled={selectedAutomations.length !== 1}
+                onClick={
+                  selectedAutomations.length === 1
+                    ? handleOpenSingleSelection
+                    : () => confirmAction(() => void handleMergeSelection())
+                }
+                disabled={selectedAutomations.length === 0}
               >
-                <Download className="mr-2 h-4 w-4" />
-                {t('dialogs:import.openSingle')}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => confirmAction(() => void handleMergeSelection())}
-                disabled={selectedAutomations.length < 2}
-              >
-                <Layers className="mr-2 h-4 w-4" />
-                {t('dialogs:import.mergeSelected')}
+                {selectedAutomations.length > 1 ? (
+                  <Layers className="mr-2 h-4 w-4" />
+                ) : (
+                  <Download className="mr-2 h-4 w-4" />
+                )}
+                {selectedAutomations.length > 1
+                  ? t('dialogs:import.openTogether')
+                  : t('dialogs:import.openSingle')}
               </Button>
               <Button
                 onClick={() => {
@@ -388,14 +391,13 @@ export function AutomationImportDialog({ isOpen, onClose }: AutomationImportDial
             <div className="min-w-full">
               <div className="sticky top-0 z-20 bg-background before:absolute before:-top-px before:right-0 before:left-0 before:h-px before:bg-background">
                 <div className="flex">
-                  <button
-                    type="button"
-                    onClick={toggleSelectAllVisible}
-                    className="w-[44px] cursor-pointer whitespace-nowrap border-b bg-muted px-2 py-2 text-center font-semibold text-muted-foreground text-xs hover:bg-muted/80"
-                    title={allVisibleSelected ? t('dialogs:import.unselectAll') : t('dialogs:import.selectAll')}
-                  >
-                    {allVisibleSelected ? '[x]' : '[ ]'}
-                  </button>
+                  <div className="flex w-[44px] items-center justify-center border-b bg-muted px-2 py-2">
+                    <Checkbox
+                      checked={allVisibleSelected}
+                      onCheckedChange={toggleSelectAllVisible}
+                      title={allVisibleSelected ? t('dialogs:import.unselectAll') : t('dialogs:import.selectAll')}
+                    />
+                  </div>
                   <button
                     type="button"
                     onClick={() => handleSort('name')}
@@ -448,15 +450,12 @@ export function AutomationImportDialog({ isOpen, onClose }: AutomationImportDial
                         key={automation.entity_id}
                         className={`flex border-b last:border-0 ${isSelected ? 'bg-accent/40' : ''}`}
                       >
-                        <div className="w-[44px] px-2 py-2 text-center align-top">
-                          <button
-                            type="button"
-                            onClick={() => toggleSelection(automation.entity_id)}
+                        <div className="flex w-[44px] items-center justify-center px-2 py-2">
+                          <Checkbox
+                            checked={isSelected}
+                            onCheckedChange={() => toggleSelection(automation.entity_id)}
                             title={isSelected ? t('dialogs:import.unselect') : t('dialogs:import.select')}
-                            className="rounded px-1 text-sm hover:bg-accent"
-                          >
-                            {isSelected ? '[x]' : '[ ]'}
-                          </button>
+                          />
                         </div>
                         <div className="flex-1 px-3 py-2 align-top">
                           <div className="max-w-[180px] font-medium">{automation.friendly_name}</div>
