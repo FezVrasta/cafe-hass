@@ -53,6 +53,13 @@
       "number": "数字",
       "boolean": "布尔值",
       "json": "数组（JSON）"
+    },
+    "fields": {
+      "entityId": "实体",
+      "toState": "目标状态",
+      "fromState": "来源状态",
+      "toStatePlaceholder": "例如 on、off、home",
+      "fromStatePlaceholder": "例如 off"
     }
   },
   "conditions": {

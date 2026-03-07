@@ -53,6 +53,13 @@
       "number": "Zahl",
       "boolean": "Wahrheitswert",
       "json": "Array (JSON)"
+    },
+    "fields": {
+      "entityId": "Entität",
+      "toState": "Zu Zustand",
+      "fromState": "Von Zustand",
+      "toStatePlaceholder": "z.B. on, off, home",
+      "fromStatePlaceholder": "z.B. off"
     }
   },
   "conditions": {

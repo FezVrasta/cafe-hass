@@ -53,6 +53,13 @@
       "number": "Numero",
       "boolean": "Booleano",
       "json": "Array (JSON)"
+    },
+    "fields": {
+      "entityId": "Entità",
+      "toState": "Verso lo stato",
+      "fromState": "Dallo stato",
+      "toStatePlaceholder": "es. on, off, home",
+      "fromStatePlaceholder": "es. off"
     }
   },
   "conditions": {

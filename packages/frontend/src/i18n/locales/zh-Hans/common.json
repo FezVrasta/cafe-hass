@@ -157,5 +157,8 @@
     "arrowDown": "向下箭头",
     "arrowLeft": "向左箭头",
     "arrowRight": "向右箭头"
+  },
+  "stateTrigger": {
+    "useValue": "使用值"
   }
 }

@@ -53,6 +53,13 @@
       "number": "Nombre",
       "boolean": "Booléen",
       "json": "Tableau (JSON)"
+    },
+    "fields": {
+      "entityId": "Entité",
+      "toState": "Vers l'état",
+      "fromState": "De l'état",
+      "toStatePlaceholder": "ex. on, off, home",
+      "fromStatePlaceholder": "ex. off"
     }
   },
   "conditions": {

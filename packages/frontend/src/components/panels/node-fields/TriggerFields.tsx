@@ -15,6 +15,7 @@ import { useNodeErrors } from '@/hooks/useNodeErrors';
 import type { HassEntity } from '@/types/hass';
 import { getNodeDataString } from '@/utils/nodeData';
 import { DeviceTriggerFields } from './DeviceTriggerFields';
+import { StateTriggerFields } from './StateTriggerFields';
 
 interface TriggerFieldsProps {
   node: FlowNode;
@@ -119,6 +120,11 @@ function TriggerDynamicFields({
   // Device triggers use API-driven fields
   if (effectiveTriggerType === 'device' || deviceId) {
     return <DeviceTriggerFields node={node} onChange={onChange} entities={entities} />;
+  }
+
+  // State trigger uses a dedicated component for entity-aware state suggestions
+  if (effectiveTriggerType === 'state') {
+    return <StateTriggerFields node={node} onChange={onChange} entities={entities} />;
   }
 
   // Other trigger types use static field configuration

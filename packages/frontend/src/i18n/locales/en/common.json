@@ -184,5 +184,8 @@
     "arrowDown": "Arrow Down",
     "arrowLeft": "Arrow Left",
     "arrowRight": "Arrow Right"
+  },
+  "stateTrigger": {
+    "useValue": "Use value"
   }
 }

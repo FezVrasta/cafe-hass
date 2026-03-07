@@ -53,6 +53,13 @@
       "number": "Number",
       "boolean": "Boolean",
       "json": "Array (JSON)"
+    },
+    "fields": {
+      "entityId": "Entity",
+      "toState": "To State",
+      "fromState": "From State",
+      "toStatePlaceholder": "e.g., on, off, home",
+      "fromStatePlaceholder": "e.g., off"
     }
   },
   "conditions": {

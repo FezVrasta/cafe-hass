@@ -157,5 +157,8 @@
     "arrowDown": "Flèche vers le bas",
     "arrowLeft": "Flèche vers la gauche",
     "arrowRight": "Flèche vers la droite"
+  },
+  "stateTrigger": {
+    "useValue": "Utiliser la valeur"
   }
 }

@@ -157,5 +157,8 @@
     "arrowDown": "Pfeil nach unten",
     "arrowLeft": "Pfeil nach links",
     "arrowRight": "Pfeil nach rechts"
+  },
+  "stateTrigger": {
+    "useValue": "Wert verwenden"
   }
 }
