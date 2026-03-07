@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { FormField } from '@/components/forms/FormField';
 import { DeviceSelector } from '@/components/ui/DeviceSelector';
 import { DynamicFieldRenderer } from '@/components/ui/DynamicFieldRenderer';
-import { EntitySelector } from '@/components/ui/EntitySelector';
 import {
   Select,
   SelectContent,
@@ -25,13 +24,43 @@ interface DeviceTriggerFieldsProps {
 }
 
 /**
+ * Build the composite value used as the Select option value.
+ * Format: type[::subtype][::entity_id]
+ */
+function buildCompositeValue(trigger: DeviceTrigger): string {
+  const parts = [trigger.type];
+  if (trigger.subtype) parts.push(trigger.subtype);
+  if (trigger.entity_id) parts.push(trigger.entity_id);
+  return parts.join('::');
+}
+
+/**
+ * Get the translated label for a trigger type/subtype using HA device_automation translations.
+ * Falls back to the raw type/subtype strings if no translation is found.
+ */
+function getTriggerLabel(
+  trigger: DeviceTrigger,
+  translations: Record<string, string>
+): string {
+  const typeKey = `component.${trigger.domain}.device_automation.trigger_type.${trigger.type}`;
+  const typeLabel = translations[typeKey] ?? trigger.type;
+
+  if (trigger.subtype) {
+    const subtypeKey = `component.${trigger.domain}.device_automation.trigger_subtype.${trigger.subtype}`;
+    const subtypeLabel = translations[subtypeKey] ?? trigger.subtype;
+    return `${typeLabel}: ${subtypeLabel}`;
+  }
+
+  return typeLabel;
+}
+
+/**
  * Component for device trigger fields with dynamic API-based rendering.
  * Moved from PropertyPanel and updated to use new hooks.
  */
 export function DeviceTriggerFields({ node, onChange, entities }: DeviceTriggerFieldsProps) {
   const { t } = useTranslation(['common', 'nodes', 'errors']);
   const { getDeviceTriggers, getTriggerCapabilities } = useDeviceAutomation();
-  // DeviceSelector handles device registry internally
   const { translations } = useTranslations();
 
   const [availableDeviceTriggers, setAvailableDeviceTriggers] = useState<DeviceTrigger[]>([]);
@@ -42,12 +71,15 @@ export function DeviceTriggerFields({ node, onChange, entities }: DeviceTriggerF
   const selectedTriggerType = getNodeDataString(node, 'type');
   const domain = getNodeDataString(node, 'domain');
   const entityId = getNodeDataString(node, 'entity_id');
-
   const selectedSubtype = getNodeDataString(node, 'subtype');
-  const selectedCompositeValue =
-    selectedTriggerType && selectedSubtype
-      ? `${selectedTriggerType}::${selectedSubtype}`
-      : selectedTriggerType ?? '';
+
+  // Build the composite value that uniquely identifies the selected trigger
+  const selectedCompositeValue = (() => {
+    const parts = [selectedTriggerType].filter(Boolean);
+    if (selectedSubtype) parts.push(selectedSubtype);
+    if (entityId) parts.push(entityId);
+    return parts.join('::');
+  })();
 
   // Fetch triggers when device is selected
   useEffect(() => {
@@ -79,7 +111,11 @@ export function DeviceTriggerFields({ node, onChange, entities }: DeviceTriggerF
 
     // Find the full trigger object from the list - HA API needs the complete trigger
     const trigger = availableDeviceTriggers.find(
-      (t) => t.type === selectedTriggerType && t.domain === domain && (t.subtype ?? '') === (selectedSubtype ?? '')
+      (tr) =>
+        tr.type === selectedTriggerType &&
+        tr.domain === domain &&
+        (tr.subtype ?? '') === (selectedSubtype ?? '') &&
+        (tr.entity_id ?? '') === (entityId ?? '')
     );
 
     if (!trigger) {
@@ -95,7 +131,7 @@ export function DeviceTriggerFields({ node, onChange, entities }: DeviceTriggerF
         console.error(t('errors:api.loadTriggerCapabilitiesFailed'), error);
         setTriggerCapabilities([]);
       });
-  }, [deviceId, selectedTriggerType, selectedSubtype, domain, availableDeviceTriggers, getTriggerCapabilities, t]);
+  }, [deviceId, selectedTriggerType, selectedSubtype, entityId, domain, availableDeviceTriggers, getTriggerCapabilities, t]);
 
   return (
     <>
@@ -114,13 +150,16 @@ export function DeviceTriggerFields({ node, onChange, entities }: DeviceTriggerF
           <Select
             value={selectedCompositeValue}
             onValueChange={(value) => {
-              const [type, subtype] = value.split('::');
-              // Find the selected trigger to get its domain
-              const trigger = availableDeviceTriggers.find((t) => t.type === type && (t.subtype ?? '') === (subtype ?? ''));
+              // Find the trigger by its composite value
+              const trigger = availableDeviceTriggers.find(
+                (tr) => buildCompositeValue(tr) === value
+              );
               if (trigger) {
-                onChange('type', type);
+                onChange('type', trigger.type);
                 onChange('domain', trigger.domain);
-                onChange('subtype', subtype ?? undefined);
+                onChange('subtype', trigger.subtype ?? undefined);
+                // Set entity_id from the trigger — required by HA for device automation triggers
+                onChange('entity_id', trigger.entity_id ?? undefined);
               }
             }}
           >
@@ -128,29 +167,14 @@ export function DeviceTriggerFields({ node, onChange, entities }: DeviceTriggerF
               <SelectValue placeholder={t('placeholders.selectTriggerType')} />
             </SelectTrigger>
             <SelectContent>
-              {Array.from(
-                new Map(
-                  availableDeviceTriggers.map((t) => [
-                    `${t.domain}-${t.type}-${t.subtype ?? ''}`,
-                    t,
-                  ])
-                ).values()
-              ).map((trigger) => {
-                const compositeValue = trigger.subtype
-                  ? `${trigger.type}::${trigger.subtype}`
-                  : trigger.type;
-                const label = trigger.subtype
-                  ? `${trigger.type}: ${trigger.subtype} (${trigger.domain})`
-                  : `${trigger.type} (${trigger.domain})`;
-                return (
-                  <SelectItem
-                    key={`${trigger.domain}-${trigger.type}-${trigger.subtype ?? ''}`}
-                    value={compositeValue}
-                  >
-                    {label}
-                  </SelectItem>
-                );
-              })}
+              {availableDeviceTriggers.map((trigger) => (
+                <SelectItem
+                  key={buildCompositeValue(trigger)}
+                  value={buildCompositeValue(trigger)}
+                >
+                  {getTriggerLabel(trigger, translations)}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </FormField>
@@ -162,24 +186,12 @@ export function DeviceTriggerFields({ node, onChange, entities }: DeviceTriggerF
             <div className="truncate rounded-md border bg-muted px-3 py-2 font-mono text-sm">
               {selectedTriggerType}
               {selectedSubtype && (
-                <span className="text-muted-foreground">{" \u00B7 "}{selectedSubtype}</span>
+                <span className="text-muted-foreground">{' \u00B7 '}{selectedSubtype}</span>
               )}
               {domain && <span className="text-muted-foreground"> {`(${domain})`}</span>}
             </div>
           </FormField>
         )
-      )}
-
-      {/* Entity ID - always required for device triggers when device is selected */}
-      {deviceId && (
-        <FormField label={t('labels.entityId')}>
-          <EntitySelector
-            value={entityId || ''}
-            onChange={(value) => onChange('entity_id', value)}
-            entities={entities}
-            placeholder={t('placeholders.selectEntity')}
-          />
-        </FormField>
       )}
 
       {/* Loading state */}
