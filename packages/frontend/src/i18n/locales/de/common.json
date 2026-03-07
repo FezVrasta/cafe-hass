@@ -122,6 +122,7 @@
     "itemsSelected": "{{count}} Elemente ausgewählt",
     "selectEntities": "Entitäten auswählen...",
     "selectEntity": "Entität auswählen...",
+    "selectZone": "Zone auswählen...",
     "formatHMS": "Format: HH:MM:SS",
     "enterValue": "{{name}} eingeben..."
   },

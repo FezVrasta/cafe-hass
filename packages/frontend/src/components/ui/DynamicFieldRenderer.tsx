@@ -335,6 +335,18 @@ export function DynamicFieldRenderer({
         );
       }
 
+      // Zone picker
+      case 'zone':
+        return (
+          <EntitySelector
+            value={stringValue}
+            onChange={onChange}
+            entities={entities}
+            domainFilter="zone"
+            placeholder={placeholder || t('dynamicField.selectZone')}
+          />
+        );
+
       // Template editor
       case 'template':
         return (

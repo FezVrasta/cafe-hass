@@ -164,6 +164,8 @@ interface EntitySelectorProps {
   entities?: HassEntity[];
   placeholder?: string;
   className?: string;
+  /** Optional domain filter (e.g., 'light', 'zone') */
+  domainFilter?: string | string[];
 }
 
 function getEntityName(entity: HassEntity): string {
@@ -176,11 +178,23 @@ export function EntitySelector({
   entities: entitiesProp,
   placeholder = 'Select entity...',
   className,
+  domainFilter,
 }: EntitySelectorProps) {
   const { entities: contextEntities, getDeviceNameForEntity, getAreaNameForEntity } = useHass();
 
   // Use provided entities or fall back to context entities
-  const entities = entitiesProp ?? contextEntities;
+  const allEntities = entitiesProp ?? contextEntities;
+
+  // Apply domain filter if provided
+  const entities = useMemo(() => {
+    if (!domainFilter) return allEntities;
+
+    const filters = Array.isArray(domainFilter) ? domainFilter : [domainFilter];
+    return allEntities.filter((entity) => {
+      const domain = entity.entity_id.split('.')[0];
+      return filters.includes(domain);
+    });
+  }, [allEntities, domainFilter]);
 
   // Map entities to ComboboxOption with domain info
   const options: OptionWithDomain[] = useMemo(

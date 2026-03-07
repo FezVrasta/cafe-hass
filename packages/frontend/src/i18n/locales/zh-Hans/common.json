@@ -122,7 +122,8 @@
     "itemsSelected": "已选择 {{count}} 项",
     "selectEntities": "选择实体...",
     "selectEntity": "选择实体...",
-    "formatHMS": "格式：时:分:秒",
+    "selectZone": "选择区域...",
+    "formatHMS": "格式: HH:MM:SS",
     "enterValue": "输入 {{name}}..."
   },
   "deviceSelector": {

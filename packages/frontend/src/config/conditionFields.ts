@@ -186,7 +186,7 @@ export const CONDITION_TYPE_FIELDS: Record<ConditionType, FieldConfig[]> = {
     {
       name: 'zone',
       label: 'Zone',
-      type: 'text',
+      type: 'zone',
       required: true,
       placeholder: 'zone.home',
       description: 'Zone entity to check for presence',

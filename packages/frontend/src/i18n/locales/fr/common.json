@@ -121,8 +121,9 @@
     "selectItems": "Sélectionner des éléments...",
     "itemsSelected": "{{count}} éléments sélectionnés",
     "selectEntities": "Sélectionner des entités...",
-    "selectEntity": "Sélectionner une entité...",
-    "formatHMS": "Format : HH:MM:SS",
+    "selectEntity": "Sélectionner l'entité...",
+    "selectZone": "Sélectionner la zone...",
+    "formatHMS": "Format: HH:MM:SS",
     "enterValue": "Entrer {{name}}..."
   },
   "deviceSelector": {

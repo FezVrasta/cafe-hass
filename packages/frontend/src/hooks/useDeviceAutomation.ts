@@ -25,6 +25,7 @@ export type SelectorType =
   | 'entity'
   | 'device'
   | 'area'
+  | 'zone'
   | 'time'
   | 'date'
   | 'datetime'

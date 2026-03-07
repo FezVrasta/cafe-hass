@@ -229,7 +229,7 @@ export const TRIGGER_PLATFORM_FIELDS: Record<TriggerPlatform, FieldConfig[]> = {
     {
       name: 'zone',
       label: 'Zone',
-      type: 'text',
+      type: 'zone',
       required: true,
       placeholder: 'e.g., zone.home',
       description: 'The zone entity to monitor',
