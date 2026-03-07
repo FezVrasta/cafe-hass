@@ -134,19 +134,34 @@ export class NativeStrategy extends BaseStrategy {
           },
         ];
       } else {
-        // Multiple paths from triggers - use parallel
-        const parallelBranches = uniqueFirstActions.map((nodeId) =>
-          this.buildSequenceFromNode(flow, nodeId, new Set())
-        );
-        // Flatten single-action branches to avoid double-nesting (- - service:)
-        const flattenedBranches = parallelBranches
-          .filter((branch) => branch.length > 0)
-          .map((branch) => (branch.length === 1 ? branch[0] : branch));
-        actions = [
-          {
-            parallel: flattenedBranches,
-          },
-        ];
+        // Check if all first-action nodes are `condition: trigger` nodes.
+        // In that case, each branch is an exclusive trigger-id route and should
+        // be emitted as sequential `if:` blocks, not a parallel block.
+        const allAreTriggerConditions = uniqueFirstActions.every((nodeId) => {
+          const node = flow.nodes.find((n) => n.id === nodeId);
+          return node?.type === 'condition' && (node.data as Record<string, unknown>)?.condition === 'trigger';
+        });
+
+        if (allAreTriggerConditions) {
+          // Emit each as a sequential if block
+          actions = uniqueFirstActions.flatMap((nodeId) =>
+            this.buildSequenceFromNode(flow, nodeId, new Set())
+          );
+        } else {
+          // Multiple paths from triggers - use parallel
+          const parallelBranches = uniqueFirstActions.map((nodeId) =>
+            this.buildSequenceFromNode(flow, nodeId, new Set())
+          );
+          // Flatten single-action branches to avoid double-nesting (- - service:)
+          const flattenedBranches = parallelBranches
+            .filter((branch) => branch.length > 0)
+            .map((branch) => (branch.length === 1 ? branch[0] : branch));
+          actions = [
+            {
+              parallel: flattenedBranches,
+            },
+          ];
+        }
       }
     } else {
       actions = [];

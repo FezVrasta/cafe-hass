@@ -378,6 +378,21 @@ function detectDivergentTriggerPaths(g: GraphInstance, flow: FlowGraph): boolean
     return new Set(successors);
   });
 
+  // When each trigger connects exclusively to condition nodes, the conditions
+  // handle routing at runtime (e.g. `condition: trigger` checks). This pattern
+  // is natively expressible in HA with sequential `if` blocks and is NOT
+  // truly divergent from a transpilation standpoint.
+  const allTriggerTargetsAreConditions = triggerNodes.every((trigger) => {
+    const successors = g.successors(trigger.id) || [];
+    return successors.length > 0 && successors.every((succ) => {
+      const node = flow.nodes.find((n) => n.id === succ);
+      return node?.type === 'condition';
+    });
+  });
+  if (allTriggerTargetsAreConditions) {
+    return false;
+  }
+
   // Check if all triggers have the same targets
   const firstTargets = triggerTargets[0];
   for (let i = 1; i < triggerTargets.length; i++) {

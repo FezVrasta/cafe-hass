@@ -187,6 +187,11 @@ interface ParseOptions {
   /** Set of condition node IDs whose FALSE path should connect to next action */
   falsePathConditionIds?: Set<string>;
   /**
+   * Map from trigger node ID → trigger's `id` field.
+   * Used to route trigger-id conditions directly to matching trigger nodes.
+   */
+  triggerNodeMap?: Map<string, string>;
+  /**
    * Inherited enabled state from parent block.
    * When false, all child nodes will be created with enabled: false.
    * When undefined, nodes inherit their own enabled property.
@@ -887,6 +892,15 @@ export class YamlParser {
     const triggerNodes = this.parseTriggers(triggers, warnings, getNextNodeId);
     nodes.push(...triggerNodes);
 
+    // Build a map from trigger node ID → trigger's `id` field (for trigger-id condition routing)
+    const triggerNodeMap = new Map<string, string>();
+    for (let i = 0; i < triggerNodes.length; i++) {
+      const triggerId = (triggers[i] as Record<string, unknown>)?.id;
+      if (typeof triggerId === 'string') {
+        triggerNodeMap.set(triggerNodes[i].id, triggerId);
+      }
+    }
+
     // Parse conditions (if present at top level - support both 'condition' and 'conditions')
     let firstActionNodeIds: string[] = [];
     const conditionData = content.conditions || content.condition;
@@ -949,6 +963,7 @@ export class YamlParser {
       previousNodeIds: firstActionNodeIds,
       getNextNodeId,
       conditionNodeIds,
+      triggerNodeMap,
     });
     nodes.push(...actionResults.nodes);
     edges.push(...actionResults.edges);
@@ -1061,6 +1076,7 @@ export class YamlParser {
       previousNodeIds,
       getNextNodeId,
       conditionNodeIds = new Set(),
+      triggerNodeMap,
       inheritedEnabled,
     } = options;
 
@@ -1308,6 +1324,7 @@ export class YamlParser {
           getNextNodeId,
           conditionNodeIds: localConditionNodeIds,
           falsePathConditionIds,
+          triggerNodeMap,
           inheritedEnabled,
         });
         nodes.push(...ifResult.nodes);
@@ -1325,7 +1342,14 @@ export class YamlParser {
             }
           }
         }
-        currentNodeIds = ifResult.outputNodeIds;
+        // For trigger-id routing: merge unconsumed trigger nodes (those that didn't match
+        // this if block's trigger id) back into currentNodeIds so they are available
+        // as entry points for the next if block.
+        if (ifResult.unconsumedPreviousIds.length > 0) {
+          currentNodeIds = ifResult.unconsumedPreviousIds;
+        } else {
+          currentNodeIds = ifResult.outputNodeIds;
+        }
       } else if (isDeviceAction(action)) {
         // Device action (type + device_id + domain)
         const nodeId = getNextNodeId('action');
@@ -2132,13 +2156,14 @@ export class YamlParser {
       enabled?: unknown;
     },
     options: ParseOptions
-  ): { nodes: FlowNode[]; edges: FlowEdge[]; outputNodeIds: string[]; falsePathOutputIds: string[] } {
+  ): { nodes: FlowNode[]; edges: FlowEdge[]; outputNodeIds: string[]; falsePathOutputIds: string[]; unconsumedPreviousIds: string[] } {
     const {
       warnings,
       previousNodeIds,
       getNextNodeId,
       conditionNodeIds = new Set(),
       falsePathConditionIds: incomingFalsePathIds = new Set(),
+      triggerNodeMap,
       inheritedEnabled,
     } = options;
 
@@ -2229,9 +2254,36 @@ export class YamlParser {
       localConditionIds.add(conditionId);
     }
 
-    // Connect from previous nodes to the first condition
+    // Connect from previous nodes to the first condition.
+    // Special case: if this is a single trigger-id condition (no else), only connect
+    // the trigger(s) whose id matches — this creates independent parallel flows instead
+    // of a single chained sequence when multiple if-trigger blocks exist.
     const firstConditionId = conditionNodes[0].id;
+
+    // Detect trigger-id routing: a single `condition: trigger` with no else.
+    // The `id` field can be a string or an array of strings in HA YAML.
+    const triggerConditionIds: string[] | null = (() => {
+      if (ifAction.else || ifConditions.length !== 1) return null;
+      const cond = ifConditions[0] as Record<string, unknown>;
+      if (cond?.condition !== 'trigger') return null;
+      const rawId = cond?.id;
+      if (typeof rawId === 'string') return [rawId];
+      if (Array.isArray(rawId) && rawId.length > 0 && rawId.every((x) => typeof x === 'string'))
+        return rawId as string[];
+      return null;
+    })();
+
     for (const prevId of previousNodeIds) {
+      // If this is a trigger-id condition and we have trigger routing info,
+      // only connect triggers whose id is listed in this condition's id array.
+      if (triggerConditionIds !== null && triggerNodeMap) {
+        const triggerIdForNode = triggerNodeMap.get(prevId);
+        if (triggerIdForNode !== undefined && !triggerConditionIds.includes(triggerIdForNode)) {
+          // This trigger's id doesn't match — don't connect it here
+          continue;
+        }
+      }
+
       let sourceHandle: string | undefined;
       if (incomingFalsePathIds.has(prevId)) {
         sourceHandle = 'false';
@@ -2311,6 +2363,11 @@ export class YamlParser {
 
       // Track all terminal nodes from else branch
       outputNodeIds.push(...elseResult.terminalNodeIds);
+    } else if (triggerConditionIds !== null) {
+      // Trigger-id routing: this if block is a dedicated branch for one trigger.
+      // There is no sequential false-path continuation — subsequent if blocks are
+      // independent branches, each connected directly from their matching trigger.
+      // Don't add condition nodes to outputs; they are leaf nodes for this branch.
     } else {
       // No else branch: every condition node is an implicit false exit.
       // The first condition's false path skips the entire if block; each subsequent
@@ -2322,12 +2379,23 @@ export class YamlParser {
     }
 
     // If no outputs were added (empty then + else branch), the last condition is the output
-    if (outputNodeIds.length === 0) {
+    if (outputNodeIds.length === 0 && triggerConditionIds === null) {
       outputNodeIds.push(lastConditionId);
       falsePathOutputIds.push(lastConditionId);
     }
 
-    return { nodes, edges, outputNodeIds, falsePathOutputIds };
+    // For trigger-id routing: the trigger nodes that were NOT consumed by this if block
+    // must remain available for subsequent if blocks.
+    const unconsumedPreviousIds =
+      triggerConditionIds !== null && triggerNodeMap
+        ? previousNodeIds.filter((id) => {
+            const triggerId = triggerNodeMap.get(id);
+            // Keep: trigger nodes whose id is not in this condition's id list, OR non-trigger nodes
+            return triggerId === undefined || !triggerConditionIds.includes(triggerId);
+          })
+        : [];
+
+    return { nodes, edges, outputNodeIds, falsePathOutputIds, unconsumedPreviousIds };
   }
 
   /**

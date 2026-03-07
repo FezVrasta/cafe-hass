@@ -251,19 +251,27 @@ mode: single
     const actionNodes = graph.nodes.filter((n) => n.type === 'action');
     expect(actionNodes).toHaveLength(2);
 
-    // The second condition node must have an incoming edge from the first condition node
-    // via the 'false' handle — that's how the second if gets reached when button_a doesn't fire
     const edges = graph.edges;
     const firstCondId = conditionNodes[0].id;
     const secondCondId = conditionNodes[1].id;
 
-    const falseEdge = edges.find(
-      (e) => e.source === firstCondId && e.target === secondCondId && e.sourceHandle === 'false'
+    // With trigger-id routing, the two ifs are INDEPENDENT branches:
+    // trigger_a → condition_1(button_a) → action_a
+    // trigger_b → condition_2(button_b) → action_b
+    // There must be NO edge connecting condition_1 to condition_2
+    const chainEdge = edges.find(
+      (e) => e.source === firstCondId && e.target === secondCondId
     );
-    expect(falseEdge).toBeDefined();
+    expect(chainEdge).toBeUndefined();
+
+    // Each condition connects from its matching trigger only
+    const triggerNodes = graph.nodes.filter((n) => n.type === 'trigger');
+    expect(triggerNodes).toHaveLength(2);
 
     // Roundtrip: transpile back to YAML
     const transpileResult = transpiler.transpile(graph);
+    if (!transpileResult.success) console.log('errors:', transpileResult.errors);
+    console.log('YAML:\n', transpileResult.yaml);
     expect(transpileResult.success).toBe(true);
 
     const yaml = transpileResult.yaml!;
@@ -274,5 +282,90 @@ mode: single
     // Each light should appear exactly once
     expect((yaml.match(/light\.a\b/g) || []).length).toBe(1);
     expect((yaml.match(/light\.b\b/g) || []).length).toBe(1);
+  });
+
+  it('should create independent flows when condition: trigger id is an array (real-world format)', async () => {
+    // HA YAML allows `id: [T_ON]` (array) as well as `id: T_ON` (string).
+    // Both must produce independent parallel branches, not a chained sequence.
+    const inputYaml = `
+alias: BathFlowers_automation
+triggers:
+  - trigger: state
+    entity_id: binary_sensor.flowersinbath
+    from: "off"
+    to: "on"
+    id: T_FlowerBath_to_ON
+  - trigger: state
+    entity_id: binary_sensor.flowersinbath
+    from: "on"
+    to: "off"
+    id: T_FlowerBath_to_OFF
+actions:
+  - alias: Conditionally_Fower_ON
+    if:
+      - condition: trigger
+        id:
+          - T_FlowerBath_to_ON
+    then:
+      - action: switch.turn_on
+        target:
+          entity_id: switch.flower_light
+  - alias: Conditionally_Flower_OFF
+    if:
+      - condition: trigger
+        id:
+          - T_FlowerBath_to_OFF
+    then:
+      - action: switch.turn_off
+        target:
+          entity_id: switch.flower_light
+mode: restart
+`;
+
+    const transpiler = new FlowTranspiler();
+    const parseResult = await transpiler.fromYaml(inputYaml);
+    expect(parseResult.success).toBe(true);
+
+    const graph = parseResult.graph!;
+    const conditionNodes = graph.nodes.filter((n) => n.type === 'condition');
+    expect(conditionNodes).toHaveLength(2);
+
+    const firstCondId = conditionNodes[0].id;
+    const secondCondId = conditionNodes[1].id;
+
+    // No edge between the two conditions — they are independent
+    const chainEdge = graph.edges.find(
+      (e) => e.source === firstCondId && e.target === secondCondId
+    );
+    expect(chainEdge).toBeUndefined();
+
+    // Each trigger connects only to its matching condition
+    const triggerON = graph.nodes.find(
+      (n) => n.type === 'trigger' && (n.data as Record<string, unknown>).id === 'T_FlowerBath_to_ON'
+    );
+    const triggerOFF = graph.nodes.find(
+      (n) => n.type === 'trigger' && (n.data as Record<string, unknown>).id === 'T_FlowerBath_to_OFF'
+    );
+    expect(triggerON).toBeDefined();
+    expect(triggerOFF).toBeDefined();
+
+    // trigger_ON should NOT connect to the OFF condition
+    const wrongEdge = graph.edges.find(
+      (e) => e.source === triggerON!.id && e.target === secondCondId
+    );
+    expect(wrongEdge).toBeUndefined();
+
+    // Roundtrip
+    const transpileResult = transpiler.transpile(graph);
+    expect(transpileResult.success).toBe(true);
+    const yaml = transpileResult.yaml!;
+    // Both conditions should appear in the output
+    expect(yaml).toContain('T_FlowerBath_to_ON');
+    expect(yaml).toContain('T_FlowerBath_to_OFF');
+    expect(yaml).toContain('switch.turn_on');
+    expect(yaml).toContain('switch.turn_off');
+    // Should NOT use state-machine strategy
+    expect(yaml).not.toContain('state_machine');
+    expect(yaml).not.toContain('current_node');
   });
 });
