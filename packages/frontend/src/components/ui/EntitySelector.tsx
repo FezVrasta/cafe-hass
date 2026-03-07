@@ -2,6 +2,7 @@ type OptionWithDomain = ComboboxOption & {
   domainLabel: string;
   domainColor: string;
   deviceLabel?: string;
+  areaLabel?: string;
 };
 
 // Map domain to display name and color
@@ -176,7 +177,7 @@ export function EntitySelector({
   placeholder = 'Select entity...',
   className,
 }: EntitySelectorProps) {
-  const { entities: contextEntities, getDeviceNameForEntity } = useHass();
+  const { entities: contextEntities, getDeviceNameForEntity, getAreaNameForEntity } = useHass();
 
   // Use provided entities or fall back to context entities
   const entities = entitiesProp ?? contextEntities;
@@ -192,9 +193,10 @@ export function EntitySelector({
           domainLabel: domainInfo.label,
           domainColor: domainInfo.color,
           deviceLabel: getDeviceNameForEntity(entity.entity_id) ?? undefined,
+          areaLabel: getAreaNameForEntity(entity.entity_id) ?? undefined,
         };
       }),
-    [entities, getDeviceNameForEntity]
+    [entities, getDeviceNameForEntity, getAreaNameForEntity]
   );
 
   // Handle case where value might be an array
@@ -216,13 +218,13 @@ export function EntitySelector({
         placeholder={placeholder}
         buttonClassName={cn(!normalizedValue && 'text-muted-foreground')}
         disabled={options.length === 0}
-        searchKeys={['label', 'value', 'deviceLabel']} // Search on friendly name, entity ID, and device name
+        searchKeys={['label', 'value', 'deviceLabel', 'areaLabel']} // Search on friendly name, entity ID, device name, and area
         fuzzyOptions={{
           threshold: 0.3, // More strict for entity selection
           minMatchCharLength: 2, // Require at least 2 characters for search
         }}
         renderOption={(option: OptionWithDomain) => (
-          <div className="flex min-w-0 flex-col gap-2">
+          <div className="flex min-w-0 flex-1 flex-col gap-2">
             <span>{option.label}</span>
 
             <div className="flex min-w-0 items-center gap-2">
@@ -231,6 +233,11 @@ export function EntitySelector({
               </span>
               {option.deviceLabel && (
                 <span className="truncate text-muted-foreground text-xs">{option.deviceLabel}</span>
+              )}
+              {option.areaLabel && (
+                <span className="ml-auto shrink-0 text-muted-foreground text-xs">
+                  {option.areaLabel}
+                </span>
               )}
             </div>
           </div>

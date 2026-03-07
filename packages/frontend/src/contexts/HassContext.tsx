@@ -19,6 +19,14 @@ import {
 import type { HassEntity, HassService, HomeAssistant } from '@/types/hass';
 
 /**
+ * Area registry entry from Home Assistant
+ */
+interface AreaRegistryEntry {
+  area_id: string;
+  name: string;
+}
+
+/**
  * Device registry entry from Home Assistant
  */
 interface DeviceRegistryEntry {
@@ -90,6 +98,7 @@ interface HassContextProps {
   getAllServices: () => Array<{ domain: string; service: string; definition: HassService }>;
   getServiceDefinition: (fullServiceName: string) => HassService | null;
   getDeviceNameForEntity: (entityId: string) => string | null;
+  getAreaNameForEntity: (entityId: string) => string | null;
 }
 
 const HassContext = createContext<HassContextProps | undefined>(undefined);
@@ -102,6 +111,7 @@ export const HassProvider: FC<
   );
   const [remoteEntities, setRemoteEntities] = useState<HassEntity[]>([]);
   const [remoteServices, setRemoteServices] = useState<HassServices>({});
+  const [areaRegistry, setAreaRegistry] = useState<Map<string, AreaRegistryEntry>>(new Map());
   const [deviceRegistry, setDeviceRegistry] = useState<Map<string, DeviceRegistryEntry>>(new Map());
   const [entityRegistry, setEntityRegistry] = useState<Map<string, EntityRegistryEntry>>(new Map());
   const [isLoading, setIsLoading] = useState(false);
@@ -120,6 +130,7 @@ export const HassProvider: FC<
     // Reset state when config changes
     setRemoteEntities([]);
     setRemoteServices({});
+    setAreaRegistry(new Map());
     setDeviceRegistry(new Map());
     setEntityRegistry(new Map());
     setConnectionError(null);
@@ -179,6 +190,16 @@ export const HassProvider: FC<
         // Fetch device and entity registries
         const fetchRegistries = async () => {
           try {
+            // Fetch area registry
+            const areas = (await connection.sendMessagePromise({
+              type: 'config/area_registry/list',
+            })) as AreaRegistryEntry[];
+            const areaMap = new Map<string, AreaRegistryEntry>();
+            for (const area of areas) {
+              areaMap.set(area.area_id, area);
+            }
+            setAreaRegistry(areaMap);
+
             // Fetch device registry
             const devices = (await connection.sendMessagePromise({
               type: 'config/device_registry/list',
@@ -235,6 +256,16 @@ export const HassProvider: FC<
 
     const fetchRegistries = async () => {
       try {
+        // Fetch area registry
+        const areas = (await externalHass.connection.sendMessagePromise({
+          type: 'config/area_registry/list',
+        })) as AreaRegistryEntry[];
+        const areaMap = new Map<string, AreaRegistryEntry>();
+        for (const area of areas) {
+          areaMap.set(area.area_id, area);
+        }
+        setAreaRegistry(areaMap);
+
         // Fetch device registry
         const devices = (await externalHass.connection.sendMessagePromise({
           type: 'config/device_registry/list',
@@ -426,6 +457,20 @@ export const HassProvider: FC<
     [entityRegistry, deviceRegistry]
   );
 
+  const getAreaNameForEntity = useCallback(
+    (entityId: string): string | null => {
+      // Check entity registry for direct area assignment
+      const entityEntry = entityRegistry.get(entityId);
+      const areaId =
+        entityEntry?.area_id ??
+        // Fall back to device area if entity has no direct area
+        (entityEntry?.device_id ? deviceRegistry.get(entityEntry.device_id)?.area_id : null);
+      if (!areaId) return null;
+      return areaRegistry.get(areaId)?.name ?? null;
+    },
+    [entityRegistry, deviceRegistry, areaRegistry]
+  );
+
   const value: HassContextProps = {
     hass,
     isRemote: shouldUseRemote,
@@ -439,6 +484,7 @@ export const HassProvider: FC<
     getAllServices,
     getServiceDefinition,
     getDeviceNameForEntity,
+    getAreaNameForEntity,
   };
 
   return <HassContext.Provider value={value}>{children}</HassContext.Provider>;
