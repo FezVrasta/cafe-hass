@@ -9,19 +9,21 @@ The user wants to commit changes. Before creating any git commit, you MUST run a
 
 ## Step 1: Run quality checks
 
-Run all three checks in parallel:
+Run all checks in parallel:
 
 ```bash
-yarn lint:biome
+yarn lint:biome --fix
 yarn typecheck
+yarn format:check --fix
+yarn test
 ```
 
 ## Step 2: Fix all issues
 
 If any check fails:
-- **Lint errors**: Run `yarn biome check --write` to auto-fix, then manually fix remaining issues
+- **Lint errors**: Run `yarn lint:biome --fix` to auto-fix, then manually fix remaining issues
 - **Type errors**: Fix TypeScript errors in the affected files
-- **Formatting**: Run `yarn biome format --write` to auto-format
+- **Formatting**: Run `yarn format` (i.e. `yarn format:check --fix`) to auto-format all files
 
 Re-run the failing checks after fixing until they all pass. Do NOT proceed to commit until every check passes with zero errors.
 
