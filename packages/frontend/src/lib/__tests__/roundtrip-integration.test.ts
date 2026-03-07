@@ -175,7 +175,8 @@ describe('Roundtrip Import/Export Tests', () => {
                 actionObj.sequence ||
                 actionObj.stop ||
                 actionObj.event ||
-                actionObj.set_conversation_response; // Conversation response
+                actionObj.set_conversation_response || // Conversation response
+                actionObj.device_id; // Device automation actions
 
               if (!hasValidActionType) {
                 console.error(`Invalid action at index ${actionIndex}:`, action);
