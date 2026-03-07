@@ -10,6 +10,7 @@ declare const window: Window & {
   hass?: HomeAssistant;
 };
 
+
 class CafePanelWrapper extends HTMLElement {
   private _messageHandler?: (event: MessageEvent) => void;
   private iframe: HTMLIFrameElement | null = null;
@@ -22,8 +23,9 @@ class CafePanelWrapper extends HTMLElement {
     window.hass = value;
 
     // Notify the iframe of the update if it has registered a listener
-    if (this.iframe?.contentWindow && (this.iframe.contentWindow as any).setHass) {
-      (this.iframe.contentWindow as any).setHass(value);
+    const iframeWindow = this.iframe?.contentWindow as (Window & typeof globalThis) | null;
+    if (iframeWindow?.setHass) {
+      iframeWindow.setHass(value);
     }
   }
 

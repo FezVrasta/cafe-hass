@@ -1111,6 +1111,7 @@ export class YamlParser {
       }
     };
 
+    // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: large dispatch switch, refactoring deferred
     actions.forEach((action, index) => {
       if (!action || typeof action !== 'object') {
         // Unknown action type - create unknown node

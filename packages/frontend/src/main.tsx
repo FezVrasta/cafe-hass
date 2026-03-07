@@ -75,7 +75,7 @@ function renderApp() {
     };
 
     // Expose setHass to the parent window (panel-wrapper.ts)
-    (window as any).setHass = (newHass: HomeAssistant) => {
+    window.setHass = (newHass: HomeAssistant | undefined) => {
       render(newHass);
     };
 
