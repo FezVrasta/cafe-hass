@@ -259,9 +259,7 @@ mode: single
     // trigger_a → condition_1(button_a) → action_a
     // trigger_b → condition_2(button_b) → action_b
     // There must be NO edge connecting condition_1 to condition_2
-    const chainEdge = edges.find(
-      (e) => e.source === firstCondId && e.target === secondCondId
-    );
+    const chainEdge = edges.find((e) => e.source === firstCondId && e.target === secondCondId);
     expect(chainEdge).toBeUndefined();
 
     // Each condition connects from its matching trigger only
@@ -344,7 +342,8 @@ mode: restart
       (n) => n.type === 'trigger' && (n.data as Record<string, unknown>).id === 'T_FlowerBath_to_ON'
     );
     const triggerOFF = graph.nodes.find(
-      (n) => n.type === 'trigger' && (n.data as Record<string, unknown>).id === 'T_FlowerBath_to_OFF'
+      (n) =>
+        n.type === 'trigger' && (n.data as Record<string, unknown>).id === 'T_FlowerBath_to_OFF'
     );
     expect(triggerON).toBeDefined();
     expect(triggerOFF).toBeDefined();

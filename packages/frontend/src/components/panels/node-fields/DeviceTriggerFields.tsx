@@ -38,10 +38,7 @@ function buildCompositeValue(trigger: DeviceTrigger): string {
  * Get the translated label for a trigger type/subtype using HA device_automation translations.
  * Falls back to the raw type/subtype strings if no translation is found.
  */
-function getTriggerLabel(
-  trigger: DeviceTrigger,
-  translations: Record<string, string>
-): string {
+function getTriggerLabel(trigger: DeviceTrigger, translations: Record<string, string>): string {
   const typeKey = `component.${trigger.domain}.device_automation.trigger_type.${trigger.type}`;
   const typeLabel = translations[typeKey] ?? trigger.type;
 
@@ -131,7 +128,16 @@ export function DeviceTriggerFields({ node, onChange, entities }: DeviceTriggerF
         console.error(t('errors:api.loadTriggerCapabilitiesFailed'), error);
         setTriggerCapabilities([]);
       });
-  }, [deviceId, selectedTriggerType, selectedSubtype, entityId, domain, availableDeviceTriggers, getTriggerCapabilities, t]);
+  }, [
+    deviceId,
+    selectedTriggerType,
+    selectedSubtype,
+    entityId,
+    domain,
+    availableDeviceTriggers,
+    getTriggerCapabilities,
+    t,
+  ]);
 
   return (
     <>
@@ -168,10 +174,7 @@ export function DeviceTriggerFields({ node, onChange, entities }: DeviceTriggerF
             </SelectTrigger>
             <SelectContent>
               {availableDeviceTriggers.map((trigger) => (
-                <SelectItem
-                  key={buildCompositeValue(trigger)}
-                  value={buildCompositeValue(trigger)}
-                >
+                <SelectItem key={buildCompositeValue(trigger)} value={buildCompositeValue(trigger)}>
                   {getTriggerLabel(trigger, translations)}
                 </SelectItem>
               ))}
@@ -186,7 +189,10 @@ export function DeviceTriggerFields({ node, onChange, entities }: DeviceTriggerF
             <div className="truncate rounded-md border bg-muted px-3 py-2 font-mono text-sm">
               {selectedTriggerType}
               {selectedSubtype && (
-                <span className="text-muted-foreground">{' \u00B7 '}{selectedSubtype}</span>
+                <span className="text-muted-foreground">
+                  {' \u00B7 '}
+                  {selectedSubtype}
+                </span>
               )}
               {domain && <span className="text-muted-foreground"> {`(${domain})`}</span>}
             </div>

@@ -359,7 +359,12 @@ export function useAutomationExplorer({
             continue;
           }
 
-          const inferred = inferFromConfig(config as Record<string, unknown>, entityToAreaId, zoneById, zoneByName);
+          const inferred = inferFromConfig(
+            config as Record<string, unknown>,
+            entityToAreaId,
+            zoneById,
+            zoneByName
+          );
           const cacheKey = `${item.entity_id}:${lastUpdatedByEntityId.get(item.entity_id) ?? ''}`;
           await setInferenceCache(cacheKey, inferred);
           nextInference[item.entity_id] = inferred;
@@ -416,7 +421,9 @@ export function useAutomationExplorer({
       .map((zone) => ({
         id: zone.entity_id,
         label: zone.name,
-        automations: explorerItems.filter((item) => item.inferredZoneEntityIds.includes(zone.entity_id)),
+        automations: explorerItems.filter((item) =>
+          item.inferredZoneEntityIds.includes(zone.entity_id)
+        ),
       }))
       .filter((section) => section.automations.length > 0);
   }, [zones, explorerItems]);
@@ -433,4 +440,3 @@ export function useAutomationExplorer({
     unassigned,
   };
 }
-

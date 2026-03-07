@@ -1,10 +1,6 @@
 import Fuse from 'fuse.js';
 import { useEffect, useMemo, useState } from 'react';
-import type {
-  AreaRegistryEntry,
-  AutomationCatalogItem,
-  EntityRegistryEntry,
-} from '@/lib/ha-api';
+import type { AreaRegistryEntry, AutomationCatalogItem, EntityRegistryEntry } from '@/lib/ha-api';
 import { getHomeAssistantAPI } from '@/lib/ha-api';
 import type { HassEntity, HomeAssistant } from '@/types/hass';
 
@@ -62,8 +58,11 @@ export function mapAutomationEntityToCatalogItem(
     friendly_name: friendlyName,
     enabled: entity.state === 'on',
     last_triggered:
-      typeof entity.attributes.last_triggered === 'string' ? entity.attributes.last_triggered : undefined,
-    description: typeof entity.attributes.description === 'string' ? entity.attributes.description : '',
+      typeof entity.attributes.last_triggered === 'string'
+        ? entity.attributes.last_triggered
+        : undefined,
+    description:
+      typeof entity.attributes.description === 'string' ? entity.attributes.description : '',
     mode: typeof entity.attributes.mode === 'string' ? entity.attributes.mode : undefined,
     area_id: areaId,
     tags: normalizeAutomationTags(entity.attributes.tags),
@@ -150,9 +149,7 @@ export function groupAutomationCatalogByArea(
   const groups: Record<string, AutomationCatalogItem[]> = {};
 
   for (const item of items) {
-    const areaName = item.area_id
-      ? areaIdToName[item.area_id] || labels.otherArea
-      : labels.noArea;
+    const areaName = item.area_id ? areaIdToName[item.area_id] || labels.otherArea : labels.noArea;
 
     if (!groups[areaName]) {
       groups[areaName] = [];
@@ -185,7 +182,10 @@ export function useAutomationCatalog({
 
     (async () => {
       try {
-        const [areasResult, entitiesResult] = await Promise.all([api.getAreas(), api.getEntities()]);
+        const [areasResult, entitiesResult] = await Promise.all([
+          api.getAreas(),
+          api.getEntities(),
+        ]);
         if (!cancelled) {
           setAreas(Array.isArray(areasResult) ? (areasResult as AreaRegistryEntry[]) : []);
           setEntityRegistry(
@@ -253,4 +253,3 @@ export function useAutomationCatalog({
     catalogByArea,
   };
 }
-

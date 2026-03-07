@@ -10,7 +10,6 @@ declare const window: Window & {
   hass?: HomeAssistant;
 };
 
-
 class CafePanelWrapper extends HTMLElement {
   private _messageHandler?: (event: MessageEvent) => void;
   private iframe: HTMLIFrameElement | null = null;

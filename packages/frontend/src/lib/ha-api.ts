@@ -638,14 +638,19 @@ export class HomeAssistantAPI {
                 ? entity.attributes.friendly_name
                 : zoneId,
             latitude:
-              typeof entity.attributes.latitude === 'number' ? entity.attributes.latitude : undefined,
+              typeof entity.attributes.latitude === 'number'
+                ? entity.attributes.latitude
+                : undefined,
             longitude:
               typeof entity.attributes.longitude === 'number'
                 ? entity.attributes.longitude
                 : undefined,
-            radius: typeof entity.attributes.radius === 'number' ? entity.attributes.radius : undefined,
+            radius:
+              typeof entity.attributes.radius === 'number' ? entity.attributes.radius : undefined,
             passive:
-              typeof entity.attributes.passive === 'boolean' ? entity.attributes.passive : undefined,
+              typeof entity.attributes.passive === 'boolean'
+                ? entity.attributes.passive
+                : undefined,
           };
         });
     } catch (error) {

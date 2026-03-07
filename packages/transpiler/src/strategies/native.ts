@@ -139,7 +139,10 @@ export class NativeStrategy extends BaseStrategy {
         // be emitted as sequential `if:` blocks, not a parallel block.
         const allAreTriggerConditions = uniqueFirstActions.every((nodeId) => {
           const node = flow.nodes.find((n) => n.id === nodeId);
-          return node?.type === 'condition' && (node.data as Record<string, unknown>)?.condition === 'trigger';
+          return (
+            node?.type === 'condition' &&
+            (node.data as Record<string, unknown>)?.condition === 'trigger'
+          );
         });
 
         if (allAreTriggerConditions) {

@@ -2157,7 +2157,13 @@ export class YamlParser {
       enabled?: unknown;
     },
     options: ParseOptions
-  ): { nodes: FlowNode[]; edges: FlowEdge[]; outputNodeIds: string[]; falsePathOutputIds: string[]; unconsumedPreviousIds: string[] } {
+  ): {
+    nodes: FlowNode[];
+    edges: FlowEdge[];
+    outputNodeIds: string[];
+    falsePathOutputIds: string[];
+    unconsumedPreviousIds: string[];
+  } {
     const {
       warnings,
       previousNodeIds,

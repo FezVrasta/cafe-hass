@@ -395,7 +395,11 @@ export function AutomationImportDialog({ isOpen, onClose }: AutomationImportDial
                     <Checkbox
                       checked={allVisibleSelected}
                       onCheckedChange={toggleSelectAllVisible}
-                      title={allVisibleSelected ? t('dialogs:import.unselectAll') : t('dialogs:import.selectAll')}
+                      title={
+                        allVisibleSelected
+                          ? t('dialogs:import.unselectAll')
+                          : t('dialogs:import.selectAll')
+                      }
                     />
                   </div>
                   <button
@@ -435,7 +439,10 @@ export function AutomationImportDialog({ isOpen, onClose }: AutomationImportDial
                   }
 
                   const areaHeader = (
-                    <div key={areaName} className="sticky top-[32px] z-10 -mt-1 flex border-b bg-accent">
+                    <div
+                      key={areaName}
+                      className="sticky top-[32px] z-10 -mt-1 flex border-b bg-accent"
+                    >
                       <div className="flex-1 px-3 py-2 font-bold text-accent-foreground text-xs">
                         {areaName}
                       </div>
@@ -454,11 +461,15 @@ export function AutomationImportDialog({ isOpen, onClose }: AutomationImportDial
                           <Checkbox
                             checked={isSelected}
                             onCheckedChange={() => toggleSelection(automation.entity_id)}
-                            title={isSelected ? t('dialogs:import.unselect') : t('dialogs:import.select')}
+                            title={
+                              isSelected ? t('dialogs:import.unselect') : t('dialogs:import.select')
+                            }
                           />
                         </div>
                         <div className="flex-1 px-3 py-2 align-top">
-                          <div className="max-w-[180px] font-medium">{automation.friendly_name}</div>
+                          <div className="max-w-[180px] font-medium">
+                            {automation.friendly_name}
+                          </div>
                           {automation.description && (
                             <div className="mt-1 max-w-[180px] truncate text-muted-foreground text-xs">
                               {automation.description}
@@ -467,7 +478,11 @@ export function AutomationImportDialog({ isOpen, onClose }: AutomationImportDial
                           {automation.tags.length > 0 && (
                             <div className="mt-1 flex flex-wrap gap-1">
                               {automation.tags.map((tag) => (
-                                <Badge key={`${automation.entity_id}-${tag}`} variant="secondary" className="text-xs">
+                                <Badge
+                                  key={`${automation.entity_id}-${tag}`}
+                                  variant="secondary"
+                                  className="text-xs"
+                                >
                                   {tag}
                                 </Badge>
                               ))}
@@ -520,7 +535,9 @@ export function AutomationImportDialog({ isOpen, onClose }: AutomationImportDial
                           <Button
                             size="icon"
                             variant="ghost"
-                            onClick={() => confirmAction(() => void handleImportAutomation(automation))}
+                            onClick={() =>
+                              confirmAction(() => void handleImportAutomation(automation))
+                            }
                             title={t('dialogs:import.importAutomation')}
                           >
                             <Download className="h-4 w-4" />
@@ -530,7 +547,12 @@ export function AutomationImportDialog({ isOpen, onClose }: AutomationImportDial
                     );
                   });
 
-                  return [<React.Fragment key={areaName}>{areaHeader}{rows}</React.Fragment>];
+                  return [
+                    <React.Fragment key={areaName}>
+                      {areaHeader}
+                      {rows}
+                    </React.Fragment>,
+                  ];
                 })}
 
                 {!hasVisibleResults && (

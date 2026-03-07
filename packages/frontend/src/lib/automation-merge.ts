@@ -93,10 +93,14 @@ export function mergeAutomationGraphs(sources: MergeAutomationSource[]): FlowGra
   const mergedNodes: FlowNode[] = [];
   const mergedEdges: FlowEdge[] = [];
   const workspaceSources: FlowWorkspace['sources'] = [];
-  const prefixedVariableSources: Array<{ prefix: string; variables?: Record<string, unknown> }> = [];
+  const prefixedVariableSources: Array<{ prefix: string; variables?: Record<string, unknown> }> =
+    [];
 
   sources.forEach((source, index) => {
-    const prefix = sanitizeSourcePrefix(source.alias || source.automationId || source.entityId, index);
+    const prefix = sanitizeSourcePrefix(
+      source.alias || source.automationId || source.entityId,
+      index
+    );
     const bounds = boundsPerSource[index];
     const col = index % columns;
     const row = Math.floor(index / columns);
@@ -168,4 +172,3 @@ export function mergeAutomationGraphs(sources: MergeAutomationSource[]): FlowGra
     userVariables: mergeUserVariables(prefixedVariableSources),
   };
 }
-

@@ -89,4 +89,3 @@ describe('HomeAssistantAPI catalog helpers', () => {
     });
   });
 });
-

@@ -384,10 +384,13 @@ function detectDivergentTriggerPaths(g: GraphInstance, flow: FlowGraph): boolean
   // truly divergent from a transpilation standpoint.
   const allTriggerTargetsAreConditions = triggerNodes.every((trigger) => {
     const successors = g.successors(trigger.id) || [];
-    return successors.length > 0 && successors.every((succ) => {
-      const node = flow.nodes.find((n) => n.id === succ);
-      return node?.type === 'condition';
-    });
+    return (
+      successors.length > 0 &&
+      successors.every((succ) => {
+        const node = flow.nodes.find((n) => n.id === succ);
+        return node?.type === 'condition';
+      })
+    );
   });
   if (allTriggerTargetsAreConditions) {
     return false;
