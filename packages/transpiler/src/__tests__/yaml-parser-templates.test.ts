@@ -2,9 +2,12 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import type { ConditionNode } from '@cafe/shared';
+import { FlowTranspiler } from '../FlowTranspiler';
 import { yamlParser } from '../parser/YamlParser';
 
 describe('YamlParser', () => {
+  const transpiler = new FlowTranspiler();
+
   it('parses trigger and condition with entity_id as array', async () => {
     const yaml = `
   alias: Array Entity Test
@@ -262,5 +265,33 @@ action:
     const secondTrigger = waitData.wait_for_trigger[1];
     expect(secondTrigger.trigger).toBe('event');
     expect(secondTrigger.event_type).toBe('my_custom_event');
+  });
+
+  it('normalizes templated structured delay fields into a string delay', async () => {
+    const yaml = `
+alias: Templated Delay Test
+triggers:
+  - trigger: state
+    entity_id: input_boolean.start_backup
+    to: 'on'
+actions:
+  - alias: Wait for the backup
+    delay:
+      minutes: "{{ input_backup_timeout | int(60) }}"
+`;
+
+    const result = await yamlParser.parse(yaml);
+    expect(result.success).toBe(true);
+    expect(result.graph).toBeDefined();
+
+    const delayNode = result.graph?.nodes.find((node) => node.type === 'delay');
+    expect(delayNode).toBeDefined();
+    expect(typeof delayNode?.data.delay).toBe('string');
+    expect(delayNode?.data.delay).toContain("{{ '%02d:%02d:%02d' | format(");
+    expect(delayNode?.data.delay).toContain('input_backup_timeout | int(60)');
+
+    const roundTrippedYaml = transpiler.toYaml(result.graph!);
+    expect(roundTrippedYaml).toContain("delay: \"{{ '%02d:%02d:%02d'");
+    expect(roundTrippedYaml).toContain('input_backup_timeout | int(60)');
   });
 });
