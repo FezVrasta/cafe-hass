@@ -529,6 +529,7 @@ export class YamlParser {
         data: Record<string, unknown>;
         trueTarget: string | null;
         falseTarget: string | null;
+        parallelItems?: unknown[];
       }
     >();
 
@@ -565,6 +566,20 @@ export class YamlParser {
           }
         }
       }
+    }
+
+    // Resolve __parallel_trigger_* synthetic entries.
+    // The transpiler generates these for triggers with multiple targets.
+    // Expand them back into direct trigger→target edges instead of phantom nodes.
+    const parallelTriggerTargets = new Map<string, string[]>();
+    for (const [nodeId, info] of nodeInfoMap) {
+      if (!/^__parallel_trigger_\d+$/.test(nodeId)) continue;
+
+      const targetIds = this.extractParallelTargetIds(info.parallelItems, nodeInfoMap);
+      if (targetIds.length > 0) {
+        parallelTriggerTargets.set(nodeId, targetIds);
+      }
+      nodeInfoMap.delete(nodeId);
     }
 
     // In state-machine strategy, action/condition/delay/wait node IDs are extracted
@@ -648,7 +663,15 @@ export class YamlParser {
         for (let i = 0; i < triggerNodes.length; i++) {
           const targetNodeId = triggerRouting.get(i);
           if (targetNodeId) {
-            edges.push(this.createEdge(triggerNodes[i].id, targetNodeId));
+            // Expand synthetic parallel trigger entries into direct edges
+            const expandedTargets = parallelTriggerTargets.get(targetNodeId);
+            if (expandedTargets) {
+              for (const actualTarget of expandedTargets) {
+                edges.push(this.createEdge(triggerNodes[i].id, actualTarget));
+              }
+            } else {
+              edges.push(this.createEdge(triggerNodes[i].id, targetNodeId));
+            }
           }
         }
       } else {
@@ -722,6 +745,59 @@ export class YamlParser {
   }
 
   /**
+   * Extract target node IDs from a synthetic __parallel_trigger_* block's parallel items.
+   * Non-action nodes use system_log.write with "Node: <id>" messages.
+   * Action nodes are matched against nodeInfoMap by comparing action properties.
+   */
+  private extractParallelTargetIds(
+    parallelItems: unknown[] | undefined,
+    nodeInfoMap: Map<string, { nodeType: string; data: Record<string, unknown> }>
+  ): string[] {
+    if (!parallelItems) return [];
+
+    const targetIds: string[] = [];
+    const matchedNodeIds = new Set<string>();
+
+    for (const item of parallelItems) {
+      const pItem = item as Record<string, unknown>;
+      const service = (pItem.service || pItem.action) as string | undefined;
+
+      // Non-action nodes: { service: 'system_log.write', data: { message: 'Node: <id>' } }
+      if (service === 'system_log.write') {
+        const data = pItem.data as Record<string, unknown> | undefined;
+        const message = data?.message as string | undefined;
+        if (message) {
+          const nodeMatch = message.match(/^Node:\s*(.+)$/);
+          if (nodeMatch) {
+            targetIds.push(nodeMatch[1]);
+            continue;
+          }
+        }
+      }
+
+      // Action nodes: match by comparing action properties against nodeInfoMap
+      if (service) {
+        for (const [candidateId, info] of nodeInfoMap) {
+          if (matchedNodeIds.has(candidateId)) continue;
+          if (info.nodeType !== 'action') continue;
+
+          const cService = info.data.service as string | undefined;
+          if (service !== cService) continue;
+          if (pItem.alias !== info.data.alias) continue;
+          if (JSON.stringify(pItem.target) !== JSON.stringify(info.data.target)) continue;
+          if (JSON.stringify(pItem.data) !== JSON.stringify(info.data.data)) continue;
+
+          targetIds.push(candidateId);
+          matchedNodeIds.add(candidateId);
+          break;
+        }
+      }
+    }
+
+    return targetIds;
+  }
+
+  /**
    * Parse a single choose block from state-machine format
    */
   private parseStateMachineChooseBlock(chooseBlock: Record<string, unknown>): {
@@ -730,6 +806,7 @@ export class YamlParser {
     data: Record<string, unknown>;
     trueTarget: string | null;
     falseTarget: string | null;
+    parallelItems?: unknown[];
   } | null {
     const conditions = chooseBlock.conditions;
     if (!Array.isArray(conditions) || conditions.length === 0) {
@@ -755,6 +832,7 @@ export class YamlParser {
     const data: Record<string, unknown> = {};
     let trueTarget: string | null = null;
     let falseTarget: string | null = null;
+    let parallelItems: unknown[] | undefined;
 
     for (const item of sequence) {
       const seqItem = item as Record<string, unknown>;
@@ -804,6 +882,10 @@ export class YamlParser {
         }
         if (seqItem.alias) data.alias = seqItem.alias;
       }
+      // Check for parallel block (synthetic __parallel_trigger_* entries)
+      else if (Array.isArray(seqItem.parallel)) {
+        parallelItems = seqItem.parallel;
+      }
       // Check for service call action
       else if (seqItem.service || seqItem.action) {
         nodeType = 'action';
@@ -814,7 +896,7 @@ export class YamlParser {
       }
     }
 
-    return { nodeId, nodeType, data, trueTarget, falseTarget };
+    return { nodeId, nodeType, data, trueTarget, falseTarget, parallelItems };
   }
 
   /**
