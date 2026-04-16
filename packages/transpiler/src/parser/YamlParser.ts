@@ -954,14 +954,45 @@ export class YamlParser {
     const nodes: FlowNode[] = [];
     const edges: FlowEdge[] = [];
     const conditionNodeIds = new Set<string>();
-    let nodeIdIndex = 0;
+
+    // Group metadata IDs by node type for type-aware assignment.
+    // Without type-aware grouping, depth-first parsing of parallel branches
+    // would assign IDs in the wrong order (e.g., an action gets a condition's ID).
+    const knownNodeTypes = ['set_variables', 'trigger', 'condition', 'action', 'delay', 'wait'];
+    const metadataIdsByType = new Map<string, string[]>();
+    const usedMetadataIds = new Set<string>();
+    for (const id of metadataNodeIds) {
+      const matchedType = knownNodeTypes.find((t) => id.startsWith(`${t}_`));
+      if (matchedType) {
+        if (!metadataIdsByType.has(matchedType)) metadataIdsByType.set(matchedType, []);
+        metadataIdsByType.get(matchedType)!.push(id);
+      }
+    }
+    const metadataTypeIndexes = new Map<string, number>();
+    let sequentialFallbackIndex = 0;
+    let nodeIdCounter = metadataNodeIds.length;
 
     // Helper to get next node ID (from metadata if available, otherwise generate)
     const getNextNodeId = (type: string): string => {
-      if (nodeIdIndex < metadataNodeIds.length) {
-        return metadataNodeIds[nodeIdIndex++];
+      // First: try type-matched metadata ID
+      const ids = metadataIdsByType.get(type);
+      const idx = metadataTypeIndexes.get(type) ?? 0;
+      if (ids && idx < ids.length) {
+        const id = ids[idx];
+        metadataTypeIndexes.set(type, idx + 1);
+        usedMetadataIds.add(id);
+        return id;
       }
-      return generateNodeId(type, nodeIdIndex++);
+      // Second: fallback to next unused metadata ID (handles non-standard ID formats)
+      while (sequentialFallbackIndex < metadataNodeIds.length) {
+        const id = metadataNodeIds[sequentialFallbackIndex++];
+        if (!usedMetadataIds.has(id)) {
+          usedMetadataIds.add(id);
+          return id;
+        }
+      }
+      // Third: generate a new ID
+      return generateNodeId(type, nodeIdCounter++);
     };
 
     // Parse triggers (support both 'trigger' and 'triggers')
