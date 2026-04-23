@@ -20,6 +20,9 @@
 > "THIS Home Assistant Automation Integration Is Absolutely INCREDIBLE!"
 > — **Byte of Geek** [![Watch the review](https://img.shields.io/badge/YouTube-Watch%20Review-red?logo=youtube)](https://www.youtube.com/watch?v=9PVBo0CtHz0)
 
+> "10 Home Assistant add-ons to make it WAY Better!"
+> — **Smart Home Solver** [![Watch the review](https://img.shields.io/badge/YouTube-Watch%20Review-red?logo=youtube)](https://youtu.be/l_gizeju8D4?t=127)
+
 ---
 
 ## 🧐 Why C.A.F.E.?
