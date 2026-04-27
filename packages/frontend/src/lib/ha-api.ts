@@ -361,8 +361,9 @@ export class HomeAssistantAPI {
         }
       }
 
-      // Try numeric ID with REST API (for automations created via UI)
-      if (!automationId.startsWith('automation.') && !Number.isNaN(Number(automationId))) {
+      // REST API works for any automation with an `id:` field — both numeric
+      // (UI-created) and string IDs (YAML-defined automations in automations.yaml).
+      if (!automationId.startsWith('automation.')) {
         try {
           const config = await this.fetchRestAPI(`config/automation/config/${automationId}`);
           if (config) {
@@ -410,14 +411,22 @@ export class HomeAssistantAPI {
   }
 
   /**
-   * Get automation configuration with multiple fallback methods
+   * Get automation configuration with multiple fallback methods.
+   * Falls back to extracting the config from the most recent trace when
+   * the primary lookup returns null (e.g. when neither WebSocket nor REST
+   * can serve the config).
    */
   async getAutomationConfigWithFallback(
     automationId: string,
     _alias?: string
   ): Promise<AutomationConfig | null> {
     try {
-      return await this.getAutomationConfig(automationId);
+      const primary = await this.getAutomationConfig(automationId);
+      if (primary) {
+        return primary;
+      }
+      const fromTrace = await this.getAutomationConfigFromTrace(automationId);
+      return (fromTrace as AutomationConfig | null) ?? null;
     } catch (error) {
       console.error('C.A.F.E.: Failed to get automation config with fallback:', error);
       return null;
