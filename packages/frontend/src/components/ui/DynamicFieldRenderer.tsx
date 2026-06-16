@@ -188,7 +188,7 @@ export function DynamicFieldRenderer({
           <Input
             type="number"
             value={numberValue ?? ''}
-            onChange={(e) => onChange(e.target.value ? Number(e.target.value) : null)}
+            onChange={(e) => onChange(e.target.value ? Number(e.target.value) : undefined)}
             placeholder={placeholder}
             required={required}
           />

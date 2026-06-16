@@ -732,8 +732,8 @@ export class StateMachineStrategy extends BaseStrategy {
     // Copy relevant fields based on condition type
     if (data.entity_id) condition.entity_id = data.entity_id;
     if (data.state !== undefined) condition.state = data.state;
-    if (data.above !== undefined) condition.above = data.above;
-    if (data.below !== undefined) condition.below = data.below;
+    if (data.above != null && data.above !== '') condition.above = data.above;
+    if (data.below != null && data.below !== '') condition.below = data.below;
     if (data.attribute) condition.attribute = data.attribute;
     if (data.value_template) condition.value_template = data.value_template;
     if (data.after) condition.after = data.after;
@@ -1045,10 +1045,10 @@ export class StateMachineStrategy extends BaseStrategy {
         ? `state_attr('${data.entity_id}', '${data.attribute}') | float`
         : `states('${data.entity_id}') | float`;
 
-    if (data.above !== undefined) {
+    if (data.above != null && data.above !== '') {
       parts.push(`${valueExpr} > ${data.above}`);
     }
-    if (data.below !== undefined) {
+    if (data.below != null && data.below !== '') {
       parts.push(`${valueExpr} < ${data.below}`);
     }
 

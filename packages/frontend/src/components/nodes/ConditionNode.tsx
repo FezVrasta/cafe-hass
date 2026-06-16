@@ -94,13 +94,13 @@ export const ConditionNode = memo(function ConditionNode({
             {data.state}
           </div>
         )}
-        {data.above !== undefined && (
+        {data.above != null && (
           <div className="opacity-75">
             {'> '}
             {data.above}
           </div>
         )}
-        {data.below !== undefined && (
+        {data.below != null && (
           <div className="opacity-75">
             {'< '}
             {data.below}
