@@ -142,6 +142,19 @@ function isEventAction(action: unknown): action is Record<string, unknown> {
     typeof (action as Record<string, unknown>).event === 'string'
   );
 }
+
+/**
+ * Information about a node parsed from a state-machine choose block or inline parallel branch
+ */
+interface StateMachineNodeInfo {
+  nodeId: string;
+  nodeType: 'action' | 'condition' | 'delay' | 'wait';
+  data: Record<string, unknown>;
+  trueTarget: string | null;
+  falseTarget: string | null;
+  parallelItems?: unknown[];
+}
+
 /**
  * Result of parsing YAML
  */
@@ -521,16 +534,7 @@ export class YamlParser {
     }
 
     let entryNodeId: string | null = null;
-    const nodeInfoMap = new Map<
-      string,
-      {
-        nodeId: string;
-        nodeType: 'action' | 'condition' | 'delay' | 'wait';
-        data: Record<string, unknown>;
-        trueTarget: string | null;
-        falseTarget: string | null;
-      }
-    >();
+    const nodeInfoMap = new Map<string, StateMachineNodeInfo>();
 
     for (const action of actions) {
       const actionObj = action as Record<string, unknown>;
@@ -565,6 +569,20 @@ export class YamlParser {
           }
         }
       }
+    }
+
+    // Resolve __parallel_trigger_* synthetic entries.
+    // The transpiler generates these for triggers with multiple targets.
+    // Expand them back into direct trigger→target edges instead of phantom nodes.
+    const parallelTriggerTargets = new Map<string, string[]>();
+    for (const [nodeId, info] of nodeInfoMap) {
+      if (!/^__parallel_trigger_\d+$/.test(nodeId)) continue;
+
+      const targetIds = this.parseInlineParallelBranches(info.parallelItems ?? [], nodeInfoMap);
+      if (targetIds.length > 0) {
+        parallelTriggerTargets.set(nodeId, targetIds);
+      }
+      nodeInfoMap.delete(nodeId);
     }
 
     // In state-machine strategy, action/condition/delay/wait node IDs are extracted
@@ -648,7 +666,15 @@ export class YamlParser {
         for (let i = 0; i < triggerNodes.length; i++) {
           const targetNodeId = triggerRouting.get(i);
           if (targetNodeId) {
-            edges.push(this.createEdge(triggerNodes[i].id, targetNodeId));
+            // Expand synthetic parallel trigger entries into direct edges
+            const expandedTargets = parallelTriggerTargets.get(targetNodeId);
+            if (expandedTargets) {
+              for (const actualTarget of expandedTargets) {
+                edges.push(this.createEdge(triggerNodes[i].id, actualTarget));
+              }
+            } else {
+              edges.push(this.createEdge(triggerNodes[i].id, targetNodeId));
+            }
           }
         }
       } else {
@@ -666,7 +692,7 @@ export class YamlParser {
           id: `edge-${nodeId}-${info.trueTarget}`,
           source: nodeId,
           target: info.trueTarget,
-          sourceHandle: info.falseTarget ? 'true' : undefined,
+          sourceHandle: info.nodeType === 'condition' || info.falseTarget ? 'true' : undefined,
         });
       }
       if (info.falseTarget && info.falseTarget !== 'END') {
@@ -722,15 +748,192 @@ export class YamlParser {
   }
 
   /**
+   * Parse inline parallel branch items into nodes and edges.
+   * Reconstructs the subgraph that was inlined by the transpiler's generateInlineBranch.
+   * Returns the root node IDs of each branch (for trigger→target edge creation).
+   */
+  private parseInlineParallelBranches(
+    parallelItems: unknown[],
+    nodeInfoMap: Map<string, StateMachineNodeInfo>
+  ): string[] {
+    const targetIds: string[] = [];
+    let idCounter = 0;
+
+    const generateId = (type: string): string => `inline_${type}_${idCounter++}`;
+
+    for (const item of parallelItems) {
+      const pItem = item as Record<string, unknown>;
+      const alias = pItem.alias as string | undefined;
+
+      // New format: { alias: "parallel_branch:<nodeId>", ... }
+      const branchMatch = alias?.match(/^parallel_branch:(.+)$/);
+      if (branchMatch) {
+        const rootNodeId = branchMatch[1];
+        targetIds.push(rootNodeId);
+
+        // Parse the branch content into nodes
+        if (Array.isArray(pItem.sequence)) {
+          this.parseInlineActionList(
+            pItem.sequence as Record<string, unknown>[],
+            rootNodeId,
+            nodeInfoMap,
+            generateId
+          );
+        } else {
+          this.parseInlineActionItem(pItem, rootNodeId, nodeInfoMap, generateId);
+        }
+        continue;
+      }
+
+      // Legacy format: { action: "system_log.write", data: { message: "Node: <nodeId>" } }
+      const action = (pItem.service ?? pItem.action) as string | undefined;
+      if (action === 'system_log.write') {
+        const data = pItem.data as Record<string, unknown> | undefined;
+        const message = data?.message as string | undefined;
+        if (message) {
+          const nodeMatch = message.match(/^Node:\s*(.+)$/);
+          if (nodeMatch) {
+            targetIds.push(nodeMatch[1]);
+          }
+        }
+      }
+    }
+
+    return targetIds;
+  }
+
+  /**
+   * Parse a list of inline HA actions, chaining them sequentially.
+   * The first action uses firstNodeId; subsequent actions get generated IDs.
+   */
+  private parseInlineActionList(
+    actions: Record<string, unknown>[],
+    firstNodeId: string,
+    nodeInfoMap: Map<string, StateMachineNodeInfo>,
+    generateId: (type: string) => string
+  ): void {
+    let prevNodeId: string | null = null;
+
+    for (let i = 0; i < actions.length; i++) {
+      const action = actions[i];
+      const { nodeId: embeddedId } = this.extractCafeNodeId(action.alias as string | undefined);
+      const nodeId = i === 0 ? firstNodeId : (embeddedId ?? generateId(this.inferInlineNodeType(action)));
+
+      // Chain previous non-condition node to this one
+      if (prevNodeId) {
+        const prevInfo = nodeInfoMap.get(prevNodeId);
+        if (prevInfo && prevInfo.nodeType !== 'condition') {
+          prevInfo.trueTarget = nodeId;
+        }
+      }
+
+      this.parseInlineActionItem(action, nodeId, nodeInfoMap, generateId);
+      prevNodeId = nodeId;
+    }
+  }
+
+  /**
+   * Parse a single inline HA action item into a StateMachineNodeInfo entry.
+   * Handles actions, conditions (if/then/else), delays, and waits.
+   */
+  private parseInlineActionItem(
+    item: Record<string, unknown>,
+    nodeId: string,
+    nodeInfoMap: Map<string, StateMachineNodeInfo>,
+    generateId: (type: string) => string
+  ): void {
+    // Strip parallel_branch: prefix from alias if present
+    const rawAlias = item.alias as string | undefined;
+    const { cleanAlias: cafeStripped } = this.extractCafeNodeId(rawAlias);
+    const alias = cafeStripped?.startsWith('parallel_branch:') ? undefined : cafeStripped;
+
+    if (item.if && Array.isArray(item.if)) {
+      // Condition node (if/then/else)
+      const conditions = item.if as Record<string, unknown>[];
+      const condition = conditions[0] ?? {};
+      const data: Record<string, unknown> = { ...condition };
+      if (alias) data.alias = alias;
+
+      let trueTarget: string | null = null;
+      let falseTarget: string | null = null;
+
+      const thenActions = item.then as Record<string, unknown>[] | undefined;
+      if (thenActions && thenActions.length > 0) {
+        const { nodeId: thenEmbeddedId } = this.extractCafeNodeId(thenActions[0].alias as string | undefined);
+        const thenNodeId = thenEmbeddedId ?? generateId(this.inferInlineNodeType(thenActions[0]));
+        trueTarget = thenNodeId;
+        this.parseInlineActionList(thenActions, thenNodeId, nodeInfoMap, generateId);
+      }
+
+      const elseActions = item.else as Record<string, unknown>[] | undefined;
+      if (elseActions && elseActions.length > 0) {
+        const { nodeId: elseEmbeddedId } = this.extractCafeNodeId(elseActions[0].alias as string | undefined);
+        const elseNodeId = elseEmbeddedId ?? generateId(this.inferInlineNodeType(elseActions[0]));
+        falseTarget = elseNodeId;
+        this.parseInlineActionList(elseActions, elseNodeId, nodeInfoMap, generateId);
+      }
+
+      nodeInfoMap.set(nodeId, { nodeId, nodeType: 'condition', data, trueTarget, falseTarget });
+    } else if (item.service || item.action) {
+      // Action node
+      const data: Record<string, unknown> = {};
+      data.service = (item.service ?? item.action) as string;
+      if (item.target) data.target = item.target;
+      if (item.data) data.data = item.data;
+      if (alias) data.alias = alias;
+
+      nodeInfoMap.set(nodeId, { nodeId, nodeType: 'action', data, trueTarget: null, falseTarget: null });
+    } else if (item.delay !== undefined) {
+      // Delay node
+      const data: Record<string, unknown> = { delay: item.delay };
+      if (alias) data.alias = alias;
+
+      nodeInfoMap.set(nodeId, { nodeId, nodeType: 'delay', data, trueTarget: null, falseTarget: null });
+    } else if (item.wait_template !== undefined || item.wait_for_trigger !== undefined) {
+      // Wait node
+      const data: Record<string, unknown> = {};
+      if (item.wait_template) data.wait_template = item.wait_template;
+      if (item.wait_for_trigger) data.wait_for_trigger = item.wait_for_trigger;
+      if (item.timeout) data.timeout = item.timeout;
+      if (item.continue_on_timeout !== undefined) data.continue_on_timeout = item.continue_on_timeout;
+      if (alias) data.alias = alias;
+
+      nodeInfoMap.set(nodeId, { nodeId, nodeType: 'wait', data, trueTarget: null, falseTarget: null });
+    }
+  }
+
+  /**
+   * Extract a C.A.F.E. node ID encoded in an alias field.
+   * Handles format: "cafe_node:<nodeId>" or "cafe_node:<nodeId>:<userAlias>"
+   */
+  private extractCafeNodeId(alias: string | undefined): {
+    nodeId: string | null;
+    cleanAlias: string | undefined;
+  } {
+    if (!alias) return { nodeId: null, cleanAlias: undefined };
+    const match = alias.match(/^cafe_node:([^:]+)(?::(.+))?$/);
+    if (match) {
+      return { nodeId: match[1], cleanAlias: match[2] || undefined };
+    }
+    return { nodeId: null, cleanAlias: alias };
+  }
+
+  /**
+   * Infer the node type from an inline HA action item.
+   */
+  private inferInlineNodeType(item: Record<string, unknown>): string {
+    if (item.if) return 'condition';
+    if (item.delay !== undefined) return 'delay';
+    if (item.wait_template !== undefined || item.wait_for_trigger !== undefined) return 'wait';
+    return 'action';
+  }
+
+  /**
    * Parse a single choose block from state-machine format
    */
-  private parseStateMachineChooseBlock(chooseBlock: Record<string, unknown>): {
-    nodeId: string;
-    nodeType: 'action' | 'condition' | 'delay' | 'wait';
-    data: Record<string, unknown>;
-    trueTarget: string | null;
-    falseTarget: string | null;
-  } | null {
+  private parseStateMachineChooseBlock(
+    chooseBlock: Record<string, unknown>
+  ): StateMachineNodeInfo | null {
     const conditions = chooseBlock.conditions;
     if (!Array.isArray(conditions) || conditions.length === 0) {
       return null;
@@ -755,6 +958,7 @@ export class YamlParser {
     const data: Record<string, unknown> = {};
     let trueTarget: string | null = null;
     let falseTarget: string | null = null;
+    let parallelItems: unknown[] | undefined;
 
     for (const item of sequence) {
       const seqItem = item as Record<string, unknown>;
@@ -804,6 +1008,10 @@ export class YamlParser {
         }
         if (seqItem.alias) data.alias = seqItem.alias;
       }
+      // Check for parallel block (synthetic __parallel_trigger_* entries)
+      else if (Array.isArray(seqItem.parallel)) {
+        parallelItems = seqItem.parallel;
+      }
       // Check for service call action
       else if (seqItem.service || seqItem.action) {
         nodeType = 'action';
@@ -814,7 +1022,7 @@ export class YamlParser {
       }
     }
 
-    return { nodeId, nodeType, data, trueTarget, falseTarget };
+    return { nodeId, nodeType, data, trueTarget, falseTarget, parallelItems };
   }
 
   /**
@@ -872,14 +1080,45 @@ export class YamlParser {
     const nodes: FlowNode[] = [];
     const edges: FlowEdge[] = [];
     const conditionNodeIds = new Set<string>();
-    let nodeIdIndex = 0;
+
+    // Group metadata IDs by node type for type-aware assignment.
+    // Without type-aware grouping, depth-first parsing of parallel branches
+    // would assign IDs in the wrong order (e.g., an action gets a condition's ID).
+    const knownNodeTypes = ['set_variables', 'trigger', 'condition', 'action', 'delay', 'wait'];
+    const metadataIdsByType = new Map<string, string[]>();
+    const usedMetadataIds = new Set<string>();
+    for (const id of metadataNodeIds) {
+      const matchedType = knownNodeTypes.find((t) => id.startsWith(`${t}_`));
+      if (matchedType) {
+        if (!metadataIdsByType.has(matchedType)) metadataIdsByType.set(matchedType, []);
+        metadataIdsByType.get(matchedType)!.push(id);
+      }
+    }
+    const metadataTypeIndexes = new Map<string, number>();
+    let sequentialFallbackIndex = 0;
+    let nodeIdCounter = metadataNodeIds.length;
 
     // Helper to get next node ID (from metadata if available, otherwise generate)
     const getNextNodeId = (type: string): string => {
-      if (nodeIdIndex < metadataNodeIds.length) {
-        return metadataNodeIds[nodeIdIndex++];
+      // First: try type-matched metadata ID
+      const ids = metadataIdsByType.get(type);
+      const idx = metadataTypeIndexes.get(type) ?? 0;
+      if (ids && idx < ids.length) {
+        const id = ids[idx];
+        metadataTypeIndexes.set(type, idx + 1);
+        usedMetadataIds.add(id);
+        return id;
       }
-      return generateNodeId(type, nodeIdIndex++);
+      // Second: fallback to next unused metadata ID (handles non-standard ID formats)
+      while (sequentialFallbackIndex < metadataNodeIds.length) {
+        const id = metadataNodeIds[sequentialFallbackIndex++];
+        if (!usedMetadataIds.has(id)) {
+          usedMetadataIds.add(id);
+          return id;
+        }
+      }
+      // Third: generate a new ID
+      return generateNodeId(type, nodeIdCounter++);
     };
 
     // Parse triggers (support both 'trigger' and 'triggers')

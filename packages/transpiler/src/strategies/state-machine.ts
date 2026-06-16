@@ -74,15 +74,26 @@ export class StateMachineStrategy extends BaseStrategy {
       };
     }
 
-    // Build choose blocks for each non-trigger node
-    const nodeBlocks = flow.nodes
-      .filter((n) => n.type !== 'trigger')
-      .map((node) => this.generateNodeBlock(flow, node));
-
     // Generate parallel entry blocks for triggers with multiple targets
     const parallelEntryBlocks = this.generateParallelEntryBlocks(flow, triggerRouting);
 
-    // Combine node blocks and parallel entry blocks
+    // Collect node IDs consumed by parallel branches so they aren't
+    // duplicated as standalone state-machine choose entries
+    const parallelConsumedNodeIds = new Set<string>();
+    for (const [, targets] of triggerRouting) {
+      if (targets.length > 1) {
+        for (const targetId of targets) {
+          this.collectSubgraphNodeIds(flow, targetId, parallelConsumedNodeIds);
+        }
+      }
+    }
+
+    // Build choose blocks for each non-trigger node not already inlined in a parallel branch
+    const nodeBlocks = flow.nodes
+      .filter((n) => n.type !== 'trigger' && !parallelConsumedNodeIds.has(n.id))
+      .map((node) => this.generateNodeBlock(flow, node));
+
+    // Combine parallel entry blocks and remaining node blocks
     const chooseBlocks = [...parallelEntryBlocks, ...nodeBlocks];
 
     // Warn about potential infinite loops
@@ -270,21 +281,20 @@ export class StateMachineStrategy extends BaseStrategy {
 
       const parallelEntryId = `__parallel_trigger_${idx}`;
 
-      // Build parallel action calls for all target nodes
-      const parallelActions = targets.map((targetId) => {
-        const targetNode = flow.nodes.find((n) => n.id === targetId);
-        if (!targetNode) {
-          return { service: 'system_log.write', data: { message: `Unknown node: ${targetId}` } };
+      // Build self-contained inline branches for all target nodes.
+      // Each branch gets a "parallel_branch:<nodeId>" alias so the parser
+      // can identify which node each branch corresponds to.
+      const parallelBranches = targets.map((targetId) => {
+        const inlineActions = this.generateInlineBranch(flow, targetId, new Set());
+        if (inlineActions.length === 0) {
+          return { alias: `parallel_branch:${targetId}`, stop: 'Empty branch' };
         }
-
-        // Generate the action call based on node type
-        if (targetNode.type === 'action') {
-          return this.buildActionCall(targetNode as ActionNode);
+        if (inlineActions.length === 1) {
+          // Single action — spread first, then override alias with branch identifier
+          return { ...inlineActions[0], alias: `parallel_branch:${targetId}` };
         }
-
-        // For non-action nodes, we need to execute them and continue
-        // This is a simplified case - complex parallel branches would need more work
-        return { service: 'system_log.write', data: { message: `Node: ${targetId}` } };
+        // Multiple actions — wrap in a sequence
+        return { alias: `parallel_branch:${targetId}`, sequence: inlineActions };
       });
 
       parallelBlocks.push({
@@ -296,7 +306,7 @@ export class StateMachineStrategy extends BaseStrategy {
         ],
         sequence: [
           {
-            parallel: parallelActions,
+            parallel: parallelBranches,
           },
           {
             variables: {
@@ -308,6 +318,114 @@ export class StateMachineStrategy extends BaseStrategy {
     }
 
     return parallelBlocks;
+  }
+
+  /**
+   * Collect all node IDs reachable from a starting node (used to identify
+   * nodes that are already inlined inside parallel branches).
+   */
+  private collectSubgraphNodeIds(flow: FlowGraph, nodeId: string, collected: Set<string>): void {
+    if (nodeId === 'END' || collected.has(nodeId)) return;
+
+    const node = flow.nodes.find((n) => n.id === nodeId);
+    if (!node || node.type === 'trigger') return;
+
+    collected.add(nodeId);
+    const edges = this.getOutgoingEdges(flow, node.id);
+    for (const edge of edges) {
+      this.collectSubgraphNodeIds(flow, edge.target, collected);
+    }
+  }
+
+  /**
+   * Encode a C.A.F.E. node ID into the alias field so it survives the HA round-trip.
+   * Format: "cafe_node:<nodeId>" or "cafe_node:<nodeId>:<userAlias>"
+   */
+  private encodeNodeIdInAlias(action: Record<string, unknown>, nodeId: string): void {
+    const existingAlias = action.alias as string | undefined;
+    action.alias = existingAlias
+      ? `cafe_node:${nodeId}:${existingAlias}`
+      : `cafe_node:${nodeId}`;
+  }
+
+  /**
+   * Generate an inline HA action sequence for a subgraph starting at the given node.
+   * Used within parallel branches where each branch must be self-contained
+   * (no current_node state machine variable).
+   */
+  private generateInlineBranch(
+    flow: FlowGraph,
+    nodeId: string,
+    visited: Set<string>
+  ): Record<string, unknown>[] {
+    if (nodeId === 'END' || visited.has(nodeId)) {
+      return [];
+    }
+
+    const node = flow.nodes.find((n) => n.id === nodeId);
+    if (!node) return [];
+
+    visited.add(nodeId);
+    const edges = this.getOutgoingEdges(flow, node.id);
+
+    switch (node.type) {
+      case 'action': {
+        const actionCall = this.buildActionCall(node as ActionNode);
+        this.encodeNodeIdInAlias(actionCall, node.id);
+        const nextNodeId = edges[0]?.target ?? 'END';
+        return [actionCall, ...this.generateInlineBranch(flow, nextNodeId, visited)];
+      }
+
+      case 'condition': {
+        const trueEdge = edges.find((e) => e.sourceHandle === 'true');
+        const falseEdge = edges.find((e) => e.sourceHandle === 'false');
+        const trueTarget = trueEdge?.target ?? 'END';
+        const falseTarget = falseEdge?.target ?? 'END';
+
+        const condition = this.buildNativeCondition(node as ConditionNode);
+        // Each branch gets its own visited copy so independent paths don't block each other
+        const thenActions = this.generateInlineBranch(flow, trueTarget, new Set(visited));
+        const elseActions = this.generateInlineBranch(flow, falseTarget, new Set(visited));
+
+        const ifBlock: Record<string, unknown> = {
+          alias: (node as ConditionNode).data.alias,
+          if: [condition],
+          then: thenActions,
+        };
+        this.encodeNodeIdInAlias(ifBlock, node.id);
+        if (elseActions.length > 0) {
+          ifBlock.else = elseActions;
+        }
+        return [ifBlock];
+      }
+
+      case 'delay': {
+        const delayAction = this.buildDelayAction(node as DelayNode);
+        this.encodeNodeIdInAlias(delayAction, node.id);
+        const nextNodeId = edges[0]?.target ?? 'END';
+        return [delayAction, ...this.generateInlineBranch(flow, nextNodeId, visited)];
+      }
+
+      case 'wait': {
+        const waitAction = this.buildWaitAction(node as WaitNode);
+        this.encodeNodeIdInAlias(waitAction, node.id);
+        const nextNodeId = edges[0]?.target ?? 'END';
+        return [waitAction, ...this.generateInlineBranch(flow, nextNodeId, visited)];
+      }
+
+      case 'set_variables': {
+        const setVarsAction = this.buildSetVariablesAction(node as SetVariablesNode);
+        this.encodeNodeIdInAlias(setVarsAction, node.id);
+        const nextNodeId = edges[0]?.target ?? 'END';
+        return [setVarsAction, ...this.generateInlineBranch(flow, nextNodeId, visited)];
+      }
+
+      default: {
+        // Unknown node type — skip it and continue to the next node
+        const nextNodeId = edges[0]?.target ?? 'END';
+        return this.generateInlineBranch(flow, nextNodeId, visited);
+      }
+    }
   }
 
   /**
@@ -654,13 +772,9 @@ export class StateMachineStrategy extends BaseStrategy {
   }
 
   /**
-   * Generate block for delay node
+   * Build a delay action from a delay node (without state-machine wrapper)
    */
-  private generateDelayBlock(node: DelayNode, edges: FlowEdge[]): Record<string, unknown> {
-    const nextNodeId = edges[0]?.target ?? 'END';
-    const nextNode = nextNodeId === 'END' ? 'END' : nextNodeId;
-    const currentNodeId = node.id;
-
+  private buildDelayAction(node: DelayNode): Record<string, unknown> {
     // Use spread pattern to preserve unknown properties from custom integrations
     const { alias, delay, id, ...extraProps } = node.data;
     const delayAction: Record<string, unknown> = {
@@ -673,6 +787,17 @@ export class StateMachineStrategy extends BaseStrategy {
       delayAction.id = id;
     }
 
+    return delayAction;
+  }
+
+  /**
+   * Generate block for delay node
+   */
+  private generateDelayBlock(node: DelayNode, edges: FlowEdge[]): Record<string, unknown> {
+    const nextNodeId = edges[0]?.target ?? 'END';
+    const nextNode = nextNodeId === 'END' ? 'END' : nextNodeId;
+    const currentNodeId = node.id;
+
     return {
       conditions: [
         {
@@ -681,7 +806,7 @@ export class StateMachineStrategy extends BaseStrategy {
         },
       ],
       sequence: [
-        delayAction,
+        this.buildDelayAction(node),
         {
           variables: {
             current_node: nextNode,
@@ -692,13 +817,9 @@ export class StateMachineStrategy extends BaseStrategy {
   }
 
   /**
-   * Generate block for wait node
+   * Build a wait action from a wait node (without state-machine wrapper)
    */
-  private generateWaitBlock(node: WaitNode, edges: FlowEdge[]): Record<string, unknown> {
-    const nextNodeId = edges[0]?.target ?? 'END';
-    const nextNode = nextNodeId === 'END' ? 'END' : nextNodeId;
-    const currentNodeId = node.id;
-
+  private buildWaitAction(node: WaitNode): Record<string, unknown> {
     // Use spread pattern to preserve unknown properties from custom integrations
     const {
       alias,
@@ -738,6 +859,17 @@ export class StateMachineStrategy extends BaseStrategy {
       waitAction.continue_on_timeout = continue_on_timeout;
     }
 
+    return waitAction;
+  }
+
+  /**
+   * Generate block for wait node
+   */
+  private generateWaitBlock(node: WaitNode, edges: FlowEdge[]): Record<string, unknown> {
+    const nextNodeId = edges[0]?.target ?? 'END';
+    const nextNode = nextNodeId === 'END' ? 'END' : nextNodeId;
+    const currentNodeId = node.id;
+
     return {
       conditions: [
         {
@@ -746,7 +878,7 @@ export class StateMachineStrategy extends BaseStrategy {
         },
       ],
       sequence: [
-        waitAction,
+        this.buildWaitAction(node),
         {
           variables: {
             current_node: nextNode,
@@ -757,16 +889,9 @@ export class StateMachineStrategy extends BaseStrategy {
   }
 
   /**
-   * Generate block for set_variables node
+   * Build a set_variables action from a set_variables node (without state-machine wrapper)
    */
-  private generateSetVariablesBlock(
-    node: SetVariablesNode,
-    edges: FlowEdge[]
-  ): Record<string, unknown> {
-    const nextNodeId = edges[0]?.target ?? 'END';
-    const nextNode = nextNodeId === 'END' ? 'END' : nextNodeId;
-    const currentNodeId = node.id;
-
+  private buildSetVariablesAction(node: SetVariablesNode): Record<string, unknown> {
     // Use spread pattern to preserve unknown properties from custom integrations
     const { alias, id, variables, ...extraProps } = node.data;
     const setVarsAction: Record<string, unknown> = {
@@ -782,6 +907,20 @@ export class StateMachineStrategy extends BaseStrategy {
       setVarsAction.id = id;
     }
 
+    return setVarsAction;
+  }
+
+  /**
+   * Generate block for set_variables node
+   */
+  private generateSetVariablesBlock(
+    node: SetVariablesNode,
+    edges: FlowEdge[]
+  ): Record<string, unknown> {
+    const nextNodeId = edges[0]?.target ?? 'END';
+    const nextNode = nextNodeId === 'END' ? 'END' : nextNodeId;
+    const currentNodeId = node.id;
+
     return {
       conditions: [
         {
@@ -790,7 +929,7 @@ export class StateMachineStrategy extends BaseStrategy {
         },
       ],
       sequence: [
-        setVarsAction,
+        this.buildSetVariablesAction(node),
         {
           variables: {
             current_node: nextNode,
