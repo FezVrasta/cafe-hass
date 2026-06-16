@@ -44,6 +44,117 @@ function isDelayAction(action: unknown): action is HADelay {
   );
 }
 
+type DelayDurationObject = {
+  hours?: number;
+  minutes?: number;
+  seconds?: number;
+  milliseconds?: number;
+};
+
+const DELAY_DURATION_MULTIPLIERS = {
+  hours: 60 * 60 * 1000,
+  minutes: 60 * 1000,
+  seconds: 1000,
+  milliseconds: 1,
+} as const;
+
+function isFiniteDelayNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
+function unwrapTemplateExpression(value: string): string {
+  const trimmed = value.trim();
+  const templateMatch = /^\{\{\s*([\s\S]*?)\s*\}\}$/.exec(trimmed);
+  return templateMatch ? templateMatch[1].trim() : trimmed;
+}
+
+function toDelayTemplatePart(value: unknown): string | null {
+  if (isFiniteDelayNumber(value)) {
+    return String(value);
+  }
+
+  if (typeof value !== 'string' || value.trim() === '') {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  const numericValue = Number(trimmed);
+  if (Number.isFinite(numericValue)) {
+    return String(numericValue);
+  }
+
+  return `(${unwrapTemplateExpression(trimmed)})`;
+}
+
+function buildTemplatedDelayString(duration: Record<string, unknown>): string {
+  const terms = Object.entries(DELAY_DURATION_MULTIPLIERS).flatMap(([key, multiplier]) => {
+    const templatePart = toDelayTemplatePart(duration[key]);
+    if (!templatePart) {
+      return [];
+    }
+
+    return multiplier === 1 ? [templatePart] : [`(${templatePart}) * ${multiplier}`];
+  });
+
+  const totalMillisecondsExpression = terms.length > 0 ? terms.join(' + ') : '0';
+  const hoursExpression = `(${totalMillisecondsExpression}) // 3600000`;
+  const minutesExpression = `((${totalMillisecondsExpression}) % 3600000) // 60000`;
+  const secondsExpression = `((${totalMillisecondsExpression}) % 60000) // 1000`;
+  const millisecondsExpression = `(${totalMillisecondsExpression}) % 1000`;
+
+  return Object.prototype.hasOwnProperty.call(duration, 'milliseconds')
+    ? `{{ '%02d:%02d:%02d.%03d' | format(${hoursExpression}, ${minutesExpression}, ${secondsExpression}, ${millisecondsExpression}) }}`
+    : `{{ '%02d:%02d:%02d' | format(${hoursExpression}, ${minutesExpression}, ${secondsExpression}) }}`;
+}
+
+function normalizeDelayValue(delayValue: unknown): string | DelayDurationObject {
+  if (typeof delayValue === 'string') {
+    return delayValue;
+  }
+
+  if (isFiniteDelayNumber(delayValue)) {
+    return String(delayValue);
+  }
+
+  if (typeof delayValue !== 'object' || delayValue === null) {
+    return '';
+  }
+
+  const duration = delayValue as Record<string, unknown>;
+  const normalizedDuration: DelayDurationObject = {};
+  let requiresTemplateNormalization = false;
+
+  for (const key of Object.keys(DELAY_DURATION_MULTIPLIERS) as Array<keyof DelayDurationObject>) {
+    const rawValue = duration[key];
+    if (rawValue === undefined) {
+      continue;
+    }
+
+    if (isFiniteDelayNumber(rawValue)) {
+      normalizedDuration[key] = rawValue;
+      continue;
+    }
+
+    if (typeof rawValue === 'string' && rawValue.trim() !== '') {
+      const numericValue = Number(rawValue.trim());
+      if (Number.isFinite(numericValue)) {
+        normalizedDuration[key] = numericValue;
+      } else {
+        requiresTemplateNormalization = true;
+      }
+      continue;
+    }
+
+    requiresTemplateNormalization = true;
+  }
+
+  if (requiresTemplateNormalization) {
+    return buildTemplatedDelayString(duration);
+  }
+
+  return normalizedDuration;
+}
+
 /** Returns true if the action is a wait node */
 function isWaitAction(action: unknown): action is HAWait {
   return (
@@ -363,14 +474,12 @@ export class YamlParser {
             if (e.path[0] === 'nodes' && typeof e.path[1] === 'number') {
               const idx = e.path[1];
               const node = graph.nodes[idx];
-              nodeInfo = `Node index ${idx} (id: ${node?.id}, type: ${
-                node?.type
-              })\nData: ${JSON.stringify(node?.data, null, 2)}`;
+              nodeInfo = `Node index ${idx} (id: ${node?.id}, type: ${node?.type
+                })\nData: ${JSON.stringify(node?.data, null, 2)}`;
             }
           }
-          return `Schema path: ${e.path.join('.')}\nMessage: ${e.message}${
-            nodeInfo ? `\n${nodeInfo}` : ''
-          }`;
+          return `Schema path: ${e.path.join('.')}\nMessage: ${e.message}${nodeInfo ? `\n${nodeInfo}` : ''
+            }`;
         });
         // Also log to console for debugging
         console.error('Zod validation error details:', errorDetails);
@@ -1438,17 +1547,7 @@ export class YamlParser {
           data: {
             ...extraProps, // Preserve extra properties
             alias: typeof alias === 'string' ? alias : undefined,
-            delay:
-              typeof delayValue === 'string'
-                ? delayValue
-                : typeof delayValue === 'object' && delayValue !== null
-                  ? (delayValue as {
-                      hours?: number;
-                      minutes?: number;
-                      seconds?: number;
-                      milliseconds?: number;
-                    })
-                  : '',
+            delay: normalizeDelayValue(delayValue),
             enabled: getNodeEnabled(typeof enabled === 'boolean' ? enabled : undefined),
           },
         };
@@ -2073,10 +2172,10 @@ export class YamlParser {
               target:
                 typeof target === 'object' && target !== null
                   ? (target as {
-                      entity_id?: string | string[];
-                      area_id?: string | string[];
-                      device_id?: string | string[];
-                    })
+                    entity_id?: string | string[];
+                    area_id?: string | string[];
+                    device_id?: string | string[];
+                  })
                   : undefined,
               data:
                 typeof data === 'object' && data !== null
@@ -2635,10 +2734,10 @@ export class YamlParser {
     const unconsumedPreviousIds =
       triggerConditionIds !== null && triggerNodeMap
         ? previousNodeIds.filter((id) => {
-            const triggerId = triggerNodeMap.get(id);
-            // Keep: trigger nodes whose id is not in this condition's id list, OR non-trigger nodes
-            return triggerId === undefined || !triggerConditionIds.includes(triggerId);
-          })
+          const triggerId = triggerNodeMap.get(id);
+          // Keep: trigger nodes whose id is not in this condition's id list, OR non-trigger nodes
+          return triggerId === undefined || !triggerConditionIds.includes(triggerId);
+        })
         : [];
 
     return { nodes, edges, outputNodeIds, falsePathOutputIds, unconsumedPreviousIds };
