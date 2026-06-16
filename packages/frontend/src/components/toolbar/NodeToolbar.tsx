@@ -6,6 +6,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
+import { useHass } from '@/contexts/HassContext';
 import { useFlowStore } from '@/store/flow-store';
 import { isMacOS } from '@/utils/useAgentPlatform';
 import type { NodeAction, NodeActionContext } from '../actions';
@@ -21,7 +22,7 @@ import {
   getDisconnectAction,
   getDuplicateAction,
   getPasteAction,
-  //getRunAction,
+  getRunAction,
   getSelectAllAction,
   getToggleEnabledAction,
 } from '../actions';
@@ -54,6 +55,7 @@ const groupOrder: Array<'node-specific' | 'selection' | 'clipboard' | 'edit' | '
 
 export function NodeToolbar() {
   const { t } = useTranslation();
+  const { hass, config: hassConfig } = useHass();
   const {
     nodes,
     edges,
@@ -90,6 +92,8 @@ export function NodeToolbar() {
       edges,
       clipboard,
       pasteCount,
+      hass,
+      hassConfig,
       addNode,
       removeNode,
       updateNodeData,
@@ -103,6 +107,8 @@ export function NodeToolbar() {
       edges,
       clipboard,
       pasteCount,
+      hass,
+      hassConfig,
       addNode,
       removeNode,
       updateNodeData,
@@ -117,7 +123,7 @@ export function NodeToolbar() {
   // New actions should be added here as needed!
   const allActions = useMemo(
     () => [
-      //getRunAction(t),
+      getRunAction(t),
       getDuplicateAction(t),
       getCopyAction(t),
       getCutAction(t),

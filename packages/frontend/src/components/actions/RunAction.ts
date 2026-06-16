@@ -29,7 +29,7 @@ export function getRunAction(t: TFunction): NodeAction {
         }
 
         try {
-          const hassApi = getHomeAssistantAPI();
+          const hassApi = getHomeAssistantAPI(context.hass, context.hassConfig);
           await hassApi.executeAction({
             service: data.service,
             data: data.data,
