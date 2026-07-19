@@ -48,7 +48,10 @@ mode: single
     expect(result.success).toBe(true);
     const delayNodes = result.graph!.nodes.filter((n) => n.type === 'delay');
     expect(delayNodes.length).toBe(1);
-    const delayVal = (delayNodes[0].data as Record<string, unknown>).delay as Record<string, unknown>;
+    const delayVal = (delayNodes[0].data as Record<string, unknown>).delay as Record<
+      string,
+      unknown
+    >;
     expect(delayVal.hours).toBe("{{ states('input_number.delay_hours') | int(1) }}");
     expect(delayVal.minutes).toBe(30);
   });

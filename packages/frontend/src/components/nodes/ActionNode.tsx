@@ -31,8 +31,7 @@ export const ActionNode = memo(function ActionNode({ id, data, selected }: Actio
     [domain, serviceName] = data.service.split('.');
   }
 
-  const isEventAction =
-    !isStopAction && typeof data.event === 'string' && data.event.trim() !== '';
+  const isEventAction = !isStopAction && typeof data.event === 'string' && data.event.trim() !== '';
 
   // Get target entity display
   const targetEntityId = data.target?.entity_id;
