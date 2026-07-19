@@ -97,7 +97,8 @@
     "exportJson": "Export flow as JSON",
     "clickToConfigure": "Click to configure Home Assistant connection",
     "openDetached": "Open detached window",
-    "removeSource": "Remove source from merged workspace"
+    "removeSource": "Remove source from merged workspace",
+    "backToHA": "Back to Home Assistant"
   },
   "strategy": {
     "auto": "Auto",

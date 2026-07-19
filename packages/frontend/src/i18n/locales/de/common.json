@@ -97,7 +97,8 @@
     "exportJson": "Flow als JSON exportieren",
     "clickToConfigure": "Klicken um Home Assistant-Verbindung zu konfigurieren",
     "openDetached": "Eigenes Fenster öffnen",
-    "removeSource": "Quelle aus dem Merge-Workspace entfernen"
+    "removeSource": "Quelle aus dem Merge-Workspace entfernen",
+    "backToHA": "Zurück zu Home Assistant"
   },
   "strategy": {
     "auto": "Auto",

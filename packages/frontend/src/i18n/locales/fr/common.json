@@ -97,7 +97,8 @@
     "exportJson": "Exporter le flux en JSON",
     "clickToConfigure": "Cliquez pour configurer la connexion Home Assistant",
     "openDetached": "Ouvrir une fenêtre détachée",
-    "removeSource": "Retirer la source de l'espace fusionné"
+    "removeSource": "Retirer la source de l'espace fusionné",
+    "backToHA": "Retour à Home Assistant"
   },
   "strategy": {
     "auto": "Auto",
