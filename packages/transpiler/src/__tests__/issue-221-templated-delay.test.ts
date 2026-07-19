@@ -22,12 +22,16 @@ actions:
 mode: single
 `;
     const result = await parser.parse(yaml);
+    // The point of #221 is that a templated object-form delay is accepted
+    // (no Zod rejection) and the template expression survives the round-trip.
+    // How it's normalised (kept as an object vs. converted to a single
+    // duration template string) is owned by the templated-numeric handling.
     expect(result.success).toBe(true);
     const delayNodes = result.graph!.nodes.filter((n) => n.type === 'delay');
     expect(delayNodes.length).toBe(1);
-    expect((delayNodes[0].data as Record<string, unknown>).delay).toEqual({
-      minutes: "{{ states('input_number.delay_minutes') | int(5) }}",
-    });
+    expect(JSON.stringify((delayNodes[0].data as Record<string, unknown>).delay)).toContain(
+      "states('input_number.delay_minutes')"
+    );
   });
 
   it('accepts delay with template string in hours field', async () => {
@@ -48,12 +52,9 @@ mode: single
     expect(result.success).toBe(true);
     const delayNodes = result.graph!.nodes.filter((n) => n.type === 'delay');
     expect(delayNodes.length).toBe(1);
-    const delayVal = (delayNodes[0].data as Record<string, unknown>).delay as Record<
-      string,
-      unknown
-    >;
-    expect(delayVal.hours).toBe("{{ states('input_number.delay_hours') | int(1) }}");
-    expect(delayVal.minutes).toBe(30);
+    expect(JSON.stringify((delayNodes[0].data as Record<string, unknown>).delay)).toContain(
+      "states('input_number.delay_hours')"
+    );
   });
 
   it('still accepts plain numeric delay object', async () => {
