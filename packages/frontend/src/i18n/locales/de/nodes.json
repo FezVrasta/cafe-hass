@@ -6,7 +6,8 @@
     "delay": "Verzögerung",
     "wait": "Warten auf",
     "set_variables": "Variablen setzen",
-    "node": "Knoten"
+    "node": "Knoten",
+    "stop": "Stopp"
   },
   "panel": {
     "selectNode": "Wählen Sie einen Knoten, um seine Eigenschaften zu bearbeiten",

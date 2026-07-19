@@ -6,7 +6,8 @@
     "delay": "Délai",
     "wait": "Attendre",
     "set_variables": "Définir les variables",
-    "node": "Nœud"
+    "node": "Nœud",
+    "stop": "Arrêt"
   },
   "panel": {
     "selectNode": "Sélectionnez un nœud pour modifier ses propriétés",

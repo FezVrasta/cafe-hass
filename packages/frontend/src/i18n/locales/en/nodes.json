@@ -3,6 +3,7 @@
     "trigger": "Trigger",
     "condition": "Condition",
     "action": "Action",
+    "stop": "Stop",
     "delay": "Delay",
     "wait": "Wait for",
     "set_variables": "Set Variables",
@@ -86,7 +87,8 @@
     "actionTypeLabel": "Action Type",
     "actionTypes": {
       "service": "Call Service",
-      "event": "Fire Event"
+      "event": "Fire Event",
+      "stop": "Stop execution"
     },
     "actionLabel": "Action",
     "eventNameLabel": "Event Name",
@@ -100,7 +102,12 @@
     "targetAreas": "Target Areas",
     "targetAreasDescription": "Area IDs to target",
     "addAreaId": "Add area ID...",
-    "fireEvent": "fire event"
+    "fireEvent": "fire event",
+    "stopExecution": "Stop execution",
+    "stopError": "Mark as error",
+    "stopMessageLabel": "Stop message",
+    "stopMessagePlaceholder": "e.g. Condition not met",
+    "markAsError": "Mark as error"
   },
   "variables": {
     "variableCount_one": "{{count}} variable",

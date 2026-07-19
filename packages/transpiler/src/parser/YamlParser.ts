@@ -232,6 +232,11 @@ function isSetConversationResponseAction(action: unknown): action is Record<stri
   return typeof action === 'object' && action !== null && 'set_conversation_response' in action;
 }
 
+/** Returns true if the action is a stop action */
+function isStopAction(action: unknown): action is Record<string, unknown> {
+  return typeof action === 'object' && action !== null && 'stop' in action;
+}
+
 /** Returns true if the action is a repeat block */
 function isRepeatAction(action: unknown): action is Record<string, unknown> {
   return (
@@ -2280,6 +2285,24 @@ export class YamlParser {
               typeof act.set_conversation_response === 'string'
                 ? act.set_conversation_response
                 : undefined,
+            enabled: getNodeEnabled(typeof act.enabled === 'boolean' ? act.enabled : undefined),
+          },
+        };
+        nodes.push(actionNode);
+        createEdgesFromCurrent(nodeId);
+        currentNodeIds = [nodeId];
+      } else if (isStopAction(action)) {
+        // Stop action - halts automation execution
+        const nodeId = getNextNodeId('action');
+        const act = action as Record<string, unknown>;
+        const actionNode: ActionNode = {
+          id: nodeId,
+          type: 'action',
+          position: { x: 0, y: 0 },
+          data: {
+            alias: typeof act.alias === 'string' ? act.alias : undefined,
+            stop: typeof act.stop === 'string' ? act.stop : '',
+            ...(act.error === true ? { error: true } : {}),
             enabled: getNodeEnabled(typeof act.enabled === 'boolean' ? act.enabled : undefined),
           },
         };

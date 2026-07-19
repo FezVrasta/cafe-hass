@@ -6,7 +6,8 @@
     "delay": "延迟",
     "wait": "等待",
     "set_variables": "设置变量",
-    "node": "节点"
+    "node": "节点",
+    "stop": "停止"
   },
   "panel": {
     "selectNode": "选择节点以编辑其属性",

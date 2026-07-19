@@ -14,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { useHass } from '@/contexts/HassContext';
 import { useNodeErrors } from '@/hooks/useNodeErrors';
 import type { HassEntity } from '@/types/hass';
@@ -50,14 +51,17 @@ export function ActionFields({ node, onChange, entities }: ActionFieldsProps) {
   const { getFieldError } = useNodeErrors(node.id);
   const serviceName = getNodeDataString(node, 'service');
   const eventName = getNodeDataString(node, 'event');
+  const nodeData = node.data as Record<string, unknown>;
+  const stopMessage = typeof nodeData.stop === 'string' ? nodeData.stop : undefined;
+  const isStopError = nodeData.error === true;
   const serviceDefinition = getServiceDefinition(serviceName);
   const serviceFields = serviceDefinition?.fields || {};
   const currentData = getNodeDataObject(node, 'data', {});
   const responseVariable = getNodeDataString(node, 'response_variable');
   const [showResponseVariable, setShowResponseVariable] = useState(!!responseVariable);
 
-  // Determine action type: 'event' if node has an event field set, else 'service'
-  const actionType = eventName ? 'event' : 'service';
+  // Determine action type: stop > event > service
+  const actionType = stopMessage !== undefined ? 'stop' : eventName ? 'event' : 'service';
 
   // Keep toggle in sync if node changes externally
   useEffect(() => {
@@ -65,15 +69,28 @@ export function ActionFields({ node, onChange, entities }: ActionFieldsProps) {
   }, [responseVariable]);
 
   const handleActionTypeChange = (type: string) => {
-    if (type === 'event') {
-      // Switch to fire event: clear service fields
+    if (type === 'stop') {
+      // Switch to stop: clear service and event fields
       onChange('service', undefined);
       onChange('target', undefined);
       onChange('data', undefined);
-    } else {
-      // Switch to service call: clear event fields
       onChange('event', undefined);
       onChange('event_data', undefined);
+      onChange('stop', '');
+      onChange('error', undefined);
+    } else if (type === 'event') {
+      // Switch to fire event: clear service and stop fields
+      onChange('service', undefined);
+      onChange('target', undefined);
+      onChange('data', undefined);
+      onChange('stop', undefined);
+      onChange('error', undefined);
+    } else {
+      // Switch to service call: clear event and stop fields
+      onChange('event', undefined);
+      onChange('event_data', undefined);
+      onChange('stop', undefined);
+      onChange('error', undefined);
     }
   };
 
@@ -150,11 +167,30 @@ export function ActionFields({ node, onChange, entities }: ActionFieldsProps) {
           <SelectContent>
             <SelectItem value="service">{t('nodes:actions.actionTypes.service')}</SelectItem>
             <SelectItem value="event">{t('nodes:actions.actionTypes.event')}</SelectItem>
+            <SelectItem value="stop">{t('nodes:actions.actionTypes.stop')}</SelectItem>
           </SelectContent>
         </Select>
       </FormField>
 
-      {actionType === 'event' ? (
+      {actionType === 'stop' ? (
+        <>
+          {/* Stop action fields */}
+          <FormField label={t('nodes:actions.stopMessageLabel')}>
+            <Input
+              type="text"
+              value={stopMessage ?? ''}
+              onChange={(e) => onChange('stop', e.target.value)}
+              placeholder={t('nodes:actions.stopMessagePlaceholder')}
+            />
+          </FormField>
+          <FormField label={t('nodes:actions.markAsError')}>
+            <Switch
+              checked={isStopError}
+              onCheckedChange={(checked) => onChange('error', checked || undefined)}
+            />
+          </FormField>
+        </>
+      ) : actionType === 'event' ? (
         <>
           {/* Fire event fields */}
           <FormField label={t('nodes:actions.eventNameLabel')} required>

@@ -1,5 +1,5 @@
 import { Handle, type NodeProps, Position } from '@xyflow/react';
-import { AlertCircle, Ban, Play } from 'lucide-react';
+import { AlertCircle, Ban, OctagonX, Play } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNodeErrors } from '@/hooks/useNodeErrors';
@@ -20,24 +20,81 @@ export const ActionNode = memo(function ActionNode({ id, data, selected }: Actio
   const stepNumber = getExecutionStepNumber(id);
   const isDisabled = data.enabled === false;
 
+  const isStopAction = typeof data.stop === 'string';
+  const stopMessage = isStopAction ? data.stop : undefined;
+  const isStopError = isStopAction && data.error === true;
+
   // Parse service into domain and service name, handle undefined
   let domain: string | undefined;
   let serviceName: string | undefined;
-  if (typeof data.service === 'string' && data.service.includes('.')) {
+  if (!isStopAction && typeof data.service === 'string' && data.service.includes('.')) {
     [domain, serviceName] = data.service.split('.');
   }
 
-  const isEventAction = typeof data.event === 'string' && data.event.trim() !== '';
+  const isEventAction =
+    !isStopAction && typeof data.event === 'string' && data.event.trim() !== '';
 
   // Get target entity display
-  const targetDisplay = (() => {
-    if (!data.target) return null;
-    const entityId = data.target.entity_id;
-    if (Array.isArray(entityId)) {
-      return `${entityId.length} entities selected`;
-    }
-    return entityId;
-  })();
+  const targetEntityId = data.target?.entity_id;
+  const targetDisplay =
+    isStopAction || !data.target
+      ? null
+      : Array.isArray(targetEntityId)
+        ? `${targetEntityId.length} entities selected`
+        : targetEntityId;
+
+  if (isStopAction) {
+    return (
+      <div
+        className={cn(
+          'relative min-w-[180px] rounded-lg border-2 border-orange-400 bg-orange-50 px-4 py-3',
+          'transition-all duration-200',
+          selected && 'ring-2 ring-orange-500 ring-offset-2',
+          isActive && 'node-active ring-4 ring-orange-500',
+          isDisabled && 'border-dashed opacity-50 grayscale',
+          hasErrors && 'border-red-500 ring-2 ring-red-400'
+        )}
+      >
+        {hasErrors && (
+          <div
+            className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white shadow-sm"
+            title={errorMessages.join('\n')}
+          >
+            <AlertCircle className="h-3 w-3" />
+          </div>
+        )}
+        {isDisabled && !hasErrors && (
+          <div className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-gray-500 text-white shadow-sm">
+            <Ban className="h-3 w-3" />
+          </div>
+        )}
+        <Handle
+          type="target"
+          position={Position.Left}
+          className="!w-3 !h-3 !bg-orange-500 !border-orange-700"
+        />
+        <div className="mb-1 flex items-center gap-2">
+          <div className="rounded bg-orange-200 p-1">
+            <OctagonX className="h-4 w-4 text-orange-700" />
+          </div>
+          <span className="font-semibold text-orange-900 text-sm">
+            {data.alias || t('nodes:types.stop')}
+          </span>
+          {stepNumber && (
+            <div className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-orange-600 font-bold text-white text-xs">
+              {stepNumber}
+            </div>
+          )}
+        </div>
+        <div className="space-y-0.5 text-orange-700 text-xs">
+          <div className="font-medium opacity-70">
+            {isStopError ? t('nodes:actions.stopError') : t('nodes:actions.stopExecution')}
+          </div>
+          {stopMessage && <div className="truncate opacity-75 italic">{stopMessage}</div>}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

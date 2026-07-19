@@ -6,7 +6,8 @@
     "delay": "Ritardo",
     "wait": "Attendi",
     "set_variables": "Imposta Variabili",
-    "node": "Nodo"
+    "node": "Nodo",
+    "stop": "Stop"
   },
   "panel": {
     "selectNode": "Seleziona un nodo per modificarne le proprietà",

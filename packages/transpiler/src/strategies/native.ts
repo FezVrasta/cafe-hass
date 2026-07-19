@@ -1387,6 +1387,15 @@ export class NativeStrategy extends BaseStrategy {
       return action;
     }
 
+    // Check if this is a stop action
+    if ('stop' in node.data) {
+      const action: Record<string, unknown> = { stop: node.data.stop ?? '' };
+      if (node.data.alias) action.alias = node.data.alias;
+      if (node.data.error === true) action.error = true;
+      if (node.data.enabled === false) action.enabled = false;
+      return action;
+    }
+
     // Standard service call format
     // Use spread pattern to preserve unknown properties from custom integrations
     const {

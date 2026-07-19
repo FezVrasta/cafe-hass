@@ -89,6 +89,9 @@ export interface ActionNodeData {
     device_id?: string | string[];
   };
   data?: Record<string, unknown>;
+  // Stop action: halts automation execution with an optional message
+  stop?: string;
+  error?: boolean;
   [key: string]: unknown;
 }
 
