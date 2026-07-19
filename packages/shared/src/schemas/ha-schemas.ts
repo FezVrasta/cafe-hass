@@ -205,7 +205,7 @@ export const FlowGraphMetadataSchema = z.object({
   mode: z.enum(['single', 'restart', 'queued', 'parallel']).default('single'),
   max: z.number().optional(),
   max_exceeded: z.enum(['silent', 'warning', 'critical']).optional(),
-  initial_state: z.boolean().default(false),
+  initial_state: z.boolean().optional(),
   hide_entity: z.boolean().optional(),
   trace: z.object({ stored_traces: z.number().optional() }).optional(),
 });
@@ -369,10 +369,10 @@ export const HADelaySchema = z.looseObject({
   delay: z.union([
     z.string(),
     z.looseObject({
-      hours: z.number().optional(),
-      minutes: z.number().optional(),
-      seconds: z.number().optional(),
-      milliseconds: z.number().optional(),
+      hours: z.union([z.number(), z.string()]).optional(),
+      minutes: z.union([z.number(), z.string()]).optional(),
+      seconds: z.union([z.number(), z.string()]).optional(),
+      milliseconds: z.union([z.number(), z.string()]).optional(),
     }),
   ]),
 });
@@ -391,10 +391,10 @@ export const HAWaitSchema = z
       .union([
         z.string(),
         z.looseObject({
-          hours: z.number().optional(),
-          minutes: z.number().optional(),
-          seconds: z.number().optional(),
-          milliseconds: z.number().optional(),
+          hours: z.union([z.number(), z.string()]).optional(),
+          minutes: z.union([z.number(), z.string()]).optional(),
+          seconds: z.union([z.number(), z.string()]).optional(),
+          milliseconds: z.union([z.number(), z.string()]).optional(),
         }),
       ])
       .optional(),

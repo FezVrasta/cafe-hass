@@ -138,6 +138,9 @@ export interface FlowState {
   // User-defined root-level variables (preserved across import/export round-trips)
   userVariables: Record<string, unknown> | undefined;
 
+  // User-defined trigger_variables (preserved across import/export round-trips)
+  userTriggerVariables: Record<string, unknown> | undefined;
+
   // Selection state
   selectedNodeId: string | null;
 
@@ -261,6 +264,7 @@ const initialState = {
   flowDescription: '',
   flowMetadata: defaultFlowMetadata,
   userVariables: undefined,
+  userTriggerVariables: undefined,
   nodes: [],
   edges: [],
   selectedNodeId: null,
@@ -798,6 +802,7 @@ export const useFlowStore = create<FlowState>()(
           metadata: state.flowMetadata,
           version: 1,
           userVariables: state.userVariables,
+          userTriggerVariables: state.userTriggerVariables,
         };
       },
 
@@ -841,6 +846,7 @@ export const useFlowStore = create<FlowState>()(
           flowDescription: graph.description || '',
           flowMetadata: importedMetadata,
           userVariables: graph.userVariables,
+          userTriggerVariables: graph.userTriggerVariables,
           nodes,
           edges,
           selectedNodeId: null,

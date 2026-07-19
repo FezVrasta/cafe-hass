@@ -7,7 +7,12 @@ import { Switch } from '@/components/ui/switch';
 
 export type DurationValue =
   | string
-  | { hours?: number; minutes?: number; seconds?: number; milliseconds?: number };
+  | {
+      hours?: number | string;
+      minutes?: number | string;
+      seconds?: number | string;
+      milliseconds?: number | string;
+    };
 
 export interface DurationInputProps {
   value: DurationValue;

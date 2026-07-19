@@ -191,6 +191,15 @@ export class NativeStrategy extends BaseStrategy {
     if (flow.metadata?.max_exceeded) {
       automation.max_exceeded = flow.metadata.max_exceeded;
     }
+    if (flow.metadata?.initial_state === false) {
+      automation.initial_state = false;
+    }
+    if (flow.metadata?.trace) {
+      automation.trace = flow.metadata.trace;
+    }
+    if (flow.userTriggerVariables && Object.keys(flow.userTriggerVariables).length > 0) {
+      automation.trigger_variables = flow.userTriggerVariables;
+    }
 
     return {
       automation,

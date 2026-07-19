@@ -22,7 +22,7 @@ export const FlowMetadataSchema = z.object({
   /**
    * Initial state of the automation (enabled/disabled)
    */
-  initial_state: z.boolean().default(true),
+  initial_state: z.boolean().optional(),
   /**
    * Hide from UI
    */
@@ -95,6 +95,10 @@ export const FlowGraphSchema = z.object({
    * excluding _cafe_metadata which is handled separately.
    */
   userVariables: z.record(z.string(), z.unknown()).optional(),
+  /**
+   * User-defined trigger_variables at the root level (preserved during round-trip)
+   */
+  userTriggerVariables: z.record(z.string(), z.unknown()).optional(),
   /**
    * Workspace metadata for merged automations
    */

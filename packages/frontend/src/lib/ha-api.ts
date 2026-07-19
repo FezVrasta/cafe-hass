@@ -441,14 +441,17 @@ export class HomeAssistantAPI {
       // Generate a numeric ID like Home Assistant uses
       const automationId = config.id || Date.now().toString();
 
-      // Ensure the config has the required fields for Home Assistant (plural forms)
+      // Spread all fields from config so nothing is accidentally stripped,
+      // then normalise the keys HA requires (plural trigger/condition/action forms).
+      const { trigger, condition, action, ...rest } = config;
       const configWithId = {
+        ...rest,
         id: automationId,
         alias: config.alias || `C.A.F.E. Automation ${automationId}`,
         description: config.description || '',
-        triggers: config.trigger || config.triggers || [],
-        conditions: config.condition || config.conditions || [],
-        actions: config.action || config.actions || [],
+        triggers: trigger || config.triggers || [],
+        conditions: condition || config.conditions || [],
+        actions: action || config.actions || [],
         mode: config.mode || 'single',
         variables: config.variables || {},
       };
@@ -495,14 +498,17 @@ export class HomeAssistantAPI {
       console.log('C.A.F.E.: Updating automation with ID:', automationId);
       console.log('C.A.F.E.: Update config:', config);
 
-      // Ensure the config has the correct structure that HA expects (plural forms)
+      // Spread all fields from config so nothing is accidentally stripped,
+      // then normalise the keys HA requires (plural trigger/condition/action forms).
+      const { trigger, condition, action, ...rest } = config;
       const configWithId = {
+        ...rest,
         id: automationId,
         alias: config.alias || `C.A.F.E. Automation ${automationId}`,
         description: config.description || '',
-        triggers: config.trigger || config.triggers || [],
-        conditions: config.condition || config.conditions || [],
-        actions: config.action || config.actions || [],
+        triggers: trigger || config.triggers || [],
+        conditions: condition || config.conditions || [],
+        actions: action || config.actions || [],
         mode: config.mode || 'single',
         variables: config.variables || {},
       };

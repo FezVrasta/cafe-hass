@@ -449,6 +449,13 @@ export class YamlParser {
         ? metadataResult.data
         : FlowGraphMetadataSchema.parse({});
 
+      const userTriggerVariables =
+        typeof content.trigger_variables === 'object' &&
+        content.trigger_variables !== null &&
+        !Array.isArray(content.trigger_variables)
+          ? (content.trigger_variables as Record<string, unknown>)
+          : undefined;
+
       const graph: FlowGraph = {
         id: metadata?.graph_id || generateGraphId(),
         name: typeof content.alias === 'string' ? content.alias : 'Imported Automation',
@@ -459,6 +466,10 @@ export class YamlParser {
         version: 1 as const,
         // Preserve user-defined variables for round-trip
         userVariables: Object.keys(userVariables).length > 0 ? userVariables : undefined,
+        userTriggerVariables:
+          userTriggerVariables && Object.keys(userTriggerVariables).length > 0
+            ? userTriggerVariables
+            : undefined,
       };
 
       // Step 7: Validate with Zod schema
