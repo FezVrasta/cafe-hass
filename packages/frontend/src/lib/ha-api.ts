@@ -370,7 +370,7 @@ export class HomeAssistantAPI {
             return config as AutomationConfig;
           }
         } catch (directError) {
-          console.warn(`REST API failed for automation ${automationId}:`, directError);
+          console.warn('REST API failed for automation %s:', automationId, directError);
         }
       }
 
@@ -743,7 +743,7 @@ export class HomeAssistantAPI {
         try {
           results[nextId] = await this.getAutomationConfigWithFallback(nextId);
         } catch (error) {
-          console.warn(`Failed to fetch automation config for ${nextId}:`, error);
+          console.warn('Failed to fetch automation config for %s:', nextId, error);
           results[nextId] = null;
         }
       }
