@@ -22,7 +22,6 @@ import {
   HATriggerSchema,
   isDeviceAction,
   isHACondition,
-  isHATrigger,
   validateGraphStructure,
 } from '@cafe/shared';
 import { load as yamlLoad } from 'js-yaml';
@@ -1338,30 +1337,86 @@ export class YamlParser {
     warnings: string[],
     getNextNodeId: (type: string) => string
   ): FlowNode[] {
-    return triggers.filter(isHATrigger).map((trigger, index) => {
-      const nodeId = getNextNodeId('trigger');
-      try {
-        // Validate and parse trigger using HATriggerSchema
-        const result = HATriggerSchema.safeParse(trigger);
-        if (!result.success) {
-          warnings.push(
-            `Trigger ${index} failed schema validation: ${JSON.stringify(result.error.issues)}`
-          );
-          return this.createUnknownNode(nodeId, trigger);
+    // Process all object-type trigger items — do NOT filter with isHATrigger here,
+    // because modern HA may use formats (e.g. dict-keyed or novel trigger types)
+    // that don't have 'platform', 'trigger', or 'entity_id' at the top level.
+    return triggers
+      .filter((t) => typeof t === 'object' && t !== null)
+      .map((trigger, index) => {
+        const nodeId = getNextNodeId('trigger');
+        try {
+          // Validate and parse trigger using HATriggerSchema
+          const result = HATriggerSchema.safeParse(trigger);
+          if (!result.success) {
+            warnings.push(
+              `Trigger ${index} failed schema validation: ${JSON.stringify(result.error.issues)}`
+            );
+            // Return a fallback TRIGGER node (not an action node) so the graph
+            // always has at least one trigger — allowing the import to succeed.
+            return this.createFallbackTriggerNode(nodeId, trigger);
+          }
+          // Use platform directly from validated schema
+          const node: TriggerNode = {
+            id: nodeId,
+            type: 'trigger',
+            position: { x: 0, y: 0 },
+            data: result.data,
+          };
+          return node;
+        } catch (error) {
+          warnings.push(`Failed to parse trigger ${index}: ${error}`);
+          return this.createFallbackTriggerNode(nodeId, trigger);
         }
-        // Use platform directly from validated schema
-        const node: TriggerNode = {
-          id: nodeId,
-          type: 'trigger',
-          position: { x: 0, y: 0 },
-          data: result.data,
-        };
-        return node;
-      } catch (error) {
-        warnings.push(`Failed to parse trigger ${index}: ${error}`);
-        return this.createUnknownNode(nodeId, trigger);
+      });
+  }
+
+  /**
+   * Build a best-effort trigger node when HATriggerSchema validation fails.
+   * Always returns type:'trigger' so validateGraphStructure does not fail.
+   */
+  private createFallbackTriggerNode(nodeId: string, originalData: unknown): TriggerNode {
+    const data: Record<string, unknown> =
+      typeof originalData === 'object' && originalData !== null
+        ? (originalData as Record<string, unknown>)
+        : {};
+
+    // Determine trigger type from various formats:
+    // 1. Modern HA: { trigger: 'state', ... }
+    // 2. Legacy HA: { platform: 'state', ... }
+    // 3. Dict-keyed: { state: { entity_id: '...' } }
+    let triggerType: string;
+    let nestedFields: Record<string, unknown> = {};
+
+    if (typeof data.trigger === 'string') {
+      triggerType = data.trigger;
+      const { platform: _p, trigger: _t, ...rest } = data;
+      nestedFields = rest;
+    } else if (typeof data.platform === 'string') {
+      triggerType = data.platform;
+      const { platform: _p, ...rest } = data;
+      nestedFields = rest;
+    } else {
+      // Dict-keyed format: first key is the trigger type, value contains fields
+      const firstKey = Object.keys(data).find(
+        (k) => !['alias', 'id', 'enabled', 'variables'].includes(k)
+      );
+      if (firstKey && typeof data[firstKey] === 'object' && data[firstKey] !== null) {
+        triggerType = firstKey;
+        nestedFields = data[firstKey] as Record<string, unknown>;
+      } else {
+        triggerType = 'state';
       }
-    });
+    }
+
+    return {
+      id: nodeId,
+      type: 'trigger',
+      position: { x: 0, y: 0 },
+      data: {
+        trigger: triggerType,
+        ...nestedFields,
+      } as TriggerNode['data'],
+    };
   }
 
   /**

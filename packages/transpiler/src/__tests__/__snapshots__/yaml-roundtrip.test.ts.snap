@@ -630,13 +630,13 @@ description: "Arrival: Heats if cold (after 5h away). Departure: Turns OFF (only
 triggers:
   - trigger: zone
     entity_id: person.maria
-    zone: zone.city_limits
     event: enter
+    zone: zone.city_limits
     id: arriving
   - trigger: zone
     entity_id: person.maria
-    zone: zone.city_limits
     event: leave
+    zone: zone.city_limits
     id: leaving
   - trigger: numeric_state
     entity_id: water_heater.altherma

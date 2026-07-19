@@ -72,6 +72,7 @@ export const HAPlatformEnum = z.enum([
   'numeric_state',
   'homeassistant',
   'device',
+  'calendar',
 ]);
 export type HAPlatform = z.infer<typeof HAPlatformEnum>;
 
@@ -94,15 +95,19 @@ export const HATriggerSchema = z
     for: z
       .union([
         z.string(),
+        z.number(),
         z.object({
-          hours: z.number().optional(),
-          minutes: z.number().optional(),
-          seconds: z.number().optional(),
+          hours: z.union([z.number(), z.string()]).optional(),
+          minutes: z.union([z.number(), z.string()]).optional(),
+          seconds: z.union([z.number(), z.string()]).optional(),
+          milliseconds: z.union([z.number(), z.string()]).optional(),
         }),
       ])
       .optional(),
-    at: z.union([z.string(), z.array(z.string())]).optional(),
-    event_type: z.string().optional(),
+    at: z.unknown().optional(),
+    offset: z.string().optional(),
+    event: z.string().optional(),
+    event_type: z.union([z.string(), z.array(z.string())]).optional(),
     event_data: z.record(z.string(), z.unknown()).optional(),
     above: z.union([z.string(), z.number()]).optional(),
     below: z.union([z.string(), z.number()]).optional(),
@@ -141,7 +146,9 @@ export interface HATriggerInput {
   from?: string | string[] | null;
   to?: string | string[] | null;
   for?: string | { hours?: number; minutes?: number; seconds?: number };
-  at?: string | string[];
+  at?: string | string[] | { entity_id: string; offset?: string };
+  offset?: string;
+  event?: string;
   event_type?: string;
   event_data?: Record<string, unknown>;
   above?: string | number;
