@@ -2354,10 +2354,14 @@ export class YamlParser {
       ? chooseAction.choose
       : [chooseAction.choose];
 
-    // Filter to only valid choices with conditions
-    const validChoices = choices.filter(
-      (choice) => typeof choice === 'object' && choice !== null && choice.conditions
-    );
+    // Filter to only valid choices with non-empty conditions.
+    // Note: an empty array (`conditions: []`) is truthy in JS, so it must be
+    // rejected explicitly by checking the array length.
+    const validChoices = choices.filter((choice) => {
+      if (typeof choice !== 'object' || choice === null) return false;
+      const conds = (choice as Record<string, unknown>).conditions;
+      return Array.isArray(conds) ? conds.length > 0 : Boolean(conds);
+    });
 
     // Track what nodes should connect to the next condition (false path of current)
     let currentPreviousIds = [...previousNodeIds];
@@ -2439,6 +2443,10 @@ export class YamlParser {
         nodes.push(conditionNode);
         localConditionIds.add(conditionId);
       }
+
+      // Guard: skip this choice entirely if no condition nodes were created
+      // (prevents "Cannot read properties of undefined (reading 'id')").
+      if (choiceConditionNodes.length === 0) return;
 
       const firstConditionId = choiceConditionNodes[0].id;
       const lastConditionId = choiceConditionNodes[choiceConditionNodes.length - 1].id;
