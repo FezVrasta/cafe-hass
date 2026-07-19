@@ -8,7 +8,10 @@
     "noAction": "L'automatisation doit avoir au moins un nœud d'action. Veuillez ajouter une action depuis la palette de nœuds.",
     "validationFailed": "Validation échouée : {{errors}}",
     "transpileFailed": "Échec de la transpilation du flux en configuration d'automatisation",
-    "noAutomationId": "Aucun ID d'automatisation défini. Utilisez saveAutomation() pour les nouvelles automatisations."
+    "noAutomationId": "Aucun ID d'automatisation défini. Utilisez saveAutomation() pour les nouvelles automatisations.",
+    "node": {
+      "duplicateId": "ID déjà utilisé — doit être unique dans l'automatisation"
+    }
   },
   "connection": {
     "noConnection": "Aucune connexion Home Assistant disponible",

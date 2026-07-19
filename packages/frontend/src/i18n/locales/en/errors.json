@@ -8,7 +8,10 @@
     "noAction": "Automation must have at least one action node. Please add an action from the node palette.",
     "validationFailed": "Validation failed: {{errors}}",
     "transpileFailed": "Failed to transpile flow to automation config",
-    "noAutomationId": "No automation ID set. Use saveAutomation() for new automations."
+    "noAutomationId": "No automation ID set. Use saveAutomation() for new automations.",
+    "node": {
+      "duplicateId": "ID already in use — must be unique within the automation"
+    }
   },
   "connection": {
     "noConnection": "No Home Assistant connection available",

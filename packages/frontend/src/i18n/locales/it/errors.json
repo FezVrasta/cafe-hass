@@ -8,7 +8,10 @@
     "noAction": "L'automazione deve avere almeno un nodo azione. Aggiungi un'azione dalla palette dei nodi.",
     "validationFailed": "Validazione fallita: {{errors}}",
     "transpileFailed": "Impossibile transpilare il flow in configurazione automazione",
-    "noAutomationId": "Nessun ID automazione impostato. Usa saveAutomation() per nuove automazioni."
+    "noAutomationId": "Nessun ID automazione impostato. Usa saveAutomation() per nuove automazioni.",
+    "node": {
+      "duplicateId": "ID già in uso — deve essere univoco nell'automazione"
+    }
   },
   "connection": {
     "noConnection": "Nessuna connessione Home Assistant disponibile",

@@ -1401,7 +1401,12 @@ export class NativeStrategy extends BaseStrategy {
     const {
       alias,
       service,
-      id,
+      // `id` is intentionally dropped (not just excluded from extraProps) —
+      // HA's action-step schemas (service call, delay, wait, set_variables)
+      // don't support a per-step `id:` at all; only triggers do. Real HA
+      // rejects it outright ("extra keys not allowed"), so it can't be
+      // preserved even for round-trip fidelity.
+      id: _id,
       target,
       data,
       data_template,
@@ -1416,10 +1421,6 @@ export class NativeStrategy extends BaseStrategy {
       alias,
       service,
     };
-
-    if (id) {
-      action.id = id;
-    }
 
     if (target) {
       action.target = target;
@@ -1452,17 +1453,14 @@ export class NativeStrategy extends BaseStrategy {
    * Build delay action
    */
   private buildDelay(node: DelayNode): Record<string, unknown> {
-    // Use spread pattern to preserve unknown properties from custom integrations
-    const { alias, delay: delayValue, id, ...extraProps } = node.data;
+    // Use spread pattern to preserve unknown properties from custom integrations.
+    // `id` is dropped — HA's action-step schemas don't support it, only triggers do.
+    const { alias, delay: delayValue, id: _id, ...extraProps } = node.data;
     const delay: Record<string, unknown> = {
       ...extraProps, // Preserve extra properties
       alias,
       delay: delayValue,
     };
-
-    if (id) {
-      delay.id = id;
-    }
 
     return delay;
   }
@@ -1471,10 +1469,11 @@ export class NativeStrategy extends BaseStrategy {
    * Build wait action
    */
   private buildWait(node: WaitNode): Record<string, unknown> {
-    // Use spread pattern to preserve unknown properties from custom integrations
+    // Use spread pattern to preserve unknown properties from custom integrations.
+    // `id` is dropped — HA's action-step schemas don't support it, only triggers do.
     const {
       alias,
-      id,
+      id: _id,
       wait_template,
       wait_for_trigger,
       timeout,
@@ -1485,10 +1484,6 @@ export class NativeStrategy extends BaseStrategy {
       ...extraProps, // Preserve extra properties
       alias,
     };
-
-    if (id) {
-      wait.id = id;
-    }
 
     if (wait_template) {
       wait.wait_template = wait_template;
@@ -1516,8 +1511,9 @@ export class NativeStrategy extends BaseStrategy {
    * Build set variables action
    */
   private buildSetVariables(node: SetVariablesNode): Record<string, unknown> {
-    // Use spread pattern to preserve unknown properties from custom integrations
-    const { alias, id, variables, ...extraProps } = node.data;
+    // Use spread pattern to preserve unknown properties from custom integrations.
+    // `id` is dropped — HA's action-step schemas don't support it, only triggers do.
+    const { alias, id: _id, variables, ...extraProps } = node.data;
     const setVars: Record<string, unknown> = {
       ...extraProps, // Preserve extra properties
       variables,
@@ -1525,10 +1521,6 @@ export class NativeStrategy extends BaseStrategy {
 
     if (alias) {
       setVars.alias = alias;
-    }
-
-    if (id) {
-      setVars.id = id;
     }
 
     return setVars;

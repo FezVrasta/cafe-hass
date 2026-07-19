@@ -8,7 +8,10 @@
     "noAction": "自动化必须至少有一个动作节点。请从节点面板添加动作。",
     "validationFailed": "验证失败：{{errors}}",
     "transpileFailed": "将流程转译为自动化配置失败",
-    "noAutomationId": "未设置自动化ID。使用 saveAutomation() 创建新自动化。"
+    "noAutomationId": "未设置自动化ID。使用 saveAutomation() 创建新自动化。",
+    "node": {
+      "duplicateId": "ID 已被使用 — 在自动化中必须唯一"
+    }
   },
   "connection": {
     "noConnection": "没有可用的Home Assistant连接",

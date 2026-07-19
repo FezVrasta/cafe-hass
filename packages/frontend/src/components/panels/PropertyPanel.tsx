@@ -2,6 +2,7 @@ import type { FlowNode } from '@cafe/shared';
 import { Trash2 } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { FieldError } from '@/components/forms/FieldError';
 import { FormField } from '@/components/forms/FormField';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { getHandledProperties } from '@/config/handledProperties';
 import { useHass } from '@/contexts/HassContext';
+import { useNodeErrors } from '@/hooks/useNodeErrors';
 import { useFlowStore } from '@/store/flow-store';
 import type { HassEntity } from '@/types/hass';
 import { Separator } from '../ui/separator';
@@ -74,6 +76,9 @@ export function PropertyPanel() {
     return baseHandled;
   }, [selectedNode]);
 
+  // Must be before early return — hooks can't be called conditionally.
+  const { getFieldError } = useNodeErrors(selectedNode?.id ?? '');
+
   if (!selectedNode) {
     return <AutomationSettingsPanel />;
   }
@@ -116,8 +121,13 @@ export function PropertyPanel() {
         />
       </FormField>
 
-      {/* ID field - not applicable for action nodes */}
-      {selectedNode.type !== 'action' && (
+      {/* ID field — triggers only. Home Assistant's action-step schemas
+          (service call, delay, wait, set_variables, ...) don't support a
+          per-step `id:` at all, only triggers do (for `trigger.id`
+          templating and `choose:`/`condition: trigger` routing) — real HA
+          rejects it outright ("extra keys not allowed") on any other step
+          type, it's not just ignored. */}
+      {selectedNode.type === 'trigger' && (
         <FormField label={t('labels.id')}>
           <Input
             type="text"
@@ -126,6 +136,7 @@ export function PropertyPanel() {
             placeholder={t('placeholders.optionalUniqueId')}
             className="font-mono"
           />
+          <FieldError message={getFieldError('id')} />
         </FormField>
       )}
 
