@@ -164,5 +164,8 @@
     "timeoutDescription": "Maximum time to wait before continuing. Leave empty to wait indefinitely.",
     "continueOnTimeout": "Continue on Timeout",
     "continueOnTimeoutDescription": "If enabled, the automation continues when timeout expires. If disabled, the automation stops."
+  },
+  "quickAdd": {
+    "searchPlaceholder": "Search nodes…"
   }
 }

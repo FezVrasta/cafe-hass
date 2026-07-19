@@ -140,5 +140,8 @@
     "timeoutDescription": "Temps maximum d'attente avant de continuer. Laissez vide pour attendre indéfiniment.",
     "continueOnTimeout": "Continuer à l'expiration",
     "continueOnTimeoutDescription": "Si activé, l'automatisation continue quand le délai expire. Si désactivé, l'automatisation s'arrête."
+  },
+  "quickAdd": {
+    "searchPlaceholder": "Rechercher des nœuds…"
   }
 }

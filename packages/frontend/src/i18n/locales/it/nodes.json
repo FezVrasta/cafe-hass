@@ -140,5 +140,8 @@
     "timeoutDescription": "Tempo massimo di attesa prima di continuare. Lascia vuoto per attendere indefinitamente.",
     "continueOnTimeout": "Continua al Timeout",
     "continueOnTimeoutDescription": "Se abilitato, l'automazione continua quando scade il timeout. Se disabilitato, l'automazione si ferma."
+  },
+  "quickAdd": {
+    "searchPlaceholder": "Cerca nodi…"
   }
 }

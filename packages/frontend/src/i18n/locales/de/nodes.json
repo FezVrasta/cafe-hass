@@ -140,5 +140,8 @@
     "timeoutDescription": "Maximale Wartezeit vor dem Fortfahren. Leer lassen für unbegrenztes Warten.",
     "continueOnTimeout": "Bei Zeitüberschreitung fortfahren",
     "continueOnTimeoutDescription": "Wenn aktiviert, fährt die Automatisierung fort, wenn die Zeitüberschreitung abläuft. Wenn deaktiviert, stoppt die Automatisierung."
+  },
+  "quickAdd": {
+    "searchPlaceholder": "Knoten suchen…"
   }
 }

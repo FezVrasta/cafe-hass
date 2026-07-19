@@ -140,5 +140,8 @@
     "timeoutDescription": "继续前的最大等待时间。留空则无限等待。",
     "continueOnTimeout": "超时后继续",
     "continueOnTimeoutDescription": "如果启用，超时后自动化继续。如果禁用，自动化停止。"
+  },
+  "quickAdd": {
+    "searchPlaceholder": "搜索节点…"
   }
 }
