@@ -147,7 +147,9 @@
     "alignBottom": "Aligner en bas",
     "deleteNode": "Supprimer le nœud",
     "duplicateNode": "Dupliquer le nœud",
-    "selectAll": "Tout sélectionner"
+    "selectAll": "Tout sélectionner",
+    "undo": "Annuler",
+    "redo": "Rétablir"
   },
   "shortcuts": {
     "cmd": "Cmd",

@@ -147,7 +147,9 @@
     "alignBottom": "底端对齐",
     "deleteNode": "删除节点",
     "duplicateNode": "复制节点",
-    "selectAll": "全选"
+    "selectAll": "全选",
+    "undo": "撤销",
+    "redo": "重做"
   },
   "shortcuts": {
     "cmd": "Cmd",

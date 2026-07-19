@@ -147,7 +147,9 @@
     "alignBottom": "Unten ausrichten",
     "deleteNode": "Knoten löschen",
     "duplicateNode": "Knoten duplizieren",
-    "selectAll": "Alles auswählen"
+    "selectAll": "Alles auswählen",
+    "undo": "Rückgängig",
+    "redo": "Wiederherstellen"
   },
   "shortcuts": {
     "cmd": "Cmd",

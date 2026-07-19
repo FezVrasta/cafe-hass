@@ -174,7 +174,9 @@
     "alignBottom": "Align Bottom",
     "deleteNode": "Delete Node",
     "duplicateNode": "Duplicate Node",
-    "selectAll": "Select All"
+    "selectAll": "Select All",
+    "undo": "Undo",
+    "redo": "Redo"
   },
   "shortcuts": {
     "cmd": "Cmd",

@@ -17,4 +17,8 @@ export interface NodeActionContext {
   setEdges: (edges: Edge[]) => void;
   setClipboard: (data: string | null) => void;
   setPasteCount: (count: number) => void;
+  undo: () => void;
+  redo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
 }

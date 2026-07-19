@@ -147,7 +147,9 @@
     "alignBottom": "Allinea in basso",
     "deleteNode": "Elimina Nodo",
     "duplicateNode": "Duplica Nodo",
-    "selectAll": "Seleziona Tutto"
+    "selectAll": "Seleziona Tutto",
+    "undo": "Annulla",
+    "redo": "Ripristina"
   },
   "shortcuts": {
     "cmd": "Cmd",

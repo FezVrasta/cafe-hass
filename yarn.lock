@@ -363,6 +363,7 @@ __metadata:
     vite: "npm:^5.4.0"
     vite-plugin-css-injected-by-js: "npm:^3.5.2"
     vitest: "npm:^2.1.0"
+    zundo: "npm:^2.3.0"
     zustand: "npm:^5.0.0"
   languageName: unknown
   linkType: soft
@@ -5568,6 +5569,18 @@ __metadata:
   version: 4.3.5
   resolution: "zod@npm:4.3.5"
   checksum: 10c0/5a2db7e59177a3d7e202543f5136cb87b97b047b77c8a3d824098d3fa8b80d3aa40a0a5f296965c3b82dfdccdd05dbbfacce91347f16a39c675680fd7b1ab109
+  languageName: node
+  linkType: hard
+
+"zundo@npm:^2.3.0":
+  version: 2.3.0
+  resolution: "zundo@npm:2.3.0"
+  peerDependencies:
+    zustand: ^4.3.0 || ^5.0.0
+  peerDependenciesMeta:
+    zustand:
+      optional: false
+  checksum: 10c0/673d13570b1029830a7ace37b7946c6d878a6493c565727351bd5791f6e46e4b25eb132f96985137bc3f0aa3c7f69093ef87ea2bfb4aa5805b0eb804e8eaa916
   languageName: node
   linkType: hard
 

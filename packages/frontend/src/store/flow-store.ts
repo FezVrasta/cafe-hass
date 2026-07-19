@@ -17,8 +17,10 @@ import {
   type Node,
   type NodeChange,
 } from '@xyflow/react';
+import { temporal } from 'zundo';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { shallow } from 'zustand/shallow';
 import type { AutomationTrace } from '@/lib/ha-api';
 import { getHomeAssistantAPI } from '@/lib/ha-api';
 import { generateUUID } from '@/lib/utils';
@@ -347,615 +349,715 @@ const persistSelector = (state: FlowState): PersistedFlowState => ({
   originalSnapshot: state.originalSnapshot,
 });
 
+/**
+ * The subset of FlowState that undo/redo tracks — graph content only.
+ * Selection, save/dirty bookkeeping, simulation/trace UI state, clipboard,
+ * and derived validation errors are deliberately excluded so they don't
+ * generate (or get reverted by) history entries.
+ */
+export type TemporalFlowState = Pick<
+  FlowState,
+  | 'nodes'
+  | 'edges'
+  | 'flowName'
+  | 'flowDescription'
+  | 'flowMetadata'
+  | 'userVariables'
+  | 'userTriggerVariables'
+>;
+
+const temporalSelector = (state: FlowState): TemporalFlowState => ({
+  nodes: state.nodes,
+  edges: state.edges,
+  flowName: state.flowName,
+  flowDescription: state.flowDescription,
+  flowMetadata: state.flowMetadata,
+  userVariables: state.userVariables,
+  userTriggerVariables: state.userTriggerVariables,
+});
+
+let pendingHistoryCommit:
+  | { timeoutId: ReturnType<typeof setTimeout>; burstStart: TemporalFlowState }
+  | undefined;
+
+/**
+ * Cancels an in-flight debounced history commit (see `handleSet` below)
+ * without flushing it. Called from `reset()`/`fromFlowGraph()` alongside
+ * `temporal.getState().clear()` — clearing the past/future arrays alone
+ * isn't enough, since a burst that was still debouncing when the graph got
+ * replaced would otherwise fire *after* the clear and push a snapshot of the
+ * *previous* automation into the *new* one's history.
+ */
+function cancelPendingHistoryCommit(): void {
+  if (pendingHistoryCommit) {
+    clearTimeout(pendingHistoryCommit.timeoutId);
+    pendingHistoryCommit = undefined;
+  }
+}
+
 export const useFlowStore = create<FlowState>()(
   persist(
-    (set, get) => ({
-      ...initialState,
+    temporal(
+      (set, get) => ({
+        ...initialState,
 
-      setNodes: (nodes) => set({ nodes }),
-      setEdges: (edges) => set({ edges }),
+        setNodes: (nodes) => set({ nodes }),
+        setEdges: (edges) => set({ edges }),
 
-      onNodesChange: (changes) =>
-        set((state) => ({
-          nodes: applyNodeChanges(changes, state.nodes),
-          hasUnsavedChanges: true,
-        })),
-
-      onEdgesChange: (changes) =>
-        set((state) => ({
-          edges: applyEdgeChanges(changes, state.edges),
-          hasUnsavedChanges: true,
-        })),
-
-      onConnect: (connection) =>
-        set((state) => ({
-          edges: addEdge(
-            {
-              ...connection,
-              id: `e-${connection.source}-${connection.target}-${Date.now()}`,
-              animated: false,
-            },
-            state.edges
-          ),
-          hasUnsavedChanges: true,
-        })),
-
-      addNode: (node) => {
-        // Normalize node data (e.g., convert platform to trigger for trigger nodes)
-        const normalizedNode = node.type
-          ? {
-              ...node,
-              data: normalizeNodeData(
-                node.type,
-                node.data as Record<string, unknown>
-              ) as FlowNodeData,
-            }
-          : node;
-
-        set((state) => ({
-          nodes: [...state.nodes, normalizedNode],
-          hasUnsavedChanges: true,
-        }));
-        // Validate the newly added node
-        get().validateNode(node.id);
-      },
-
-      updateNodeData: (nodeId, data) => {
-        set((state) => ({
-          nodes: state.nodes.map((node) =>
-            node.id === nodeId ? { ...node, data: { ...node.data, ...data } } : node
-          ),
-          hasUnsavedChanges: true,
-        }));
-        if ('id' in data) {
-          // A rename can resolve a duplicate on one node while creating a new
-          // one on another — single-node validation can't see that.
-          get().validateAllNodes();
-        } else {
-          // Validate the node after data update
-          get().validateNode(nodeId);
-        }
-      },
-
-      removeNode: (nodeId) =>
-        set((state) => ({
-          nodes: state.nodes.filter((n) => n.id !== nodeId),
-          edges: state.edges.filter((e) => e.source !== nodeId && e.target !== nodeId),
-          selectedNodeId: state.selectedNodeId === nodeId ? null : state.selectedNodeId,
-          hasUnsavedChanges: true,
-        })),
-
-      selectNode: (nodeId) => set({ selectedNodeId: nodeId }),
-
-      setClipboard: (data: string | null) => set({ clipboard: data }),
-      setPasteCount: (count: number) => set({ pasteCount: count }),
-
-      setFlowName: (name) => set({ flowName: name, hasUnsavedChanges: true }),
-      setFlowDescription: (description) =>
-        set({ flowDescription: description, hasUnsavedChanges: true }),
-      setFlowMetadata: (metadata) =>
-        set((state) => ({
-          flowMetadata: { ...state.flowMetadata, ...metadata },
-          hasUnsavedChanges: true,
-        })),
-
-      // Save actions
-      setAutomationId: (id) => set({ automationId: id }),
-      setSaving: (saving) => set({ isSaving: saving }),
-      setSaved: () => set({ lastSaved: new Date(), hasUnsavedChanges: false }),
-      setUnsavedChanges: (hasChanges) => set({ hasUnsavedChanges: hasChanges }),
-      hasRealChanges: () => {
-        const state = get();
-        if (!state.originalSnapshot) {
-          // No original snapshot means it's a new flow - check if there are any nodes
-          return state.nodes.length > 0;
-        }
-        // Create current snapshot and compare
-        const currentSnapshot = JSON.stringify({
-          flowName: state.flowName,
-          flowDescription: state.flowDescription,
-          flowMetadata: state.flowMetadata,
-          nodes: state.nodes.map((n) => ({
-            id: n.id,
-            type: n.type,
-            position: n.position,
-            data: n.data,
+        onNodesChange: (changes) =>
+          set((state) => ({
+            nodes: applyNodeChanges(changes, state.nodes),
+            hasUnsavedChanges: true,
           })),
-          edges: state.edges.map((e) => ({
-            id: e.id,
-            source: e.source,
-            target: e.target,
-            sourceHandle: e.sourceHandle,
-            targetHandle: e.targetHandle,
+
+        onEdgesChange: (changes) =>
+          set((state) => ({
+            edges: applyEdgeChanges(changes, state.edges),
+            hasUnsavedChanges: true,
           })),
-        });
-        return currentSnapshot !== state.originalSnapshot;
-      },
 
-      saveAutomation: async (hassApi: HomeAssistant) => {
-        const state = get();
-        const api = getHomeAssistantAPI(hassApi);
-
-        set({ isSaving: true });
-
-        try {
-          // Validate all nodes first
-          get().validateAllNodes();
-
-          // Check for validation errors
-          const currentState = get();
-          if (currentState.nodeErrors.size > 0) {
-            const errorCount = currentState.nodeErrors.size;
-            throw new Error(
-              `Cannot save: ${errorCount} node(s) have validation errors. Fix the highlighted nodes before saving.`
-            );
-          }
-
-          // Convert flow to graph
-          const graph = state.toFlowGraph();
-
-          // Check for empty automation
-          if (graph.nodes.length === 0) {
-            throw new Error(
-              'Cannot save empty automation. Please add at least one trigger and one action node.'
-            );
-          }
-
-          // Check for minimum required nodes
-          const triggers = graph.nodes.filter((n) => n.type === 'trigger');
-          const actions = graph.nodes.filter((n) => n.type === 'action');
-
-          if (triggers.length === 0) {
-            throw new Error(
-              'Automation must have at least one trigger node. Please add a trigger from the node palette.'
-            );
-          }
-
-          if (actions.length === 0) {
-            throw new Error(
-              'Automation must have at least one action node. Please add an action from the node palette.'
-            );
-          }
-
-          const transpiler = new FlowTranspiler();
-
-          // Validate first
-          const validation = transpiler.validate(graph);
-
-          if (validation.errors.length > 0) {
-            console.error('C.A.F.E.: Validation errors:', validation.errors);
-            throw new Error(
-              `Validation failed: ${validation.errors.map((e) => e.message).join(', ')}`
-            );
-          }
-
-          // Transpile to automation config
-          const result = transpiler.transpile(graph);
-          if (!result.success || !result.output?.automation) {
-            throw new Error('Failed to transpile flow to automation config');
-          }
-
-          // Create automation in Home Assistant
-          const automationConfig = {
-            alias: state.flowName,
-            description: state.flowDescription || '',
-            ...result.output.automation,
-            variables: {
-              ...(result.output.automation.variables || {}),
-              _cafe_metadata: {
-                version: 1,
-                strategy: 'native' as const,
-                nodes: graph.nodes.reduce(
-                  (acc, node) => {
-                    acc[node.id] = {
-                      x: node.position.x,
-                      y: node.position.y,
-                    };
-                    return acc;
-                  },
-                  {} as Record<string, { x: number; y: number }>
-                ),
-                graph_id: graph.id,
-                graph_version: 1,
+        onConnect: (connection) =>
+          set((state) => ({
+            edges: addEdge(
+              {
+                ...connection,
+                id: `e-${connection.source}-${connection.target}-${Date.now()}`,
+                animated: false,
               },
-            },
-          };
+              state.edges
+            ),
+            hasUnsavedChanges: true,
+          })),
 
-          const automationId = await api.createAutomation(automationConfig);
+        addNode: (node) => {
+          // Normalize node data (e.g., convert platform to trigger for trigger nodes)
+          const normalizedNode = node.type
+            ? {
+                ...node,
+                data: normalizeNodeData(
+                  node.type,
+                  node.data as Record<string, unknown>
+                ) as FlowNodeData,
+              }
+            : node;
 
-          set({
-            automationId,
-            isSaving: false,
-            lastSaved: new Date(),
-            hasUnsavedChanges: false,
-          });
+          set((state) => ({
+            nodes: [...state.nodes, normalizedNode],
+            hasUnsavedChanges: true,
+          }));
+          // Validate the newly added node
+          get().validateNode(node.id);
+        },
 
-          return automationId;
-        } catch (error) {
-          set({ isSaving: false });
-          throw error;
-        }
-      },
-
-      updateAutomation: async (hassApi: HomeAssistant) => {
-        const state = get();
-        const api = getHomeAssistantAPI(hassApi);
-
-        if (!state.automationId) {
-          throw new Error('No automation ID set. Use saveAutomation() for new automations.');
-        }
-
-        console.log('C.A.F.E.: Updating automation with ID from store:', state.automationId);
-
-        set({ isSaving: true });
-
-        try {
-          // Validate all nodes first
-          get().validateAllNodes();
-
-          // Check for validation errors
-          const currentState = get();
-          if (currentState.nodeErrors.size > 0) {
-            const errorCount = currentState.nodeErrors.size;
-            throw new Error(
-              `Cannot save: ${errorCount} node(s) have validation errors. Fix the highlighted nodes before saving.`
-            );
+        updateNodeData: (nodeId, data) => {
+          set((state) => ({
+            nodes: state.nodes.map((node) =>
+              node.id === nodeId ? { ...node, data: { ...node.data, ...data } } : node
+            ),
+            hasUnsavedChanges: true,
+          }));
+          if ('id' in data) {
+            // A rename can resolve a duplicate on one node while creating a new
+            // one on another — single-node validation can't see that.
+            get().validateAllNodes();
+          } else {
+            // Validate the node after data update
+            get().validateNode(nodeId);
           }
+        },
 
-          // Convert flow to graph
-          const graph = state.toFlowGraph();
+        removeNode: (nodeId) =>
+          set((state) => ({
+            nodes: state.nodes.filter((n) => n.id !== nodeId),
+            edges: state.edges.filter((e) => e.source !== nodeId && e.target !== nodeId),
+            selectedNodeId: state.selectedNodeId === nodeId ? null : state.selectedNodeId,
+            hasUnsavedChanges: true,
+          })),
 
-          // Check for empty automation
-          if (graph.nodes.length === 0) {
-            throw new Error(
-              'Cannot save empty automation. Please add at least one trigger and one action node.'
-            );
-          }
+        selectNode: (nodeId) => set({ selectedNodeId: nodeId }),
 
-          // Check for minimum required nodes
-          const triggers = graph.nodes.filter((n) => n.type === 'trigger');
-          const actions = graph.nodes.filter((n) => n.type === 'action');
+        setClipboard: (data: string | null) => set({ clipboard: data }),
+        setPasteCount: (count: number) => set({ pasteCount: count }),
 
-          if (triggers.length === 0) {
-            throw new Error(
-              'Automation must have at least one trigger node. Please add a trigger from the node palette.'
-            );
-          }
+        setFlowName: (name) => set({ flowName: name, hasUnsavedChanges: true }),
+        setFlowDescription: (description) =>
+          set({ flowDescription: description, hasUnsavedChanges: true }),
+        setFlowMetadata: (metadata) =>
+          set((state) => ({
+            flowMetadata: { ...state.flowMetadata, ...metadata },
+            hasUnsavedChanges: true,
+          })),
 
-          if (actions.length === 0) {
-            throw new Error(
-              'Automation must have at least one action node. Please add an action from the node palette.'
-            );
-          }
-
-          const transpiler = new FlowTranspiler();
-
-          // Validate first
-          const validation = transpiler.validate(graph);
-          if (validation.errors.length > 0) {
-            throw new Error(
-              `Validation failed: ${validation.errors.map((e) => e.message).join(', ')}`
-            );
-          }
-
-          // Transpile to automation config
-          const result = transpiler.transpile(graph);
-          if (!result.success || !result.output?.automation) {
-            throw new Error('Failed to transpile flow to automation config');
-          }
-
-          // Update automation in Home Assistant
-          const automationConfig = {
-            alias: state.flowName,
-            description: state.flowDescription || '',
-            ...result.output.automation,
-            variables: {
-              ...(result.output.automation.variables || {}),
-              _cafe_metadata: {
-                version: 1,
-                strategy: 'native' as const,
-                nodes: graph.nodes.reduce(
-                  (acc, node) => {
-                    acc[node.id] = {
-                      x: node.position.x,
-                      y: node.position.y,
-                    };
-                    return acc;
-                  },
-                  {} as Record<string, { x: number; y: number }>
-                ),
-                graph_id: graph.id,
-                graph_version: 1,
-              },
-            },
-          };
-
-          await api.updateAutomation(state.automationId, automationConfig);
-
-          set({
-            isSaving: false,
-            lastSaved: new Date(),
-            hasUnsavedChanges: false,
-          });
-        } catch (error) {
-          set({ isSaving: false });
-          throw error;
-        }
-      },
-
-      startSimulation: () => set({ isSimulating: true, executionPath: [], activeNodeId: null }),
-      stopSimulation: () => set({ isSimulating: false, activeNodeId: null }),
-      setActiveNode: (nodeId) => set({ activeNodeId: nodeId }),
-      addToExecutionPath: (nodeId) =>
-        set((state) => ({
-          executionPath: [...state.executionPath, nodeId],
-        })),
-      clearExecutionPath: () => set({ executionPath: [] }),
-
-      showTrace: (traceData) => {
-        const traceExecutionPath: string[] = [];
-        const traceTimestamps: Record<string, string> = {};
-
-        // Extract execution path and timestamps from trace data
-        if (traceData?.trace) {
-          // Get current flow nodes grouped by type and sorted by position
+        // Save actions
+        setAutomationId: (id) => set({ automationId: id }),
+        setSaving: (saving) => set({ isSaving: saving }),
+        setSaved: () => set({ lastSaved: new Date(), hasUnsavedChanges: false }),
+        setUnsavedChanges: (hasChanges) => set({ hasUnsavedChanges: hasChanges }),
+        hasRealChanges: () => {
           const state = get();
-          const nodesByType: Record<string, Node<FlowNodeData>[]> = {
-            trigger: [],
-            condition: [],
-            action: [],
-            wait: [],
-            delay: [],
-          };
-
-          // Group nodes by type and sort them (could be by y-position or order in array)
-          for (const node of state.nodes) {
-            const nodeType = node.type as keyof typeof nodesByType;
-            if (nodesByType[nodeType]) {
-              nodesByType[nodeType].push(node);
-            }
+          if (!state.originalSnapshot) {
+            // No original snapshot means it's a new flow - check if there are any nodes
+            return state.nodes.length > 0;
           }
-
-          // Sort each group by y-position to match likely execution order
-          for (const type in nodesByType) {
-            nodesByType[type].sort((a, b) => a.position.y - b.position.y);
-          }
-
-          // Sort trace steps by timestamp to get execution order
-          const sortedSteps = Object.entries(traceData.trace)
-            .flatMap(([path, steps]) => {
-              if (Array.isArray(steps)) {
-                return steps.map((step) => ({ ...step, path }));
-              }
-              return [];
-            })
-            .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-
-          // Map trace paths to actual node IDs
-          for (const step of sortedSteps) {
-            const pathParts = step.path.split('/');
-            const nodeType = pathParts[0]; // trigger, condition, action, etc.
-            const nodeIndex = parseInt(pathParts[1], 10); // 0, 1, 2, etc.
-
-            // Find the corresponding node in our flow
-            const nodesOfType = nodesByType[nodeType] || [];
-            if (nodesOfType[nodeIndex]) {
-              const nodeId = nodesOfType[nodeIndex].id;
-
-              if (!traceExecutionPath.includes(nodeId)) {
-                traceExecutionPath.push(nodeId);
-                traceTimestamps[nodeId] = step.timestamp;
-              }
-            }
-          }
-        }
-
-        set({
-          isShowingTrace: true,
-          traceData,
-          traceExecutionPath,
-          traceTimestamps,
-          activeNodeId: null,
-        });
-      },
-      hideTrace: () =>
-        set({
-          isShowingTrace: false,
-          traceData: null,
-          traceExecutionPath: [],
-          traceTimestamps: {},
-          activeNodeId: null,
-        }),
-      clearTraceExecutionPath: () => set({ traceExecutionPath: [], traceTimestamps: {} }),
-
-      setSimulationSpeed: (speed) => set({ simulationSpeed: speed }),
-      getExecutionStepNumber: (nodeId) => {
-        const state = get();
-        // Check simulation execution path first
-        if (state.isSimulating && state.executionPath.length > 0) {
-          const stepIndex = state.executionPath.indexOf(nodeId);
-          return stepIndex >= 0 ? stepIndex + 1 : null;
-        }
-        // Check trace execution path
-        if (state.isShowingTrace && state.traceExecutionPath.length > 0) {
-          const stepIndex = state.traceExecutionPath.indexOf(nodeId);
-          return stepIndex >= 0 ? stepIndex + 1 : null;
-        }
-        return null;
-      },
-
-      canDeleteEdge: () => {
-        // All edges are always deletable
-        return true;
-      },
-
-      toFlowGraph: (): FlowGraph => {
-        const state = get();
-        const nodeIds = new Set(state.nodes.map((n) => n.id));
-
-        return {
-          id: state.flowId,
-          name: state.flowName,
-          description: state.flowDescription || undefined,
-          nodes: state.nodes.map((n) => {
-            // Ensure node has all required fields
-            const nodeData = { ...n.data };
-
-            // Add missing required fields for different node types
-            if (n.type === 'trigger' && !nodeData.trigger) {
-              console.warn(
-                `C.A.F.E.: Trigger node ${n.id} missing trigger type, adding default 'state'`
-              );
-              nodeData.trigger = 'state';
-            }
-
-            if (n.type === 'action' && !nodeData.service) {
-              console.warn(
-                `C.A.F.E.: Action node ${n.id} missing service, adding default 'light.turn_on'`
-              );
-              nodeData.service = 'light.turn_on';
-            }
-
-            return {
+          // Create current snapshot and compare
+          const currentSnapshot = JSON.stringify({
+            flowName: state.flowName,
+            flowDescription: state.flowDescription,
+            flowMetadata: state.flowMetadata,
+            nodes: state.nodes.map((n) => ({
               id: n.id,
-              type: n.type as FlowNode['type'],
+              type: n.type,
               position: n.position,
-              data: nodeData as FlowNode['data'],
-            };
-          }) as FlowNode[],
-          // Filter out orphaned edges that reference deleted nodes
-          edges: state.edges
-            .filter((e) => nodeIds.has(e.source) && nodeIds.has(e.target))
-            .map((e) => ({
+              data: n.data,
+            })),
+            edges: state.edges.map((e) => ({
               id: e.id,
               source: e.source,
               target: e.target,
               sourceHandle: e.sourceHandle,
               targetHandle: e.targetHandle,
-              label: typeof e.label === 'string' ? e.label : undefined,
-            })) as FlowEdge[],
-          metadata: state.flowMetadata,
-          version: 1,
-          userVariables: state.userVariables,
-          userTriggerVariables: state.userTriggerVariables,
-        };
-      },
+            })),
+          });
+          return currentSnapshot !== state.originalSnapshot;
+        },
 
-      fromFlowGraph: (graph) => {
-        const nodes = graph.nodes.map((n) => ({
-          id: n.id,
-          type: n.type,
-          position: n.position,
-          // Normalize node data when loading (e.g., convert platform to trigger)
-          data: normalizeNodeData(n.type, n.data as Record<string, unknown>) as FlowNodeData,
-        }));
-        const edges = graph.edges.map((e) => ({
-          id: e.id,
-          source: e.source,
-          target: e.target,
-          sourceHandle: e.sourceHandle,
-          targetHandle: e.targetHandle,
-          label: e.label,
-        }));
-        const importedMetadata: FlowMetadata = {
-          ...defaultFlowMetadata,
-          ...graph.metadata,
-        };
-        // Create snapshot for comparison
-        const originalSnapshot = JSON.stringify({
-          flowName: graph.name,
-          flowDescription: graph.description || '',
-          flowMetadata: importedMetadata,
-          nodes: nodes.map((n) => ({ id: n.id, type: n.type, position: n.position, data: n.data })),
-          edges: edges.map((e) => ({
+        saveAutomation: async (hassApi: HomeAssistant) => {
+          const state = get();
+          const api = getHomeAssistantAPI(hassApi);
+
+          set({ isSaving: true });
+
+          try {
+            // Validate all nodes first
+            get().validateAllNodes();
+
+            // Check for validation errors
+            const currentState = get();
+            if (currentState.nodeErrors.size > 0) {
+              const errorCount = currentState.nodeErrors.size;
+              throw new Error(
+                `Cannot save: ${errorCount} node(s) have validation errors. Fix the highlighted nodes before saving.`
+              );
+            }
+
+            // Convert flow to graph
+            const graph = state.toFlowGraph();
+
+            // Check for empty automation
+            if (graph.nodes.length === 0) {
+              throw new Error(
+                'Cannot save empty automation. Please add at least one trigger and one action node.'
+              );
+            }
+
+            // Check for minimum required nodes
+            const triggers = graph.nodes.filter((n) => n.type === 'trigger');
+            const actions = graph.nodes.filter((n) => n.type === 'action');
+
+            if (triggers.length === 0) {
+              throw new Error(
+                'Automation must have at least one trigger node. Please add a trigger from the node palette.'
+              );
+            }
+
+            if (actions.length === 0) {
+              throw new Error(
+                'Automation must have at least one action node. Please add an action from the node palette.'
+              );
+            }
+
+            const transpiler = new FlowTranspiler();
+
+            // Validate first
+            const validation = transpiler.validate(graph);
+
+            if (validation.errors.length > 0) {
+              console.error('C.A.F.E.: Validation errors:', validation.errors);
+              throw new Error(
+                `Validation failed: ${validation.errors.map((e) => e.message).join(', ')}`
+              );
+            }
+
+            // Transpile to automation config
+            const result = transpiler.transpile(graph);
+            if (!result.success || !result.output?.automation) {
+              throw new Error('Failed to transpile flow to automation config');
+            }
+
+            // Create automation in Home Assistant
+            const automationConfig = {
+              alias: state.flowName,
+              description: state.flowDescription || '',
+              ...result.output.automation,
+              variables: {
+                ...(result.output.automation.variables || {}),
+                _cafe_metadata: {
+                  version: 1,
+                  strategy: 'native' as const,
+                  nodes: graph.nodes.reduce(
+                    (acc, node) => {
+                      acc[node.id] = {
+                        x: node.position.x,
+                        y: node.position.y,
+                      };
+                      return acc;
+                    },
+                    {} as Record<string, { x: number; y: number }>
+                  ),
+                  graph_id: graph.id,
+                  graph_version: 1,
+                },
+              },
+            };
+
+            const automationId = await api.createAutomation(automationConfig);
+
+            set({
+              automationId,
+              isSaving: false,
+              lastSaved: new Date(),
+              hasUnsavedChanges: false,
+            });
+
+            return automationId;
+          } catch (error) {
+            set({ isSaving: false });
+            throw error;
+          }
+        },
+
+        updateAutomation: async (hassApi: HomeAssistant) => {
+          const state = get();
+          const api = getHomeAssistantAPI(hassApi);
+
+          if (!state.automationId) {
+            throw new Error('No automation ID set. Use saveAutomation() for new automations.');
+          }
+
+          console.log('C.A.F.E.: Updating automation with ID from store:', state.automationId);
+
+          set({ isSaving: true });
+
+          try {
+            // Validate all nodes first
+            get().validateAllNodes();
+
+            // Check for validation errors
+            const currentState = get();
+            if (currentState.nodeErrors.size > 0) {
+              const errorCount = currentState.nodeErrors.size;
+              throw new Error(
+                `Cannot save: ${errorCount} node(s) have validation errors. Fix the highlighted nodes before saving.`
+              );
+            }
+
+            // Convert flow to graph
+            const graph = state.toFlowGraph();
+
+            // Check for empty automation
+            if (graph.nodes.length === 0) {
+              throw new Error(
+                'Cannot save empty automation. Please add at least one trigger and one action node.'
+              );
+            }
+
+            // Check for minimum required nodes
+            const triggers = graph.nodes.filter((n) => n.type === 'trigger');
+            const actions = graph.nodes.filter((n) => n.type === 'action');
+
+            if (triggers.length === 0) {
+              throw new Error(
+                'Automation must have at least one trigger node. Please add a trigger from the node palette.'
+              );
+            }
+
+            if (actions.length === 0) {
+              throw new Error(
+                'Automation must have at least one action node. Please add an action from the node palette.'
+              );
+            }
+
+            const transpiler = new FlowTranspiler();
+
+            // Validate first
+            const validation = transpiler.validate(graph);
+            if (validation.errors.length > 0) {
+              throw new Error(
+                `Validation failed: ${validation.errors.map((e) => e.message).join(', ')}`
+              );
+            }
+
+            // Transpile to automation config
+            const result = transpiler.transpile(graph);
+            if (!result.success || !result.output?.automation) {
+              throw new Error('Failed to transpile flow to automation config');
+            }
+
+            // Update automation in Home Assistant
+            const automationConfig = {
+              alias: state.flowName,
+              description: state.flowDescription || '',
+              ...result.output.automation,
+              variables: {
+                ...(result.output.automation.variables || {}),
+                _cafe_metadata: {
+                  version: 1,
+                  strategy: 'native' as const,
+                  nodes: graph.nodes.reduce(
+                    (acc, node) => {
+                      acc[node.id] = {
+                        x: node.position.x,
+                        y: node.position.y,
+                      };
+                      return acc;
+                    },
+                    {} as Record<string, { x: number; y: number }>
+                  ),
+                  graph_id: graph.id,
+                  graph_version: 1,
+                },
+              },
+            };
+
+            await api.updateAutomation(state.automationId, automationConfig);
+
+            set({
+              isSaving: false,
+              lastSaved: new Date(),
+              hasUnsavedChanges: false,
+            });
+          } catch (error) {
+            set({ isSaving: false });
+            throw error;
+          }
+        },
+
+        startSimulation: () => set({ isSimulating: true, executionPath: [], activeNodeId: null }),
+        stopSimulation: () => set({ isSimulating: false, activeNodeId: null }),
+        setActiveNode: (nodeId) => set({ activeNodeId: nodeId }),
+        addToExecutionPath: (nodeId) =>
+          set((state) => ({
+            executionPath: [...state.executionPath, nodeId],
+          })),
+        clearExecutionPath: () => set({ executionPath: [] }),
+
+        showTrace: (traceData) => {
+          const traceExecutionPath: string[] = [];
+          const traceTimestamps: Record<string, string> = {};
+
+          // Extract execution path and timestamps from trace data
+          if (traceData?.trace) {
+            // Get current flow nodes grouped by type and sorted by position
+            const state = get();
+            const nodesByType: Record<string, Node<FlowNodeData>[]> = {
+              trigger: [],
+              condition: [],
+              action: [],
+              wait: [],
+              delay: [],
+            };
+
+            // Group nodes by type and sort them (could be by y-position or order in array)
+            for (const node of state.nodes) {
+              const nodeType = node.type as keyof typeof nodesByType;
+              if (nodesByType[nodeType]) {
+                nodesByType[nodeType].push(node);
+              }
+            }
+
+            // Sort each group by y-position to match likely execution order
+            for (const type in nodesByType) {
+              nodesByType[type].sort((a, b) => a.position.y - b.position.y);
+            }
+
+            // Sort trace steps by timestamp to get execution order
+            const sortedSteps = Object.entries(traceData.trace)
+              .flatMap(([path, steps]) => {
+                if (Array.isArray(steps)) {
+                  return steps.map((step) => ({ ...step, path }));
+                }
+                return [];
+              })
+              .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+            // Map trace paths to actual node IDs
+            for (const step of sortedSteps) {
+              const pathParts = step.path.split('/');
+              const nodeType = pathParts[0]; // trigger, condition, action, etc.
+              const nodeIndex = parseInt(pathParts[1], 10); // 0, 1, 2, etc.
+
+              // Find the corresponding node in our flow
+              const nodesOfType = nodesByType[nodeType] || [];
+              if (nodesOfType[nodeIndex]) {
+                const nodeId = nodesOfType[nodeIndex].id;
+
+                if (!traceExecutionPath.includes(nodeId)) {
+                  traceExecutionPath.push(nodeId);
+                  traceTimestamps[nodeId] = step.timestamp;
+                }
+              }
+            }
+          }
+
+          set({
+            isShowingTrace: true,
+            traceData,
+            traceExecutionPath,
+            traceTimestamps,
+            activeNodeId: null,
+          });
+        },
+        hideTrace: () =>
+          set({
+            isShowingTrace: false,
+            traceData: null,
+            traceExecutionPath: [],
+            traceTimestamps: {},
+            activeNodeId: null,
+          }),
+        clearTraceExecutionPath: () => set({ traceExecutionPath: [], traceTimestamps: {} }),
+
+        setSimulationSpeed: (speed) => set({ simulationSpeed: speed }),
+        getExecutionStepNumber: (nodeId) => {
+          const state = get();
+          // Check simulation execution path first
+          if (state.isSimulating && state.executionPath.length > 0) {
+            const stepIndex = state.executionPath.indexOf(nodeId);
+            return stepIndex >= 0 ? stepIndex + 1 : null;
+          }
+          // Check trace execution path
+          if (state.isShowingTrace && state.traceExecutionPath.length > 0) {
+            const stepIndex = state.traceExecutionPath.indexOf(nodeId);
+            return stepIndex >= 0 ? stepIndex + 1 : null;
+          }
+          return null;
+        },
+
+        canDeleteEdge: () => {
+          // All edges are always deletable
+          return true;
+        },
+
+        toFlowGraph: (): FlowGraph => {
+          const state = get();
+          const nodeIds = new Set(state.nodes.map((n) => n.id));
+
+          return {
+            id: state.flowId,
+            name: state.flowName,
+            description: state.flowDescription || undefined,
+            nodes: state.nodes.map((n) => {
+              // Ensure node has all required fields
+              const nodeData = { ...n.data };
+
+              // Add missing required fields for different node types
+              if (n.type === 'trigger' && !nodeData.trigger) {
+                console.warn(
+                  `C.A.F.E.: Trigger node ${n.id} missing trigger type, adding default 'state'`
+                );
+                nodeData.trigger = 'state';
+              }
+
+              if (n.type === 'action' && !nodeData.service) {
+                console.warn(
+                  `C.A.F.E.: Action node ${n.id} missing service, adding default 'light.turn_on'`
+                );
+                nodeData.service = 'light.turn_on';
+              }
+
+              return {
+                id: n.id,
+                type: n.type as FlowNode['type'],
+                position: n.position,
+                data: nodeData as FlowNode['data'],
+              };
+            }) as FlowNode[],
+            // Filter out orphaned edges that reference deleted nodes
+            edges: state.edges
+              .filter((e) => nodeIds.has(e.source) && nodeIds.has(e.target))
+              .map((e) => ({
+                id: e.id,
+                source: e.source,
+                target: e.target,
+                sourceHandle: e.sourceHandle,
+                targetHandle: e.targetHandle,
+                label: typeof e.label === 'string' ? e.label : undefined,
+              })) as FlowEdge[],
+            metadata: state.flowMetadata,
+            version: 1,
+            userVariables: state.userVariables,
+            userTriggerVariables: state.userTriggerVariables,
+          };
+        },
+
+        fromFlowGraph: (graph) => {
+          const nodes = graph.nodes.map((n) => ({
+            id: n.id,
+            type: n.type,
+            position: n.position,
+            // Normalize node data when loading (e.g., convert platform to trigger)
+            data: normalizeNodeData(n.type, n.data as Record<string, unknown>) as FlowNodeData,
+          }));
+          const edges = graph.edges.map((e) => ({
             id: e.id,
             source: e.source,
             target: e.target,
             sourceHandle: e.sourceHandle,
             targetHandle: e.targetHandle,
-          })),
-        });
-        set({
-          flowId: graph.id,
-          flowName: graph.name,
-          flowDescription: graph.description || '',
-          flowMetadata: importedMetadata,
-          userVariables: graph.userVariables,
-          userTriggerVariables: graph.userTriggerVariables,
-          nodes,
-          edges,
-          selectedNodeId: null,
-          // Reset save state when importing
-          automationId: null,
-          hasUnsavedChanges: false,
-          lastSaved: null,
-          originalSnapshot,
-          nodeErrors: new Map(),
-        });
-        // Validate all nodes after loading
-        get().validateAllNodes();
-      },
+            label: e.label,
+          }));
+          const importedMetadata: FlowMetadata = {
+            ...defaultFlowMetadata,
+            ...graph.metadata,
+          };
+          // Create snapshot for comparison
+          const originalSnapshot = JSON.stringify({
+            flowName: graph.name,
+            flowDescription: graph.description || '',
+            flowMetadata: importedMetadata,
+            nodes: nodes.map((n) => ({
+              id: n.id,
+              type: n.type,
+              position: n.position,
+              data: n.data,
+            })),
+            edges: edges.map((e) => ({
+              id: e.id,
+              source: e.source,
+              target: e.target,
+              sourceHandle: e.sourceHandle,
+              targetHandle: e.targetHandle,
+            })),
+          });
+          set({
+            flowId: graph.id,
+            flowName: graph.name,
+            flowDescription: graph.description || '',
+            flowMetadata: importedMetadata,
+            userVariables: graph.userVariables,
+            userTriggerVariables: graph.userTriggerVariables,
+            nodes,
+            edges,
+            selectedNodeId: null,
+            // Reset save state when importing
+            automationId: null,
+            hasUnsavedChanges: false,
+            lastSaved: null,
+            originalSnapshot,
+            nodeErrors: new Map(),
+          });
+          // Validate all nodes after loading
+          get().validateAllNodes();
+          // A freshly loaded automation shouldn't offer undo back into
+          // whatever was open before it.
+          cancelPendingHistoryCommit();
+          useFlowStore.temporal.getState().clear();
+        },
 
-      reset: () =>
-        set({
-          ...initialState,
-          flowId: generateUUID(),
-          flowMetadata: { ...defaultFlowMetadata },
-          originalSnapshot: null,
-          nodeErrors: new Map(),
-        }),
+        reset: () => {
+          set({
+            ...initialState,
+            flowId: generateUUID(),
+            flowMetadata: { ...defaultFlowMetadata },
+            originalSnapshot: null,
+            nodeErrors: new Map(),
+          });
+          cancelPendingHistoryCommit();
+          useFlowStore.temporal.getState().clear();
+        },
 
-      // Node validation
-      validateNode: (nodeId) => {
-        const state = get();
-        const node = state.nodes.find((n) => n.id === nodeId);
-        if (!node || !node.type) return;
+        // Node validation
+        validateNode: (nodeId) => {
+          const state = get();
+          const node = state.nodes.find((n) => n.id === nodeId);
+          if (!node || !node.type) return;
 
-        const errors = validateNodeData(node.type, node.data as Record<string, unknown>);
-
-        set((s) => {
-          const newErrors = new Map(s.nodeErrors);
-          if (errors.length > 0) {
-            newErrors.set(nodeId, errors);
-          } else {
-            newErrors.delete(nodeId);
-          }
-          return { nodeErrors: newErrors };
-        });
-      },
-
-      validateAllNodes: () => {
-        const state = get();
-        const newErrors = new Map<string, NodeValidationError[]>();
-
-        for (const node of state.nodes) {
-          if (!node.type) continue;
           const errors = validateNodeData(node.type, node.data as Record<string, unknown>);
-          if (errors.length > 0) {
-            newErrors.set(node.id, errors);
+
+          set((s) => {
+            const newErrors = new Map(s.nodeErrors);
+            if (errors.length > 0) {
+              newErrors.set(nodeId, errors);
+            } else {
+              newErrors.delete(nodeId);
+            }
+            return { nodeErrors: newErrors };
+          });
+        },
+
+        validateAllNodes: () => {
+          const state = get();
+          const newErrors = new Map<string, NodeValidationError[]>();
+
+          for (const node of state.nodes) {
+            if (!node.type) continue;
+            const errors = validateNodeData(node.type, node.data as Record<string, unknown>);
+            if (errors.length > 0) {
+              newErrors.set(node.id, errors);
+            }
           }
-        }
 
-        const duplicateIdErrors = findDuplicateIdErrors(state.nodes);
-        for (const [nodeId, error] of duplicateIdErrors) {
-          newErrors.set(nodeId, [...(newErrors.get(nodeId) ?? []), error]);
-        }
+          const duplicateIdErrors = findDuplicateIdErrors(state.nodes);
+          for (const [nodeId, error] of duplicateIdErrors) {
+            newErrors.set(nodeId, [...(newErrors.get(nodeId) ?? []), error]);
+          }
 
-        set({ nodeErrors: newErrors });
-      },
+          set({ nodeErrors: newErrors });
+        },
 
-      clearNodeErrors: (nodeId) => {
-        set((s) => {
-          const newErrors = new Map(s.nodeErrors);
-          newErrors.delete(nodeId);
-          return { nodeErrors: newErrors };
-        });
-      },
+        clearNodeErrors: (nodeId) => {
+          set((s) => {
+            const newErrors = new Map(s.nodeErrors);
+            newErrors.delete(nodeId);
+            return { nodeErrors: newErrors };
+          });
+        },
 
-      hasValidationErrors: () => {
-        return get().nodeErrors.size > 0;
-      },
-    }),
+        hasValidationErrors: () => {
+          return get().nodeErrors.size > 0;
+        },
+      }),
+      {
+        partialize: temporalSelector,
+        limit: 100,
+        // Without this, zundo pushes a history entry on *every* set() call
+        // regardless of whether the tracked (partialized) fields actually
+        // changed — so UI-only actions like selectNode/setClipboard, which
+        // never touch nodes/edges/flowName/etc., would still create no-op
+        // undo steps. Shallow-compares the partialized fields; nodes/edges
+        // get new array references on every real structural change, so this
+        // only skips truly no-op sets.
+        equality: shallow,
+        // Coalesces bursts of rapid changes (every pointer-move frame of a
+        // node drag, a run of keystrokes, an add-then-immediately-edit) into
+        // ONE history entry spanning the whole burst, not just its last
+        // step. A plain trailing-edge debounce would only keep the *last*
+        // call's `pastState` — the state just before that final call —
+        // silently discarding the earlier steps' undo information, so
+        // undoing would only jump back one micro-step instead of to before
+        // the burst started. This remembers the *first* call's `pastState`
+        // for the duration of the burst and only actually commits 300ms
+        // after it goes quiet. Only the trigger for committing a snapshot is
+        // delayed; the live store state itself updates immediately.
+        handleSet: (handleSet) => (pastStateArg: FlowState | ((state: FlowState) => FlowState)) => {
+          // zundo's own .d.ts mistypes this parameter as `FlowState |
+          // ((state: FlowState) => FlowState)` — an artifact of `Parameters<>`
+          // only resolving the *last* overload of zustand's own overloaded
+          // `setState`. Verified against zundo/dist/index.js's
+          // `temporalHandleSet`: at runtime this is always
+          // `options.partialize(get())`, i.e. our own `temporalSelector`
+          // output — a genuine `TemporalFlowState`.
+          const pastState = pastStateArg as unknown as TemporalFlowState;
+          const burstStart = pendingHistoryCommit?.burstStart ?? pastState;
+          cancelPendingHistoryCommit();
+          const timeoutId = setTimeout(() => {
+            pendingHistoryCommit = undefined;
+            handleSet(burstStart);
+          }, 300);
+          pendingHistoryCommit = { timeoutId, burstStart };
+        },
+      }
+    ),
     {
       name: 'cafe-flow-storage',
       storage: cafeIndexedDBStorage,

@@ -12,7 +12,15 @@ export interface NodeAction {
   tooltip: string | ((context: NodeActionContext) => string);
   variant?: 'default' | 'destructive';
   /** Group this action belongs to for toolbar organization */
-  group?: 'node-specific' | 'selection' | 'clipboard' | 'move' | 'align' | 'edit' | 'delete';
+  group?:
+    | 'history'
+    | 'node-specific'
+    | 'selection'
+    | 'clipboard'
+    | 'move'
+    | 'align'
+    | 'edit'
+    | 'delete';
   /** Function to determine if this action should be enabled in the toolbar */
   isEnabled?: (context: NodeActionContext) => boolean;
   execute: (context: NodeActionContext) => void;

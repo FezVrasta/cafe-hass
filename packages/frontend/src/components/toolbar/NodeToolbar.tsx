@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { useUndoRedo } from '@/hooks/useUndoRedo';
 import { cn } from '@/lib/utils';
 import { useFlowStore } from '@/store/flow-store';
 import { isMacOS } from '@/utils/useAgentPlatform';
@@ -21,9 +22,11 @@ import {
   getDisconnectAction,
   getDuplicateAction,
   getPasteAction,
+  getRedoAction,
   //getRunAction,
   getSelectAllAction,
   getToggleEnabledAction,
+  getUndoAction,
 } from '../actions';
 
 /**
@@ -49,8 +52,9 @@ function formatShortcut(shortcut: string, t: TFunction): string {
 
 // Define the order of groups to display
 // New groups should be added here as needed!
-const groupOrder: Array<'node-specific' | 'selection' | 'clipboard' | 'edit' | 'align' | 'delete'> =
-  ['node-specific', 'selection', 'clipboard', 'edit', 'align', 'delete'];
+const groupOrder: Array<
+  'history' | 'node-specific' | 'selection' | 'clipboard' | 'edit' | 'align' | 'delete'
+> = ['history', 'node-specific', 'selection', 'clipboard', 'edit', 'align', 'delete'];
 
 export function NodeToolbar() {
   const { t } = useTranslation();
@@ -81,6 +85,7 @@ export function NodeToolbar() {
       setPasteCount: s.setPasteCount,
     }))
   );
+  const { undo, redo, canUndo, canRedo } = useUndoRedo();
 
   // Create action context — selectedNodes is computed inside to avoid unstable reference in deps
   const context: NodeActionContext = useMemo(
@@ -97,6 +102,10 @@ export function NodeToolbar() {
       setEdges,
       setClipboard,
       setPasteCount,
+      undo,
+      redo,
+      canUndo,
+      canRedo,
     }),
     [
       nodes,
@@ -110,6 +119,10 @@ export function NodeToolbar() {
       setEdges,
       setClipboard,
       setPasteCount,
+      undo,
+      redo,
+      canUndo,
+      canRedo,
     ]
   );
 
@@ -117,6 +130,8 @@ export function NodeToolbar() {
   // New actions should be added here as needed!
   const allActions = useMemo(
     () => [
+      getUndoAction(t),
+      getRedoAction(t),
       //getRunAction(t),
       getDuplicateAction(t),
       getCopyAction(t),
