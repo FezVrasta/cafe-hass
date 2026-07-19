@@ -135,6 +135,9 @@ export interface FlowState {
   // Automation metadata (mode, max, max_exceeded, etc.)
   flowMetadata: FlowMetadata;
 
+  // User-defined root-level variables (preserved across import/export round-trips)
+  userVariables: Record<string, unknown> | undefined;
+
   // Selection state
   selectedNodeId: string | null;
 
@@ -257,6 +260,7 @@ const initialState = {
   flowName: 'Untitled Automation',
   flowDescription: '',
   flowMetadata: defaultFlowMetadata,
+  userVariables: undefined,
   nodes: [],
   edges: [],
   selectedNodeId: null,
@@ -793,6 +797,7 @@ export const useFlowStore = create<FlowState>()(
             })) as FlowEdge[],
           metadata: state.flowMetadata,
           version: 1,
+          userVariables: state.userVariables,
         };
       },
 
@@ -835,6 +840,7 @@ export const useFlowStore = create<FlowState>()(
           flowName: graph.name,
           flowDescription: graph.description || '',
           flowMetadata: importedMetadata,
+          userVariables: graph.userVariables,
           nodes,
           edges,
           selectedNodeId: null,
