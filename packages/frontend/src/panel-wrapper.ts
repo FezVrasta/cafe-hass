@@ -12,8 +12,21 @@ declare const window: Window & {
 
 class CafePanelWrapper extends HTMLElement {
   private _messageHandler?: (event: MessageEvent) => void;
+  private _resizeHandler?: () => void;
   private iframe: HTMLIFrameElement | null = null;
   private _hass: HomeAssistant | undefined = undefined;
+
+  /**
+   * Size the panel to the viewport space below its own top edge.
+   *
+   * The wrapper's own offset is measured rather than assumed, so any HA chrome above
+   * the panel (a toolbar, a notification bar) is accounted for automatically instead
+   * of being hardcoded.
+   */
+  private applyHeight() {
+    const top = this.getBoundingClientRect().top;
+    this.style.height = `calc(100vh - ${Math.max(0, top)}px)`;
+  }
 
   // Properties that HA will set
   set hass(value: HomeAssistant | undefined) {
@@ -33,11 +46,21 @@ class CafePanelWrapper extends HTMLElement {
   }
 
   connectedCallback() {
-    // Style the wrapper to fill the container
+    // Style the wrapper to fill the container.
+    //
+    // HA's <ha-panel-custom> host is `display: block` with no resolved height, so a
+    // percentage height here would resolve against `auto` and collapse the panel to
+    // the iframe's intrinsic size (see issue #229).
+    //
+    // Width is unaffected — block layout already sizes it to the content area beside
+    // the sidebar — so only the height needs to stop depending on the parent. The
+    // wrapper stays in normal flow (no fixed positioning, which would need to
+    // replicate HA's sidebar offset) and its height is derived from the viewport
+    // minus wherever the panel actually starts.
     this.style.display = 'block';
     this.style.width = '100%';
-    this.style.height = '100%';
     this.style.position = 'relative';
+    this.applyHeight();
 
     // Detect dark mode from hass to set initial background and avoid white flash
     const isDarkMode = this._hass?.themes?.darkMode ?? false;
@@ -68,6 +91,12 @@ class CafePanelWrapper extends HTMLElement {
       }
     };
     window.addEventListener('message', this._messageHandler);
+
+    // Re-measure when the viewport changes. The initial measurement runs before HA has
+    // necessarily finished laying the panel out, so recompute once layout settles too.
+    this._resizeHandler = () => this.applyHeight();
+    window.addEventListener('resize', this._resizeHandler);
+    requestAnimationFrame(this._resizeHandler);
   }
 
   disconnectedCallback() {
@@ -80,6 +109,10 @@ class CafePanelWrapper extends HTMLElement {
     if (this._messageHandler) {
       window.removeEventListener('message', this._messageHandler);
       this._messageHandler = undefined;
+    }
+    if (this._resizeHandler) {
+      window.removeEventListener('resize', this._resizeHandler);
+      this._resizeHandler = undefined;
     }
   }
 }
