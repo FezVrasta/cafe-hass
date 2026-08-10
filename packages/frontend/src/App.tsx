@@ -555,7 +555,7 @@ function App() {
             <main
               className={cn(
                 'flex min-h-0 flex-1 flex-col transition-[margin] duration-300',
-                isCompactLayout && !mobilePaletteExpanded && 'ml-16'
+                isCompactLayout && 'ml-16'
               )}
             >
               <FlowCanvas />
