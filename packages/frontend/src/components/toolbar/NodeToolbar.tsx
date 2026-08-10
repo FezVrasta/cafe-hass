@@ -264,7 +264,7 @@ export function NodeToolbar() {
   return (
     <Panel
       position="top-center"
-      className="!m-0 !p-0 max-w-[calc(100vw-2rem)] sm:max-w-[calc(100vw-4rem)]"
+      className="z-50 !m-0 !p-0 max-w-[calc(100vw-2rem)] sm:max-w-[calc(100vw-4rem)]"
     >
       <div
         className={cn(

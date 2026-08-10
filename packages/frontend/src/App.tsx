@@ -457,35 +457,11 @@ function App() {
                   desktopPaletteExpanded ? 'w-72' : 'w-20'
                 )}
               >
-                <div className="flex h-14 items-center justify-between border-b px-4">
-                  {desktopPaletteExpanded ? (
-                    <>
-                      <h3 className="shrink-0 whitespace-nowrap font-semibold text-sm">
-                        {t('labels.addNode')}
-                      </h3>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setDesktopPaletteExpanded(false)}
-                        aria-label="Collapse menu"
-                        title="Collapse menu"
-                      >
-                        <PanelLeftClose className="h-4 w-4" />
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      <div className="w-0" />
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setDesktopPaletteExpanded(true)}
-                        aria-label="Expand menu"
-                        title="Expand menu"
-                      >
-                        <PanelLeftOpen className="h-4 w-4" />
-                      </Button>
-                    </>
+                <div className="flex h-14 items-center border-b px-4">
+                  {desktopPaletteExpanded && (
+                    <h3 className="shrink-0 whitespace-nowrap font-semibold text-sm">
+                      {t('labels.addNode')}
+                    </h3>
                   )}
                 </div>
                 <div
@@ -525,6 +501,15 @@ function App() {
                     <span className="font-medium text-[10px] text-muted-foreground">
                       {`v${version}`}
                     </span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setDesktopPaletteExpanded(true)}
+                      aria-label="Expand menu"
+                      title="Expand menu"
+                    >
+                      <PanelLeftOpen className="h-4 w-4" />
+                    </Button>
                   </div>
                 )}
                 {desktopPaletteExpanded && (
@@ -544,6 +529,17 @@ function App() {
                         {t('titles.appName')} {`v${version}`}
                       </span>
                     </div>
+                    <div className="flex justify-end">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setDesktopPaletteExpanded(false)}
+                        aria-label="Collapse menu"
+                        title="Collapse menu"
+                      >
+                        <PanelLeftClose className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 )}
               </aside>
@@ -561,37 +557,11 @@ function App() {
                   mobilePaletteExpanded ? 'w-full' : 'w-20'
                 )}
               >
-                <div className="flex h-14 items-center justify-between border-b px-4">
-                  {mobilePaletteExpanded ? (
-                    <>
-                      <h3 className="shrink-0 whitespace-nowrap font-semibold text-sm">
-                        {t('labels.addNode')}
-                      </h3>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setMobilePaletteExpanded(false)}
-                          aria-label="Collapse menu"
-                          title="Collapse menu"
-                        >
-                          <PanelLeftClose className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="w-0" />
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setMobilePaletteExpanded(true)}
-                        aria-label="Expand menu"
-                        title="Expand menu"
-                      >
-                        <PanelLeftOpen className="h-4 w-4" />
-                      </Button>
-                    </>
+                <div className="flex h-14 items-center border-b px-4">
+                  {mobilePaletteExpanded && (
+                    <h3 className="shrink-0 whitespace-nowrap font-semibold text-sm">
+                      {t('labels.addNode')}
+                    </h3>
                   )}
                 </div>
 
@@ -632,6 +602,28 @@ function App() {
                     <span className="font-medium text-[10px] text-muted-foreground">
                       {`v${version}`}
                     </span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setMobilePaletteExpanded(true)}
+                      aria-label="Expand menu"
+                      title="Expand menu"
+                    >
+                      <PanelLeftOpen className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+                {mobilePaletteExpanded && (
+                  <div className="flex justify-end border-t px-4 py-3">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setMobilePaletteExpanded(false)}
+                      aria-label="Collapse menu"
+                      title="Collapse menu"
+                    >
+                      <PanelLeftClose className="h-4 w-4" />
+                    </Button>
                   </div>
                 )}
               </aside>
