@@ -200,7 +200,9 @@ function App() {
   const rightPanelContent = (
     <>
       <div className="flex items-center justify-between border-b px-4 py-3">
-        <h3 className="font-semibold text-sm">{t('labels.properties')}</h3>
+        <h3 className={cn('font-semibold text-sm', isCompactLayout && 'invisible')}>
+          {t('labels.properties')}
+        </h3>
         <Button
           variant="ghost"
           size="icon"
@@ -457,11 +459,35 @@ function App() {
                   desktopPaletteExpanded ? 'w-72' : 'w-20'
                 )}
               >
-                <div className="flex h-14 items-center border-b px-4">
-                  {desktopPaletteExpanded && (
-                    <h3 className="shrink-0 whitespace-nowrap font-semibold text-sm">
-                      {t('labels.addNode')}
-                    </h3>
+                <div className="flex h-14 items-center justify-between border-b px-4">
+                  {desktopPaletteExpanded ? (
+                    <>
+                      <h3 className="shrink-0 whitespace-nowrap font-semibold text-sm">
+                        {t('labels.addNode')}
+                      </h3>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setDesktopPaletteExpanded(false)}
+                        aria-label="Collapse menu"
+                        title="Collapse menu"
+                      >
+                        <PanelLeftClose className="h-4 w-4" />
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-0" />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setDesktopPaletteExpanded(true)}
+                        aria-label="Expand menu"
+                        title="Expand menu"
+                      >
+                        <PanelLeftOpen className="h-4 w-4" />
+                      </Button>
+                    </>
                   )}
                 </div>
                 <div
@@ -501,15 +527,6 @@ function App() {
                     <span className="font-medium text-[10px] text-muted-foreground">
                       {`v${version}`}
                     </span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setDesktopPaletteExpanded(true)}
-                      aria-label="Expand menu"
-                      title="Expand menu"
-                    >
-                      <PanelLeftOpen className="h-4 w-4" />
-                    </Button>
                   </div>
                 )}
                 {desktopPaletteExpanded && (
@@ -529,39 +546,57 @@ function App() {
                         {t('titles.appName')} {`v${version}`}
                       </span>
                     </div>
-                    <div className="flex justify-end">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setDesktopPaletteExpanded(false)}
-                        aria-label="Collapse menu"
-                        title="Collapse menu"
-                      >
-                        <PanelLeftClose className="h-4 w-4" />
-                      </Button>
-                    </div>
                   </div>
                 )}
               </aside>
             )}
 
             {/* Canvas */}
-            <main className="flex min-h-0 flex-1 flex-col">
+            <main
+              className={cn(
+                'flex min-h-0 flex-1 flex-col transition-[margin] duration-300',
+                isCompactLayout && !mobilePaletteExpanded && 'ml-16'
+              )}
+            >
               <FlowCanvas />
             </main>
 
             {isCompactLayout && (
               <aside
                 className={cn(
-                  'absolute top-0 bottom-0 left-0 z-40 flex min-h-0 flex-col bg-card transition-[width] duration-300',
-                  mobilePaletteExpanded ? 'w-full' : 'w-20'
+                  'absolute top-0 bottom-0 left-0 z-40 flex min-h-0 flex-col border-border border-r transition-[width] duration-300',
+                  mobilePaletteExpanded ? 'w-full bg-card' : 'w-16 bg-card'
                 )}
               >
-                <div className="flex h-14 items-center border-b px-4">
-                  {mobilePaletteExpanded && (
-                    <h3 className="shrink-0 whitespace-nowrap font-semibold text-sm">
-                      {t('labels.addNode')}
-                    </h3>
+                <div className="flex h-14 items-center justify-between border-b px-4">
+                  {mobilePaletteExpanded ? (
+                    <>
+                      <h3 className="shrink-0 whitespace-nowrap font-semibold text-sm">
+                        {t('labels.addNode')}
+                      </h3>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setMobilePaletteExpanded(false)}
+                        aria-label="Collapse menu"
+                        title="Collapse menu"
+                      >
+                        <PanelLeftClose className="h-4 w-4" />
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-0" />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setMobilePaletteExpanded(true)}
+                        aria-label="Expand menu"
+                        title="Expand menu"
+                      >
+                        <PanelLeftOpen className="h-4 w-4" />
+                      </Button>
+                    </>
                   )}
                 </div>
 
@@ -602,28 +637,6 @@ function App() {
                     <span className="font-medium text-[10px] text-muted-foreground">
                       {`v${version}`}
                     </span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setMobilePaletteExpanded(true)}
-                      aria-label="Expand menu"
-                      title="Expand menu"
-                    >
-                      <PanelLeftOpen className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
-                {mobilePaletteExpanded && (
-                  <div className="flex justify-end border-t px-4 py-3">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setMobilePaletteExpanded(false)}
-                      aria-label="Collapse menu"
-                      title="Collapse menu"
-                    >
-                      <PanelLeftClose className="h-4 w-4" />
-                    </Button>
                   </div>
                 )}
               </aside>
