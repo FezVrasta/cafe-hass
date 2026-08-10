@@ -310,7 +310,12 @@ function App() {
               isCompactLayout ? 'gap-2 overflow-hidden' : 'gap-4'
             )}
           >
-            <div className={cn('flex min-w-0 flex-1 items-center', isCompactLayout ? 'gap-2' : 'gap-4')}>
+            <div
+              className={cn(
+                'flex min-w-0 flex-1 items-center',
+                isCompactLayout ? 'gap-2' : 'gap-4'
+              )}
+            >
               {/* Back to HA button — only in panel mode (not remote) */}
               {!actualIsRemote && (
                 <Button
