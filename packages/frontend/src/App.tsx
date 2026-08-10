@@ -197,6 +197,84 @@ function App() {
     window.location.reload();
   };
 
+  const rightPanelContent = (
+    <>
+      <div className="flex items-center justify-between border-b px-4 py-3">
+        <h3 className="font-semibold text-sm">{t('labels.properties')}</h3>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={clearCanvasSelection}
+          aria-label={t('buttons.close')}
+        >
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+      <div className="min-h-0 flex-1 overflow-hidden">
+        <Tabs
+          value={rightTab}
+          onValueChange={(value) => setRightTab(value as RightPanelTab)}
+          className="flex min-h-0 flex-1 flex-col"
+        >
+          <TabsList className="grid w-full grid-cols-3 rounded-none border-b">
+            <TabsTrigger value="properties">{t('labels.properties')}</TabsTrigger>
+            <TabsTrigger value="yaml">{t('labels.yaml')}</TabsTrigger>
+            <TabsTrigger value="simulator">{t('labels.debug')}</TabsTrigger>
+          </TabsList>
+
+          <div className="flex flex-1 flex-col overflow-hidden">
+            <TabsContent value="properties" className="mt-0 flex-1 overflow-hidden">
+              <PropertyPanel />
+            </TabsContent>
+            <TabsContent value="yaml" className="mt-0 flex-1 overflow-hidden">
+              <YamlPreview />
+            </TabsContent>
+            <TabsContent value="simulator" className="mt-0 flex-1 overflow-hidden">
+              <div className="flex h-full flex-col">
+                <div className="border-b p-4">
+                  <div className="mb-2 flex items-center justify-between">
+                    <h4 className="font-medium text-muted-foreground text-xs">
+                      {t('labels.debugControls')}
+                    </h4>
+                    <div className="flex gap-1">
+                      <Button
+                        onClick={handleImport}
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        title={t('buttons.importJson')}
+                      >
+                        <FileUp className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        onClick={handleExport}
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        title={t('titles.exportJson')}
+                      >
+                        <FileDown className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                  <SpeedControl speed={simulationSpeed} onSpeedChange={setSimulationSpeed} />
+                </div>
+
+                <div className="flex-1 border-b">
+                  <TraceSimulator />
+                </div>
+
+                <div className="flex-1">
+                  <AutomationTraceViewer />
+                </div>
+              </div>
+            </TabsContent>
+          </div>
+        </Tabs>
+      </div>
+    </>
+  );
+
   return (
     <ErrorBoundary
       FallbackComponent={({ error }) => (
@@ -224,8 +302,13 @@ function App() {
       <ReactFlowProvider>
         <div className="flex h-screen flex-col bg-background">
           {/* Header */}
-          <header className="flex h-14 items-center justify-between gap-4 border-border border-b bg-card px-4 shadow-sm">
-            <div className="flex flex-1 items-center gap-4">
+          <header
+            className={cn(
+              'flex h-14 min-w-0 items-center justify-between border-border border-b bg-card px-4 shadow-sm',
+              isCompactLayout ? 'gap-2 overflow-hidden' : 'gap-4'
+            )}
+          >
+            <div className={cn('flex min-w-0 flex-1 items-center', isCompactLayout ? 'gap-2' : 'gap-4')}>
               {/* Back to HA button — only in panel mode (not remote) */}
               {!actualIsRemote && (
                 <Button
@@ -260,7 +343,12 @@ function App() {
                 </h1>
               )}
               <span className="mx-1 h-5 w-px bg-border" />
-              <span className="min-w-32 max-w-96 flex-1 truncate font-semibold text-foreground">
+              <span
+                className={cn(
+                  'max-w-96 flex-1 truncate font-semibold text-foreground',
+                  isCompactLayout ? 'hidden' : 'min-w-32'
+                )}
+              >
                 {flowName || (
                   <span className="font-normal text-muted-foreground">
                     {t('placeholders.automationName')}
@@ -269,8 +357,8 @@ function App() {
               </span>
             </div>
 
-            <div className="flex items-center gap-2">
-              {status && (
+            <div className={cn('flex items-center', isCompactLayout ? 'gap-1' : 'gap-2')}>
+              {!isCompactLayout && status && (
                 <Badge
                   onClick={() => setSettingsOpen(true)}
                   className={cn(
@@ -296,7 +384,7 @@ function App() {
                 </Button>
               )}
 
-              <Separator orientation="vertical" className="h-6" />
+              {!isCompactLayout && <Separator orientation="vertical" className="h-6" />}
 
               {/* Open Automation Button with Import Dropdown */}
               <div className="flex">
@@ -307,8 +395,8 @@ function App() {
                   }}
                   className="rounded-r-none"
                 >
-                  <FolderOpenDotIcon className="mr-2 h-4 w-4" />
-                  {t('buttons.openAutomation')}
+                  <FolderOpenDotIcon className={cn('h-4 w-4', !isCompactLayout && 'mr-2')} />
+                  {!isCompactLayout && t('buttons.openAutomation')}
                 </Button>
 
                 {/* Dropdown Toggle */}
@@ -553,94 +641,25 @@ function App() {
             <div
               className={cn(
                 'pointer-events-none absolute top-0 right-0 bottom-0 z-40 flex min-h-0 flex-col overflow-hidden transition-transform duration-300',
-                'w-[320px] max-w-[85vw] shadow-xl',
+                isCompactLayout ? 'w-full' : 'w-[320px] max-w-[85vw] shadow-xl',
                 selectedNodeId !== null ? 'pointer-events-auto translate-x-0' : 'translate-x-full'
               )}
             >
-              <ResizablePanel
-                defaultWidth={320}
-                minWidth={280}
-                maxWidth={600}
-                side="right"
-                className="h-full border-border border-l bg-card"
-              >
-                <div className="flex items-center justify-between border-b px-4 py-3">
-                  <h3 className="font-semibold text-sm">{t('labels.properties')}</h3>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={clearCanvasSelection}
-                    aria-label={t('buttons.close')}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
+              {isCompactLayout ? (
+                <div className="flex h-full min-h-0 flex-col border-border border-l bg-card">
+                  {rightPanelContent}
                 </div>
-                <div className="min-h-0 flex-1 overflow-hidden">
-                  <Tabs
-                    value={rightTab}
-                    onValueChange={(value) => setRightTab(value as RightPanelTab)}
-                    className="flex min-h-0 flex-1 flex-col"
-                  >
-                    <TabsList className="grid w-full grid-cols-3 rounded-none border-b">
-                      <TabsTrigger value="properties">{t('labels.properties')}</TabsTrigger>
-                      <TabsTrigger value="yaml">{t('labels.yaml')}</TabsTrigger>
-                      <TabsTrigger value="simulator">{t('labels.debug')}</TabsTrigger>
-                    </TabsList>
-
-                    <div className="flex flex-1 flex-col overflow-hidden">
-                      <TabsContent value="properties" className="mt-0 flex-1 overflow-hidden">
-                        <PropertyPanel />
-                      </TabsContent>
-                      <TabsContent value="yaml" className="mt-0 flex-1 overflow-hidden">
-                        <YamlPreview />
-                      </TabsContent>
-                      <TabsContent value="simulator" className="mt-0 flex-1 overflow-hidden">
-                        <div className="flex h-full flex-col">
-                          <div className="border-b p-4">
-                            <div className="mb-2 flex items-center justify-between">
-                              <h4 className="font-medium text-muted-foreground text-xs">
-                                {t('labels.debugControls')}
-                              </h4>
-                              <div className="flex gap-1">
-                                <Button
-                                  onClick={handleImport}
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-6 w-6"
-                                  title={t('buttons.importJson')}
-                                >
-                                  <FileUp className="h-3.5 w-3.5" />
-                                </Button>
-                                <Button
-                                  onClick={handleExport}
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-6 w-6"
-                                  title={t('titles.exportJson')}
-                                >
-                                  <FileDown className="h-3.5 w-3.5" />
-                                </Button>
-                              </div>
-                            </div>
-                            <SpeedControl
-                              speed={simulationSpeed}
-                              onSpeedChange={setSimulationSpeed}
-                            />
-                          </div>
-
-                          <div className="flex-1 border-b">
-                            <TraceSimulator />
-                          </div>
-
-                          <div className="flex-1">
-                            <AutomationTraceViewer />
-                          </div>
-                        </div>
-                      </TabsContent>
-                    </div>
-                  </Tabs>
-                </div>
-              </ResizablePanel>
+              ) : (
+                <ResizablePanel
+                  defaultWidth={320}
+                  minWidth={280}
+                  maxWidth={600}
+                  side="right"
+                  className="h-full border-border border-l bg-card"
+                >
+                  {rightPanelContent}
+                </ResizablePanel>
+              )}
             </div>
           </div>
         </div>
