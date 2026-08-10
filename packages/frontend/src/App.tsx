@@ -553,7 +553,7 @@ function App() {
             <div
               className={cn(
                 'pointer-events-none absolute top-0 right-0 bottom-0 z-40 flex min-h-0 flex-col overflow-hidden transition-transform duration-300',
-                isCompactLayout ? 'w-full' : 'w-[320px] max-w-[85vw] shadow-xl',
+                'w-[320px] max-w-[85vw] shadow-xl',
                 selectedNodeId !== null ? 'pointer-events-auto translate-x-0' : 'translate-x-full'
               )}
             >
