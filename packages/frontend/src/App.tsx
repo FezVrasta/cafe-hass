@@ -11,9 +11,12 @@ import {
   FolderOpenDotIcon,
   Loader2,
   Menu,
+  PanelLeftClose,
+  PanelLeftOpen,
   Save,
   Settings,
   Wifi,
+  X,
 } from 'lucide-react';
 
 import { useEffect, useState } from 'react';
@@ -86,6 +89,8 @@ function App() {
     fromFlowGraph,
     reset,
     automationId,
+    selectedNodeId,
+    clearCanvasSelection,
     hasUnsavedChanges,
     isSaving,
     simulationSpeed,
@@ -99,10 +104,13 @@ function App() {
   const [importDropdownOpen, setImportDropdownOpen] = useState(false);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
+  const [mobilePaletteExpanded, setMobilePaletteExpanded] = useState(false);
+  const [desktopPaletteExpanded, setDesktopPaletteExpanded] = useState(true);
   const [parentWidth, setParentWidth] = useState(() => {
     const win = window.parent ?? window;
     return win.innerWidth;
   });
+  const isCompactLayout = parentWidth <= 870;
   const forceSettingsOpen = actualIsRemote && (config.url === '' || config.token === '');
   const isDark = useDarkMode();
 
@@ -232,7 +240,7 @@ function App() {
                 </Button>
               )}
               {/* Sidebar toggle button, only visible when parent window width <= 870px */}
-              {parentWidth <= 870 ? (
+              {isCompactLayout ? (
                 <Button
                   variant="ghost"
                   size="icon"
@@ -352,119 +360,274 @@ function App() {
           </header>
 
           {/* Main content */}
-          <div className="flex flex-1 overflow-hidden">
+          <div className="relative flex flex-1 overflow-hidden">
             {/* Left sidebar - Node palette */}
-            <aside className="flex h-full min-h-0 w-72 flex-col border-border border-r bg-card">
-              <div className="min-h-0 flex-1 overflow-auto">
-                <NodePalette />
-                <div className="border-t p-4">
-                  <h4 className="mb-2 font-medium text-muted-foreground text-xs">
-                    {t('labels.quickHelp')}
-                  </h4>
-                  <ul className="space-y-1 text-muted-foreground text-xs">
-                    <li>{t('help.clickNodesToAdd')}</li>
-                    <li>{t('help.dragToConnect')}</li>
-                    <li>{t('help.deleteToRemove')}</li>
-                    <li>{t('help.backspaceDeleteKey')}</li>
-                  </ul>
+            {!isCompactLayout && (
+              <aside
+                className={cn(
+                  'flex h-full min-h-0 flex-col border-border border-r bg-card transition-[width] duration-300',
+                  desktopPaletteExpanded ? 'w-72' : 'w-20'
+                )}
+              >
+                <div className="flex h-14 items-center justify-between border-b px-4">
+                  {desktopPaletteExpanded ? (
+                    <>
+                      <h3 className="shrink-0 whitespace-nowrap font-semibold text-sm">
+                        {t('labels.addNode')}
+                      </h3>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setDesktopPaletteExpanded(false)}
+                        aria-label="Collapse menu"
+                        title="Collapse menu"
+                      >
+                        <PanelLeftClose className="h-4 w-4" />
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-0" />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setDesktopPaletteExpanded(true)}
+                        aria-label="Expand menu"
+                        title="Expand menu"
+                      >
+                        <PanelLeftOpen className="h-4 w-4" />
+                      </Button>
+                    </>
+                  )}
                 </div>
-              </div>
-              <div className="flex flex-col gap-2 border-t p-4">
-                <div className="flex items-center gap-4">
-                  {actualIsRemote && config.url && (
-                    <span className="text-green-600 text-xs">
-                      {t('status.connectedTo', { hostname: new URL(config.url).hostname })}
+                <div className={cn('min-h-0 flex-1', desktopPaletteExpanded ? 'overflow-auto' : 'overflow-hidden')}>
+                  <NodePalette iconOnly={!desktopPaletteExpanded} />
+                  {desktopPaletteExpanded && (
+                    <div className="border-t p-4">
+                      <h4 className="mb-2 font-medium text-muted-foreground text-xs">
+                        {t('labels.quickHelp')}
+                      </h4>
+                      <ul className="space-y-1 text-muted-foreground text-xs">
+                        <li>{t('help.clickNodesToAdd')}</li>
+                        <li>{t('help.dragToConnect')}</li>
+                        <li>{t('help.deleteToRemove')}</li>
+                        <li>{t('help.backspaceDeleteKey')}</li>
+                      </ul>
+                    </div>
+                  )}
+                </div>
+                {!desktopPaletteExpanded && (
+                  <div className="flex flex-col items-center gap-2 border-t px-2 py-3">
+                    {actualIsRemote && config.url && (
+                      <span
+                        title={t('status.connectedTo', { hostname: new URL(config.url).hostname })}
+                        aria-label={t('status.connectedTo', { hostname: new URL(config.url).hostname })}
+                      >
+                        <Wifi className="h-4 w-4 text-green-600" />
+                      </span>
+                    )}
+                    <span className="font-medium text-[10px] text-muted-foreground">
+                      {`v${version}`}
                     </span>
-                  )}
-                  {actualConnectionError && (
-                    <span className="text-red-600 text-xs">{actualConnectionError}</span>
-                  )}
-                </div>
-                <div className="text-muted-foreground text-xs">
-                  <span>
-                    {t('titles.appName')} {`v${version}`}
-                  </span>
-                </div>
-              </div>
-            </aside>
+                  </div>
+                )}
+                {desktopPaletteExpanded && (
+                  <div className="flex flex-col gap-2 border-t p-4">
+                    <div className="flex items-center gap-4">
+                      {actualIsRemote && config.url && (
+                        <span className="text-green-600 text-xs">
+                          {t('status.connectedTo', { hostname: new URL(config.url).hostname })}
+                        </span>
+                      )}
+                      {actualConnectionError && (
+                        <span className="text-red-600 text-xs">{actualConnectionError}</span>
+                      )}
+                    </div>
+                    <div className="text-muted-foreground text-xs">
+                      <span>
+                        {t('titles.appName')} {`v${version}`}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </aside>
+            )}
 
             {/* Canvas */}
             <main className="flex min-h-0 flex-1 flex-col">
               <FlowCanvas />
             </main>
 
-            {/* Right sidebar - Properties/YAML/Simulator */}
-            <ResizablePanel
-              defaultWidth={320}
-              minWidth={280}
-              maxWidth={600}
-              side="right"
-              className="border-border border-l bg-card"
-            >
-              <Tabs
-                value={rightTab}
-                onValueChange={(value) => setRightTab(value as RightPanelTab)}
-                className="flex min-h-0 flex-1 flex-col"
-              >
-                <TabsList className="grid w-full grid-cols-3 rounded-none border-b">
-                  <TabsTrigger value="properties">{t('labels.properties')}</TabsTrigger>
-                  <TabsTrigger value="yaml">{t('labels.yaml')}</TabsTrigger>
-                  <TabsTrigger value="simulator">{t('labels.debug')}</TabsTrigger>
-                </TabsList>
+            {isCompactLayout && (
+              <>
+                <aside
+                  className={cn(
+                    'absolute top-0 bottom-0 left-0 z-40 flex min-h-0 flex-col bg-card transition-[width] duration-300',
+                    mobilePaletteExpanded ? 'w-full' : 'w-20'
+                  )}
+                >
+                  <div className="flex h-14 items-center justify-between border-b px-4">
+                    {mobilePaletteExpanded ? (
+                      <>
+                        <h3 className="shrink-0 whitespace-nowrap font-semibold text-sm">
+                          {t('labels.addNode')}
+                        </h3>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setMobilePaletteExpanded(false)}
+                            aria-label="Collapse menu"
+                            title="Collapse menu"
+                          >
+                            <PanelLeftClose className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="w-0" />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setMobilePaletteExpanded(true)}
+                          aria-label="Expand menu"
+                          title="Expand menu"
+                        >
+                          <PanelLeftOpen className="h-4 w-4" />
+                        </Button>
+                      </>
+                    )}
+                  </div>
 
-                <div className="flex flex-1 flex-col overflow-hidden">
-                  <TabsContent value="properties" className="mt-0 flex-1 overflow-hidden">
-                    <PropertyPanel />
-                  </TabsContent>
-                  <TabsContent value="yaml" className="mt-0 flex-1 overflow-hidden">
-                    <YamlPreview />
-                  </TabsContent>
-                  <TabsContent value="simulator" className="mt-0 flex-1 overflow-hidden">
-                    <div className="flex h-full flex-col">
-                      {/* Shared Speed Control */}
-                      <div className="border-b p-4">
-                        <div className="mb-2 flex items-center justify-between">
-                          <h4 className="font-medium text-muted-foreground text-xs">
-                            {t('labels.debugControls')}
-                          </h4>
-                          <div className="flex gap-1">
-                            <Button
-                              onClick={handleImport}
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              title={t('buttons.importJson')}
-                            >
-                              <FileUp className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button
-                              onClick={handleExport}
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              title={t('titles.exportJson')}
-                            >
-                              <FileDown className="h-3.5 w-3.5" />
-                            </Button>
+                  <div className={cn('min-h-0 flex-1', mobilePaletteExpanded ? 'overflow-auto' : 'overflow-hidden')}>
+                    <NodePalette iconOnly={!mobilePaletteExpanded} />
+                    {mobilePaletteExpanded && (
+                      <div className="border-t p-4">
+                        <h4 className="mb-2 font-medium text-muted-foreground text-xs">
+                          {t('labels.quickHelp')}
+                        </h4>
+                        <ul className="space-y-1 text-muted-foreground text-xs">
+                          <li>{t('help.clickNodesToAdd')}</li>
+                          <li>{t('help.dragToConnect')}</li>
+                          <li>{t('help.deleteToRemove')}</li>
+                          <li>{t('help.backspaceDeleteKey')}</li>
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                  {!mobilePaletteExpanded && (
+                    <div className="flex flex-col items-center gap-2 border-t px-2 py-3">
+                      {actualIsRemote && config.url && (
+                        <span
+                          title={t('status.connectedTo', { hostname: new URL(config.url).hostname })}
+                          aria-label={t('status.connectedTo', { hostname: new URL(config.url).hostname })}
+                        >
+                          <Wifi className="h-4 w-4 text-green-600" />
+                        </span>
+                      )}
+                      <span className="font-medium text-[10px] text-muted-foreground">
+                        {`v${version}`}
+                      </span>
+                    </div>
+                  )}
+                </aside>
+              </>
+            )}
+
+            {/* Right sidebar - Properties/YAML/Simulator */}
+            <div
+              className={cn(
+                'pointer-events-none absolute top-0 right-0 bottom-0 z-40 flex min-h-0 flex-col overflow-hidden transition-transform duration-300',
+                isCompactLayout ? 'w-full' : 'w-[320px] max-w-[85vw] shadow-xl',
+                selectedNodeId !== null ? 'pointer-events-auto translate-x-0' : 'translate-x-full'
+              )}
+            >
+              <ResizablePanel
+                defaultWidth={320}
+                minWidth={280}
+                maxWidth={600}
+                side="right"
+                className="h-full border-border border-l bg-card"
+              >
+                <div className="flex items-center justify-between border-b px-4 py-3">
+                  <h3 className="font-semibold text-sm">{t('labels.properties')}</h3>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={clearCanvasSelection}
+                    aria-label={t('buttons.close')}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="min-h-0 flex-1 overflow-hidden">
+                  <Tabs
+                    value={rightTab}
+                    onValueChange={(value) => setRightTab(value as RightPanelTab)}
+                    className="flex min-h-0 flex-1 flex-col"
+                  >
+                    <TabsList className="grid w-full grid-cols-3 rounded-none border-b">
+                      <TabsTrigger value="properties">{t('labels.properties')}</TabsTrigger>
+                      <TabsTrigger value="yaml">{t('labels.yaml')}</TabsTrigger>
+                      <TabsTrigger value="simulator">{t('labels.debug')}</TabsTrigger>
+                    </TabsList>
+
+                    <div className="flex flex-1 flex-col overflow-hidden">
+                      <TabsContent value="properties" className="mt-0 flex-1 overflow-hidden">
+                        <PropertyPanel />
+                      </TabsContent>
+                      <TabsContent value="yaml" className="mt-0 flex-1 overflow-hidden">
+                        <YamlPreview />
+                      </TabsContent>
+                      <TabsContent value="simulator" className="mt-0 flex-1 overflow-hidden">
+                        <div className="flex h-full flex-col">
+                          <div className="border-b p-4">
+                            <div className="mb-2 flex items-center justify-between">
+                              <h4 className="font-medium text-muted-foreground text-xs">
+                                {t('labels.debugControls')}
+                              </h4>
+                              <div className="flex gap-1">
+                                <Button
+                                  onClick={handleImport}
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6"
+                                  title={t('buttons.importJson')}
+                                >
+                                  <FileUp className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button
+                                  onClick={handleExport}
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6"
+                                  title={t('titles.exportJson')}
+                                >
+                                  <FileDown className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
+                            </div>
+                            <SpeedControl
+                              speed={simulationSpeed}
+                              onSpeedChange={setSimulationSpeed}
+                            />
+                          </div>
+
+                          <div className="flex-1 border-b">
+                            <TraceSimulator />
+                          </div>
+
+                          <div className="flex-1">
+                            <AutomationTraceViewer />
                           </div>
                         </div>
-                        <SpeedControl speed={simulationSpeed} onSpeedChange={setSimulationSpeed} />
-                      </div>
-
-                      {/* Simulation Section */}
-                      <div className="flex-1 border-b">
-                        <TraceSimulator />
-                      </div>
-
-                      {/* Trace Section */}
-                      <div className="flex-1">
-                        <AutomationTraceViewer />
-                      </div>
+                      </TabsContent>
                     </div>
-                  </TabsContent>
+                  </Tabs>
                 </div>
-              </Tabs>
-            </ResizablePanel>
+              </ResizablePanel>
+            </div>
           </div>
         </div>
 

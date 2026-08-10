@@ -186,6 +186,7 @@ export interface FlowState {
   removeNode: (nodeId: string) => void;
 
   selectNode: (nodeId: string | null) => void;
+  clearCanvasSelection: () => void;
 
   setFlowName: (name: string) => void;
   setFlowDescription: (description: string) => void;
@@ -475,6 +476,13 @@ export const useFlowStore = create<FlowState>()(
           })),
 
         selectNode: (nodeId) => set({ selectedNodeId: nodeId }),
+
+        clearCanvasSelection: () =>
+          set((state) => ({
+            selectedNodeId: null,
+            nodes: state.nodes.map((node) => ({ ...node, selected: false })),
+            edges: state.edges.map((edge) => ({ ...edge, selected: false })),
+          })),
 
         setClipboard: (data: string | null) => set({ clipboard: data }),
         setPasteCount: (count: number) => set({ pasteCount: count }),
