@@ -163,7 +163,10 @@
     "addTrigger": "Add Trigger",
     "timeoutDescription": "Maximum time to wait before continuing. Leave empty to wait indefinitely.",
     "continueOnTimeout": "Continue on Timeout",
-    "continueOnTimeoutDescription": "If enabled, the automation continues when timeout expires. If disabled, the automation stops."
+    "continueOnTimeoutDescription": "If enabled, the automation continues when timeout expires. If disabled, the automation stops.",
+    "branchOnTimeout": "Branch on Timeout",
+    "branchOnTimeoutDescription": "Add a condition node after this Wait so you can do one thing if it completed in time, and another if it timed out.",
+    "addTimeoutBranch": "Add Timeout Branch"
   },
   "quickAdd": {
     "searchPlaceholder": "Search nodes…"
