@@ -23,7 +23,7 @@ import { persist } from 'zustand/middleware';
 import { shallow } from 'zustand/shallow';
 import type { AutomationTrace } from '@/lib/ha-api';
 import { getHomeAssistantAPI } from '@/lib/ha-api';
-import { generateUUID } from '@/lib/utils';
+import { generateNodeId, generateUUID } from '@/lib/utils';
 import type { HomeAssistant } from '@/types/hass';
 import { cafeIndexedDBStorage } from '@/utils/indexeddb-storage';
 
@@ -184,6 +184,7 @@ export interface FlowState {
   addNode: (node: Node<FlowNodeData>) => void;
   updateNodeData: (nodeId: string, data: Partial<FlowNodeData>) => void;
   removeNode: (nodeId: string) => void;
+  addWaitTimeoutBranch: (waitNodeId: string) => void;
 
   selectNode: (nodeId: string | null) => void;
 
@@ -473,6 +474,62 @@ export const useFlowStore = create<FlowState>()(
             selectedNodeId: state.selectedNodeId === nodeId ? null : state.selectedNodeId,
             hasUnsavedChanges: true,
           })),
+
+        // Inserts a template Condition node right after a Wait node so the user
+        // can branch on `wait.trigger is not none` / `wait.completed` — i.e.
+        // "did it happen in time, or did it time out". Any edges already
+        // leaving the Wait node are re-parented onto the condition's 'true'
+        // (completed-in-time) handle so the existing continuation keeps
+        // working; the 'false' (timed-out) handle is left for the user to
+        // wire up themselves.
+        addWaitTimeoutBranch: (waitNodeId) => {
+          const state = get();
+          const waitNode = state.nodes.find((n) => n.id === waitNodeId);
+          if (!waitNode || waitNode.type !== 'wait') return;
+          const waitData = waitNode.data as WaitNodeData;
+          if (!waitData.timeout) return;
+
+          const conditionId = generateNodeId('condition');
+          const template =
+            waitData.wait_for_trigger !== undefined
+              ? '{{ wait.trigger is not none }}'
+              : '{{ wait.completed }}';
+
+          const conditionNode: Node<FlowNodeData> = {
+            id: conditionId,
+            type: 'condition',
+            position: { x: waitNode.position.x + 260, y: waitNode.position.y },
+            data: {
+              alias: 'Wait completed?',
+              condition: 'template',
+              value_template: template,
+            } satisfies ConditionNodeData,
+          };
+
+          set((s) => ({
+            nodes: [
+              ...s.nodes.map((n) =>
+                n.id === waitNodeId
+                  ? { ...n, data: { ...n.data, continue_on_timeout: true } }
+                  : n
+              ),
+              conditionNode,
+            ],
+            edges: [
+              ...s.edges.map((e) =>
+                e.source === waitNodeId ? { ...e, source: conditionId, sourceHandle: 'true' } : e
+              ),
+              {
+                id: `e-${waitNodeId}-${conditionId}-${Date.now()}`,
+                source: waitNodeId,
+                target: conditionId,
+                animated: false,
+              },
+            ],
+            hasUnsavedChanges: true,
+          }));
+          get().validateNode(conditionId);
+        },
 
         selectNode: (nodeId) => set({ selectedNodeId: nodeId }),
 

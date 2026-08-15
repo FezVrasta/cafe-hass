@@ -1,5 +1,5 @@
 import type { TriggerPlatform, WaitNode } from '@cafe/shared';
-import { Trash2Icon } from 'lucide-react';
+import { GitBranch, Trash2Icon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { FieldError } from '@/components/forms/FieldError';
 import { FormField } from '@/components/forms/FormField';
@@ -16,6 +16,7 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { getTriggerFields, TRIGGER_PLATFORM_FIELDS } from '@/config/triggerFields';
 import { useNodeErrors } from '@/hooks/useNodeErrors';
+import { useFlowStore } from '@/store/flow-store';
 import type { TriggerNodeData } from '@/store/flow-store';
 import { getNodeData, getNodeDataString } from '@/utils/nodeData';
 import { DurationField } from './DurationField';
@@ -28,6 +29,7 @@ interface WaitFieldsProps {
 export function WaitFields({ node, onChange }: WaitFieldsProps) {
   const { t } = useTranslation(['nodes']);
   const { getFieldError, getRootError } = useNodeErrors(node.id);
+  const addWaitTimeoutBranch = useFlowStore((s) => s.addWaitTimeoutBranch);
   const waitTemplate = getNodeDataString(node, 'wait_template');
   const waitForTrigger = getNodeData<TriggerNodeData[]>(node, 'wait_for_trigger');
 
@@ -159,15 +161,32 @@ export function WaitFields({ node, onChange }: WaitFieldsProps) {
       />
 
       {node.data.timeout && (
-        <FormField
-          label={t('nodes:wait.continueOnTimeout')}
-          description={t('nodes:wait.continueOnTimeoutDescription')}
-        >
-          <Switch
-            checked={node.data.continue_on_timeout ?? true}
-            onCheckedChange={(checked) => onChange('continue_on_timeout', checked)}
-          />
-        </FormField>
+        <>
+          <FormField
+            label={t('nodes:wait.continueOnTimeout')}
+            description={t('nodes:wait.continueOnTimeoutDescription')}
+          >
+            <Switch
+              checked={node.data.continue_on_timeout ?? true}
+              onCheckedChange={(checked) => onChange('continue_on_timeout', checked)}
+            />
+          </FormField>
+
+          <FormField
+            label={t('nodes:wait.branchOnTimeout')}
+            description={t('nodes:wait.branchOnTimeoutDescription')}
+          >
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => addWaitTimeoutBranch(node.id)}
+              className="gap-2"
+            >
+              <GitBranch className="h-4 w-4" />
+              {t('nodes:wait.addTimeoutBranch')}
+            </Button>
+          </FormField>
+        </>
       )}
     </>
   );
