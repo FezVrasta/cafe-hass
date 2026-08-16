@@ -1150,11 +1150,46 @@ export class YamlParser {
   }
 
   /**
-   * Parse Jinja condition expression to extract condition data
+   * Parse Jinja condition expression to extract condition data.
+   * Recognizes top-level `and`/`or`/`not` groupings before attempting to match a
+   * single leaf condition, so a compound expression (e.g. an OR node with several
+   * conditions) doesn't get collapsed into just the first leaf that happens to
+   * match somewhere inside it (see #209).
    */
   private parseJinjaCondition(expr: string): Record<string, unknown> {
+    const trimmed = this.stripOuterParens(expr.trim());
+
+    // `or` has the lowest precedence, so split on it first: each side may still
+    // contain `and`-joined sub-expressions, which the recursive call handles.
+    const orParts = this.splitTopLevelJinja(trimmed, ' or ');
+    if (orParts.length > 1) {
+      return {
+        condition: 'or',
+        conditions: orParts.map((part) => this.parseJinjaCondition(part)),
+      };
+    }
+
+    const andParts = this.splitTopLevelJinja(trimmed, ' and ');
+    if (andParts.length > 1) {
+      return {
+        condition: 'and',
+        conditions: andParts.map((part) => this.parseJinjaCondition(part)),
+      };
+    }
+
+    const notMatch = trimmed.match(/^not\s*\((.*)\)$/s);
+    if (notMatch) {
+      const innerParts = this.splitTopLevelJinja(notMatch[1].trim(), ' and ');
+      return {
+        condition: 'not',
+        conditions: innerParts.map((part) => this.parseJinjaCondition(part)),
+      };
+    }
+
     // is_state('entity', 'state')
-    const isStateMatch = expr.match(/is_state\s*\(\s*['"]([^'"]+)['"]\s*,\s*['"]([^'"]+)['"]\s*\)/);
+    const isStateMatch = trimmed.match(
+      /^is_state\s*\(\s*['"]([^'"]+)['"]\s*,\s*['"]([^'"]+)['"]\s*\)$/
+    );
     if (isStateMatch) {
       const entityId = isStateMatch[1];
       const state = isStateMatch[2];
@@ -1171,9 +1206,22 @@ export class YamlParser {
       return { condition: 'state', entity_id: entityId, state };
     }
 
+    // state_attr('entity', 'attribute') == 'value'
+    const stateAttrMatch = trimmed.match(
+      /^state_attr\s*\(\s*['"]([^'"]+)['"]\s*,\s*['"]([^'"]+)['"]\s*\)\s*==\s*['"]([^'"]*)['"]$/
+    );
+    if (stateAttrMatch) {
+      return {
+        condition: 'state',
+        entity_id: stateAttrMatch[1],
+        attribute: stateAttrMatch[2],
+        state: stateAttrMatch[3],
+      };
+    }
+
     // states('entity') | float > number
-    const numericMatch = expr.match(
-      /states\s*\(\s*['"]([^'"]+)['"]\s*\)\s*\|\s*float\s*([<>=]+)\s*(\d+(?:\.\d+)?)/
+    const numericMatch = trimmed.match(
+      /^states\s*\(\s*['"]([^'"]+)['"]\s*\)\s*\|\s*float\s*([<>=]+)\s*(\d+(?:\.\d+)?)$/
     );
     if (numericMatch) {
       const entityId = numericMatch[1];
@@ -1190,7 +1238,82 @@ export class YamlParser {
     }
 
     // Fallback to template condition
-    return { condition: 'template', value_template: `{{ ${expr} }}` };
+    return { condition: 'template', value_template: `{{ ${trimmed} }}` };
+  }
+
+  /**
+   * Remove a single redundant pair of wrapping parentheses, e.g. `(a or b)` -> `a or b`.
+   * Only strips when the opening paren's matching close is the expression's final
+   * character - `(a) or (b)` is left untouched.
+   */
+  private stripOuterParens(expr: string): string {
+    let result = expr.trim();
+    while (result.startsWith('(') && result.endsWith(')')) {
+      let depth = 0;
+      let matchesToEnd = true;
+      for (let i = 0; i < result.length; i++) {
+        if (result[i] === '(') depth++;
+        else if (result[i] === ')') {
+          depth--;
+          if (depth === 0 && i !== result.length - 1) {
+            matchesToEnd = false;
+            break;
+          }
+        }
+      }
+      if (!matchesToEnd) break;
+      result = result.slice(1, -1).trim();
+    }
+    return result;
+  }
+
+  /**
+   * Split a Jinja expression on a logical operator (` and `/` or `), ignoring
+   * occurrences inside parentheses or quoted string literals.
+   */
+  private splitTopLevelJinja(expr: string, separator: string): string[] {
+    const parts: string[] = [];
+    let depth = 0;
+    let quote: string | null = null;
+    let current = '';
+    let i = 0;
+    while (i < expr.length) {
+      const ch = expr[i];
+      if (quote) {
+        current += ch;
+        if (ch === quote && expr[i - 1] !== '\\') quote = null;
+        i++;
+        continue;
+      }
+      if (ch === "'" || ch === '"') {
+        quote = ch;
+        current += ch;
+        i++;
+        continue;
+      }
+      if (ch === '(') {
+        depth++;
+        current += ch;
+        i++;
+        continue;
+      }
+      if (ch === ')') {
+        depth--;
+        current += ch;
+        i++;
+        continue;
+      }
+      if (depth === 0 && expr.slice(i, i + separator.length) === separator) {
+        parts.push(current.trim());
+        current = '';
+        i += separator.length;
+        continue;
+      }
+      current += ch;
+      i++;
+    }
+    parts.push(current.trim());
+    return parts;
   }
 
   /**
