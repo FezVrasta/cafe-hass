@@ -101,7 +101,7 @@ function buildTemplatedDelayString(duration: Record<string, unknown>): string {
   const secondsExpression = `((${totalMillisecondsExpression}) % 60000) // 1000`;
   const millisecondsExpression = `(${totalMillisecondsExpression}) % 1000`;
 
-  return Object.prototype.hasOwnProperty.call(duration, 'milliseconds')
+  return Object.hasOwn(duration, 'milliseconds')
     ? `{{ '%02d:%02d:%02d.%03d' | format(${hoursExpression}, ${minutesExpression}, ${secondsExpression}, ${millisecondsExpression}) }}`
     : `{{ '%02d:%02d:%02d' | format(${hoursExpression}, ${minutesExpression}, ${secondsExpression}) }}`;
 }
