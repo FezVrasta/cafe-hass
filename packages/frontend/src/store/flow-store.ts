@@ -509,9 +509,7 @@ export const useFlowStore = create<FlowState>()(
           set((s) => ({
             nodes: [
               ...s.nodes.map((n) =>
-                n.id === waitNodeId
-                  ? { ...n, data: { ...n.data, continue_on_timeout: true } }
-                  : n
+                n.id === waitNodeId ? { ...n, data: { ...n.data, continue_on_timeout: true } } : n
               ),
               conditionNode,
             ],

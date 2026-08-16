@@ -74,7 +74,11 @@ describe('Wait node timeout branching', () => {
     const parsed = yamlLoad(result.yaml!) as {
       actions: [
         { wait_for_trigger: unknown[]; timeout: string; continue_on_timeout: boolean },
-        { if: { value_template: string }[]; then: { service: string }[]; else: { service: string }[] },
+        {
+          if: { value_template: string }[];
+          then: { service: string }[];
+          else: { service: string }[];
+        },
       ];
     };
 
@@ -123,9 +127,9 @@ describe('Wait node timeout branching', () => {
     );
     const trueActionNode = graph.nodes.find((n) => n.id === trueTarget?.target);
     const falseActionNode = graph.nodes.find((n) => n.id === falseTarget?.target);
-    expect(trueActionNode && isActionNode(trueActionNode) ? trueActionNode.data.service : null).toBe(
-      'light.turn_on'
-    );
+    expect(
+      trueActionNode && isActionNode(trueActionNode) ? trueActionNode.data.service : null
+    ).toBe('light.turn_on');
     expect(
       falseActionNode && isActionNode(falseActionNode) ? falseActionNode.data.service : null
     ).toBe('notify.notify');
