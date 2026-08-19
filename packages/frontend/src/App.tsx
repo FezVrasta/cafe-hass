@@ -91,7 +91,7 @@ function App() {
     const win = window.parent ?? window;
     return win.innerWidth;
   });
-  const isCompactLayout = parentWidth <= 870;
+  const isCompactLayout = parentWidth >= 1024 ? false : true;
   const forceSettingsOpen = actualIsRemote && (config.url === '' || config.token === '');
   const isDark = useDarkMode();
 
