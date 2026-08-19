@@ -19,7 +19,8 @@
     "disconnect": "断开连接",
     "collapseMenu": "收起菜单",
     "expandMenu": "展开菜单",
-    "toggleSidebar": "切换侧边栏"
+    "toggleSidebar": "切换侧边栏",
+    "deleteConnection": "删除连接"
   },
   "labels": {
     "automationName": "自动化名称",

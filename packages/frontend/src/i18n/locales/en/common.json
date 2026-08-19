@@ -19,7 +19,8 @@
     "disconnect": "Disconnect",
     "collapseMenu": "Collapse menu",
     "expandMenu": "Expand menu",
-    "toggleSidebar": "Toggle sidebar"
+    "toggleSidebar": "Toggle sidebar",
+    "deleteConnection": "Delete connection"
   },
   "labels": {
     "automationName": "Automation name",

@@ -19,7 +19,8 @@
     "disconnect": "Trennen",
     "collapseMenu": "Menü einklappen",
     "expandMenu": "Menü ausklappen",
-    "toggleSidebar": "Seitenleiste umschalten"
+    "toggleSidebar": "Seitenleiste umschalten",
+    "deleteConnection": "Verbindung löschen"
   },
   "labels": {
     "automationName": "Automatisierungsname",

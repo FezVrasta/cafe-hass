@@ -19,7 +19,8 @@
     "disconnect": "Déconnecter",
     "collapseMenu": "Réduire le menu",
     "expandMenu": "Développer le menu",
-    "toggleSidebar": "Basculer la barre latérale"
+    "toggleSidebar": "Basculer la barre latérale",
+    "deleteConnection": "Supprimer la connexion"
   },
   "labels": {
     "automationName": "Nom de l'automatisation",
