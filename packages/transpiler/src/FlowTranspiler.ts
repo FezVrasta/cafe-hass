@@ -6,6 +6,7 @@ import { type ParseResult, YamlParser } from './parser/YamlParser';
 import type { HAYamlOutput, TranspilerStrategy } from './strategies/base';
 import { NativeStrategy } from './strategies/native';
 import { StateMachineStrategy } from './strategies/state-machine';
+import { computeNodeVisitOrder } from './utils/nodeVisitOrder';
 
 /**
  * Options for YAML generation
@@ -242,8 +243,14 @@ export class FlowTranspiler {
   ): Record<string, unknown> {
     const nodePositions: Record<string, { x: number; y: number }> = {};
 
-    // Extract node positions
-    for (const node of flow.nodes) {
+    // Write positions in the same order YamlParser will re-assign IDs to
+    // nodes on import (see computeNodeVisitOrder), not `flow.nodes` array
+    // order — otherwise positions get attached to the wrong node once a
+    // flow has multiple same-type nodes across parallel/condition branches.
+    const nodesById = new Map(flow.nodes.map((node) => [node.id, node]));
+    for (const nodeId of computeNodeVisitOrder(flow)) {
+      const node = nodesById.get(nodeId);
+      if (!node) continue;
       nodePositions[node.id] = {
         x: node.position.x,
         y: node.position.y,

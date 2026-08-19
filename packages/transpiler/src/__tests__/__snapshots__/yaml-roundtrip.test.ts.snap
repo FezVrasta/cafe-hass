@@ -1351,6 +1351,9 @@ variables:
       action_test_7_61:
         x: 2412
         "y": 213
+      action_test_12_66:
+        x: 3012
+        "y": 112.5
       delay_test_8_62:
         x: 2132
         "y": 117.5
@@ -1363,9 +1366,6 @@ variables:
       action_test_11_65:
         x: 2712
         "y": 12
-      action_test_12_66:
-        x: 3012
-        "y": 112.5
     graph_id: a18b0fbb-d966-432c-aba7-4f7361da8d29
     graph_version: 1
     strategy: native
