@@ -11,8 +11,6 @@ import {
   FolderOpenDotIcon,
   Loader2,
   Menu,
-  PanelLeftClose,
-  PanelLeftOpen,
   Save,
   Settings,
   Wifi,
@@ -29,7 +27,7 @@ import { AutomationImportDialog } from '@/components/panels/AutomationImportDial
 import { AutomationSaveDialog } from '@/components/panels/AutomationSaveDialog';
 import { HassSettings } from '@/components/panels/HassSettings';
 import { ImportYamlDialog } from '@/components/panels/ImportYamlDialog';
-import { NodePalette } from '@/components/panels/NodePalette';
+import { NodePaletteSidebar } from '@/components/panels/NodePaletteSidebar';
 import { PropertyPanel } from '@/components/panels/PropertyPanel';
 import { YamlPreview } from '@/components/panels/YamlPreview';
 import { AutomationTraceViewer } from '@/components/simulator/AutomationTraceViewer';
@@ -54,7 +52,6 @@ import { ResizablePanel } from '@/components/ui/resizable-panel';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
-import { version } from '../../../custom_components/cafe/manifest.json';
 import { useHass } from './contexts/HassContext';
 import { useDarkMode } from './hooks/useDarkMode';
 import { useLanguage } from './hooks/useLanguage';
@@ -192,6 +189,18 @@ function App() {
   };
 
   const status = getConnectionStatus();
+
+  const handlePaletteToggle = () => {
+    if (isCompactLayout) {
+      setMobilePaletteExpanded((previous) => !previous);
+      return;
+    }
+
+    setDesktopPaletteExpanded((previous) => !previous);
+  };
+
+  const paletteExpanded = isCompactLayout ? mobilePaletteExpanded : desktopPaletteExpanded;
+  const paletteLayout = isCompactLayout ? 'compact' : 'desktop';
 
   const reloadApp = () => {
     window.location.reload();
@@ -456,105 +465,14 @@ function App() {
 
           {/* Main content */}
           <div className="relative flex flex-1 overflow-hidden">
-            {/* Left sidebar - Node palette */}
-            {!isCompactLayout && (
-              <aside
-                className={cn(
-                  'flex h-full min-h-0 flex-col border-border border-r bg-card transition-[width] duration-300',
-                  desktopPaletteExpanded ? 'w-72' : 'w-20'
-                )}
-              >
-                <div className="flex h-14 items-center justify-between border-b px-4">
-                  {desktopPaletteExpanded ? (
-                    <>
-                      <h3 className="shrink-0 whitespace-nowrap font-semibold text-sm">
-                        {t('labels.addNode')}
-                      </h3>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setDesktopPaletteExpanded(false)}
-                        aria-label="Collapse menu"
-                        title="Collapse menu"
-                      >
-                        <PanelLeftClose className="h-4 w-4" />
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      <div className="w-0" />
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setDesktopPaletteExpanded(true)}
-                        aria-label="Expand menu"
-                        title="Expand menu"
-                      >
-                        <PanelLeftOpen className="h-4 w-4" />
-                      </Button>
-                    </>
-                  )}
-                </div>
-                <div
-                  className={cn(
-                    'min-h-0 flex-1',
-                    desktopPaletteExpanded ? 'overflow-auto' : 'overflow-hidden'
-                  )}
-                >
-                  <NodePalette iconOnly={!desktopPaletteExpanded} />
-                  {desktopPaletteExpanded && (
-                    <div className="border-t p-4">
-                      <h4 className="mb-2 font-medium text-muted-foreground text-xs">
-                        {t('labels.quickHelp')}
-                      </h4>
-                      <ul className="space-y-1 text-muted-foreground text-xs">
-                        <li>{t('help.clickNodesToAdd')}</li>
-                        <li>{t('help.dragToConnect')}</li>
-                        <li>{t('help.deleteToRemove')}</li>
-                        <li>{t('help.backspaceDeleteKey')}</li>
-                      </ul>
-                    </div>
-                  )}
-                </div>
-                {!desktopPaletteExpanded && (
-                  <div className="flex flex-col items-center gap-2 border-t px-2 py-3">
-                    {actualIsRemote && config.url && (
-                      <span
-                        role="img"
-                        title={t('status.connectedTo', { hostname: new URL(config.url).hostname })}
-                        aria-label={t('status.connectedTo', {
-                          hostname: new URL(config.url).hostname,
-                        })}
-                      >
-                        <Wifi className="h-4 w-4 text-green-600" />
-                      </span>
-                    )}
-                    <span className="font-medium text-[10px] text-muted-foreground">
-                      {`v${version}`}
-                    </span>
-                  </div>
-                )}
-                {desktopPaletteExpanded && (
-                  <div className="flex flex-col gap-2 border-t p-4">
-                    <div className="flex items-center gap-4">
-                      {actualIsRemote && config.url && (
-                        <span className="text-green-600 text-xs">
-                          {t('status.connectedTo', { hostname: new URL(config.url).hostname })}
-                        </span>
-                      )}
-                      {actualConnectionError && (
-                        <span className="text-red-600 text-xs">{actualConnectionError}</span>
-                      )}
-                    </div>
-                    <div className="text-muted-foreground text-xs">
-                      <span>
-                        {t('titles.appName')} {`v${version}`}
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </aside>
-            )}
+            <NodePaletteSidebar
+              expanded={paletteExpanded}
+              onToggle={handlePaletteToggle}
+              layout={paletteLayout}
+              isRemote={actualIsRemote}
+              configUrl={config.url}
+              connectionError={actualConnectionError}
+            />
 
             {/* Canvas */}
             <main
@@ -565,87 +483,6 @@ function App() {
             >
               <FlowCanvas />
             </main>
-
-            {isCompactLayout && (
-              <aside
-                className={cn(
-                  'absolute top-0 bottom-0 left-0 z-40 flex min-h-0 flex-col border-border border-r transition-[width] duration-300',
-                  mobilePaletteExpanded ? 'w-full bg-card' : 'w-16 bg-card'
-                )}
-              >
-                <div className="flex h-14 items-center justify-between border-b px-4">
-                  {mobilePaletteExpanded ? (
-                    <>
-                      <h3 className="shrink-0 whitespace-nowrap font-semibold text-sm">
-                        {t('labels.addNode')}
-                      </h3>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setMobilePaletteExpanded(false)}
-                        aria-label="Collapse menu"
-                        title="Collapse menu"
-                      >
-                        <PanelLeftClose className="h-4 w-4" />
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      <div className="w-0" />
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setMobilePaletteExpanded(true)}
-                        aria-label="Expand menu"
-                        title="Expand menu"
-                      >
-                        <PanelLeftOpen className="h-4 w-4" />
-                      </Button>
-                    </>
-                  )}
-                </div>
-
-                <div
-                  className={cn(
-                    'min-h-0 flex-1',
-                    mobilePaletteExpanded ? 'overflow-auto' : 'overflow-hidden'
-                  )}
-                >
-                  <NodePalette iconOnly={!mobilePaletteExpanded} />
-                  {mobilePaletteExpanded && (
-                    <div className="border-t p-4">
-                      <h4 className="mb-2 font-medium text-muted-foreground text-xs">
-                        {t('labels.quickHelp')}
-                      </h4>
-                      <ul className="space-y-1 text-muted-foreground text-xs">
-                        <li>{t('help.clickNodesToAdd')}</li>
-                        <li>{t('help.dragToConnect')}</li>
-                        <li>{t('help.deleteToRemove')}</li>
-                        <li>{t('help.backspaceDeleteKey')}</li>
-                      </ul>
-                    </div>
-                  )}
-                </div>
-                {!mobilePaletteExpanded && (
-                  <div className="flex flex-col items-center gap-2 border-t px-2 py-3">
-                    {actualIsRemote && config.url && (
-                      <span
-                        role="img"
-                        title={t('status.connectedTo', { hostname: new URL(config.url).hostname })}
-                        aria-label={t('status.connectedTo', {
-                          hostname: new URL(config.url).hostname,
-                        })}
-                      >
-                        <Wifi className="h-4 w-4 text-green-600" />
-                      </span>
-                    )}
-                    <span className="font-medium text-[10px] text-muted-foreground">
-                      {`v${version}`}
-                    </span>
-                  </div>
-                )}
-              </aside>
-            )}
 
             {/* Right sidebar - Properties/YAML/Simulator */}
             <div
