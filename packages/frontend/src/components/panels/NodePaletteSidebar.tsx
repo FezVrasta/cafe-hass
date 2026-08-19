@@ -102,8 +102,8 @@ export function NodePaletteSidebar({
               variant="ghost"
               size="icon"
               onClick={onToggle}
-              aria-label="Collapse menu"
-              title="Collapse menu"
+              aria-label={t('buttons.collapseMenu')}
+              title={t('buttons.collapseMenu')}
             >
               <PanelLeftClose className="h-4 w-4" />
             </Button>
@@ -115,8 +115,8 @@ export function NodePaletteSidebar({
               variant="ghost"
               size="icon"
               onClick={onToggle}
-              aria-label="Expand menu"
-              title="Expand menu"
+              aria-label={t('buttons.expandMenu')}
+              title={t('buttons.expandMenu')}
             >
               <PanelLeftOpen className="h-4 w-4" />
             </Button>

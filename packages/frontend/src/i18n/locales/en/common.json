@@ -16,7 +16,10 @@
     "importJson": "Import from JSON",
     "importYaml": "Import from YAML",
     "testConnection": "Test Connection",
-    "disconnect": "Disconnect"
+    "disconnect": "Disconnect",
+    "collapseMenu": "Collapse menu",
+    "expandMenu": "Expand menu",
+    "toggleSidebar": "Toggle sidebar"
   },
   "labels": {
     "automationName": "Automation name",

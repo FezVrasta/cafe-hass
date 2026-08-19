@@ -16,7 +16,10 @@
     "importJson": "从JSON导入",
     "importYaml": "从YAML导入",
     "testConnection": "测试连接",
-    "disconnect": "断开连接"
+    "disconnect": "断开连接",
+    "collapseMenu": "收起菜单",
+    "expandMenu": "展开菜单",
+    "toggleSidebar": "切换侧边栏"
   },
   "labels": {
     "automationName": "自动化名称",
