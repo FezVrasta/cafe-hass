@@ -41,6 +41,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { COMPACT_NODE_PALETTE_COLLAPSED_WIDTH } from './components/panels/layout';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { useHass } from './contexts/HassContext';
@@ -350,8 +351,8 @@ function App() {
             <main
               className={cn(
                 'flex min-h-0 flex-1 flex-col transition-[margin] duration-300',
-                isCompactLayout && 'ml-16'
               )}
+              style={isCompactLayout ? { marginLeft: COMPACT_NODE_PALETTE_COLLAPSED_WIDTH } : undefined}
             >
               <FlowCanvas />
             </main>

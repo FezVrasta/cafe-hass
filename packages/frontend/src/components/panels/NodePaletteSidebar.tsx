@@ -1,5 +1,6 @@
 import { PanelLeftClose, PanelLeftOpen, Wifi } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { COMPACT_NODE_PALETTE_COLLAPSED_WIDTH } from './layout';
 import { NodePalette } from '@/components/panels/NodePalette';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -78,12 +79,16 @@ export function NodePaletteSidebar({
   connectionError,
 }: NodePaletteSidebarProps) {
   const { t } = useTranslation(['common', 'errors', 'dialogs']);
+  const compactCollapsedStyle =
+    layout === 'compact' && !expanded
+      ? { width: COMPACT_NODE_PALETTE_COLLAPSED_WIDTH }
+      : undefined;
 
   const layoutClasses =
     layout === 'compact'
       ? cn(
           'absolute top-0 bottom-0 left-0 z-40 flex min-h-0 flex-col border-border border-r transition-[width] duration-300',
-          expanded ? 'w-full bg-card' : 'w-16 bg-card'
+          expanded ? 'w-full bg-card' : 'bg-card'
         )
       : cn(
           'flex h-full min-h-0 flex-col border-border border-r bg-card transition-[width] duration-300',
@@ -91,7 +96,7 @@ export function NodePaletteSidebar({
         );
 
   return (
-    <aside className={cn(layoutClasses, className)}>
+    <aside className={cn(layoutClasses, className)} style={compactCollapsedStyle}>
       <div className="flex h-14 items-center justify-between border-b px-4">
         {expanded ? (
           <>

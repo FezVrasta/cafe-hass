@@ -171,7 +171,7 @@ export function RightSidebar({
       <div
         className={cn(
           'absolute right-0 z-40 transition-opacity',
-          isCompactLayout ? 'top-2' : 'top-3',
+          isCompactLayout ? 'top-1/2 -translate-y-1/2' : 'top-3',
           rightPanelExpanded
             ? 'pointer-events-none opacity-0'
             : 'pointer-events-auto opacity-100'
@@ -180,7 +180,12 @@ export function RightSidebar({
         <Button
           variant="ghost"
           size="icon"
-          className="h-10 w-10 rounded-l-md rounded-r-none border border-r-0 border-border bg-card shadow-sm"
+          className={cn(
+            'border border-r-0 border-border bg-card shadow-sm',
+            isCompactLayout
+              ? 'h-14 w-8 rounded-l-lg rounded-r-none bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80'
+              : 'h-10 w-10 rounded-l-md rounded-r-none'
+          )}
           onClick={toggleRightPanelExpanded}
           aria-label={expandLabel}
           title={expandLabel}
