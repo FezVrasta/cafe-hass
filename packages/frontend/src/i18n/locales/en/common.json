@@ -20,6 +20,9 @@
     "collapseMenu": "Collapse menu",
     "expandMenu": "Expand menu",
     "toggleSidebar": "Toggle sidebar",
+    "expandPropertiesPanel": "Expand properties panel",
+    "collapsePropertiesPanel": "Collapse properties panel",
+    "selectNodeToOpenPropertiesPanel": "Select a node to open the properties panel",
     "deleteConnection": "Delete connection"
   },
   "labels": {

@@ -6,15 +6,12 @@ import {
   ChevronDown,
   DiamondPlus,
   FileCode,
-  FileDown,
-  FileUp,
   FolderOpenDotIcon,
   Loader2,
   Menu,
   Save,
   Settings,
   Wifi,
-  X,
 } from 'lucide-react';
 
 import { useEffect, useState } from 'react';
@@ -28,11 +25,7 @@ import { AutomationSaveDialog } from '@/components/panels/AutomationSaveDialog';
 import { HassSettings } from '@/components/panels/HassSettings';
 import { ImportYamlDialog } from '@/components/panels/ImportYamlDialog';
 import { NodePaletteSidebar } from '@/components/panels/NodePaletteSidebar';
-import { PropertyPanel } from '@/components/panels/PropertyPanel';
-import { YamlPreview } from '@/components/panels/YamlPreview';
-import { AutomationTraceViewer } from '@/components/simulator/AutomationTraceViewer';
-import { SpeedControl } from '@/components/simulator/SpeedControl';
-import { TraceSimulator } from '@/components/simulator/TraceSimulator';
+import { RightSidebar } from '@/components/panels/RightSidebar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -48,16 +41,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { ResizablePanel } from '@/components/ui/resizable-panel';
 import { Separator } from '@/components/ui/separator';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { useHass } from './contexts/HassContext';
 import { useDarkMode } from './hooks/useDarkMode';
 import { useLanguage } from './hooks/useLanguage';
 import { useFlowStore } from './store/flow-store';
-
-type RightPanelTab = 'properties' | 'yaml' | 'simulator';
 
 function App() {
   const { t } = useTranslation(['common', 'errors', 'dialogs']);
@@ -83,18 +72,12 @@ function App() {
 
   const {
     flowName,
-    fromFlowGraph,
     reset,
     automationId,
-    selectedNodeId,
-    clearCanvasSelection,
     hasUnsavedChanges,
     isSaving,
-    simulationSpeed,
-    setSimulationSpeed,
     hasRealChanges,
   } = useFlowStore();
-  const [rightTab, setRightTab] = useState<RightPanelTab>('properties');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [importYamlOpen, setImportYamlOpen] = useState(false);
   const [automationImportOpen, setAutomationImportOpen] = useState(false);
@@ -127,37 +110,6 @@ function App() {
     win.addEventListener('resize', handleResize);
     return () => win.removeEventListener('resize', handleResize);
   }, []);
-
-  const handleImport = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json';
-    input.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
-
-      try {
-        const text = await file.text();
-        const graph = JSON.parse(text);
-        fromFlowGraph(graph);
-      } catch (error) {
-        console.error('Failed to import:', error);
-        alert(t('errors:import.fileReadFailed'));
-      }
-    };
-    input.click();
-  };
-
-  const handleExport = () => {
-    const graph = useFlowStore.getState().toFlowGraph();
-    const blob = new Blob([JSON.stringify(graph, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${flowName || 'automation'}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
 
   // Determine connection status display
   const getConnectionStatus = () => {
@@ -205,86 +157,6 @@ function App() {
   const reloadApp = () => {
     window.location.reload();
   };
-
-  const rightPanelContent = (
-    <>
-      <div className="flex items-center justify-between border-b px-4 py-3">
-        <h3 className={cn('font-semibold text-sm', isCompactLayout && 'invisible')}>
-          {t('labels.properties')}
-        </h3>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={clearCanvasSelection}
-          aria-label={t('buttons.close')}
-        >
-          <X className="h-4 w-4" />
-        </Button>
-      </div>
-      <div className="min-h-0 flex-1 overflow-hidden">
-        <Tabs
-          value={rightTab}
-          onValueChange={(value) => setRightTab(value as RightPanelTab)}
-          className="flex min-h-0 flex-1 flex-col"
-        >
-          <TabsList className="grid w-full grid-cols-3 rounded-none border-b">
-            <TabsTrigger value="properties">{t('labels.properties')}</TabsTrigger>
-            <TabsTrigger value="yaml">{t('labels.yaml')}</TabsTrigger>
-            <TabsTrigger value="simulator">{t('labels.debug')}</TabsTrigger>
-          </TabsList>
-
-          <div className="flex flex-1 flex-col overflow-hidden">
-            <TabsContent value="properties" className="mt-0 flex-1 overflow-hidden">
-              <PropertyPanel />
-            </TabsContent>
-            <TabsContent value="yaml" className="mt-0 flex-1 overflow-hidden">
-              <YamlPreview />
-            </TabsContent>
-            <TabsContent value="simulator" className="mt-0 flex-1 overflow-hidden">
-              <div className="flex h-full flex-col">
-                <div className="border-b p-4">
-                  <div className="mb-2 flex items-center justify-between">
-                    <h4 className="font-medium text-muted-foreground text-xs">
-                      {t('labels.debugControls')}
-                    </h4>
-                    <div className="flex gap-1">
-                      <Button
-                        onClick={handleImport}
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6"
-                        title={t('buttons.importJson')}
-                      >
-                        <FileUp className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        onClick={handleExport}
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6"
-                        title={t('titles.exportJson')}
-                      >
-                        <FileDown className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  </div>
-                  <SpeedControl speed={simulationSpeed} onSpeedChange={setSimulationSpeed} />
-                </div>
-
-                <div className="flex-1 border-b">
-                  <TraceSimulator />
-                </div>
-
-                <div className="flex-1">
-                  <AutomationTraceViewer />
-                </div>
-              </div>
-            </TabsContent>
-          </div>
-        </Tabs>
-      </div>
-    </>
-  );
 
   return (
     <ErrorBoundary
@@ -484,30 +356,7 @@ function App() {
               <FlowCanvas />
             </main>
 
-            {/* Right sidebar - Properties/YAML/Simulator */}
-            <div
-              className={cn(
-                'pointer-events-none absolute top-0 right-0 bottom-0 z-40 flex min-h-0 flex-col overflow-hidden transition-transform duration-300',
-                isCompactLayout ? 'w-full' : 'w-[320px] max-w-[85vw] shadow-xl',
-                selectedNodeId !== null ? 'pointer-events-auto translate-x-0' : 'translate-x-full'
-              )}
-            >
-              {isCompactLayout ? (
-                <div className="flex h-full min-h-0 flex-col border-border border-l bg-card">
-                  {rightPanelContent}
-                </div>
-              ) : (
-                <ResizablePanel
-                  defaultWidth={320}
-                  minWidth={280}
-                  maxWidth={600}
-                  side="right"
-                  className="h-full border-border border-l bg-card"
-                >
-                  {rightPanelContent}
-                </ResizablePanel>
-              )}
-            </div>
+            <RightSidebar isCompactLayout={isCompactLayout} />
           </div>
         </div>
 
