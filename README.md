@@ -1,6 +1,9 @@
 > [!WARNING]
 > The project is still in beta. While it is designed to be non-destructive, please make sure to backup your automations before editing them with C.A.F.E.!
 
+> [!TIP]
+> Looking for a Role Based Access Control system for HA? [ha-rbac](https://github.com/fezvrasta/ha-rbac) is now available!
+
 # ☕ C.A.F.E.
 
 ### **C**omplex **A**utomation **F**low **E**ditor
