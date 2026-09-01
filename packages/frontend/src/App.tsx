@@ -6,8 +6,6 @@ import {
   ChevronDown,
   DiamondPlus,
   FileCode,
-  FileDown,
-  FileUp,
   FolderOpenDotIcon,
   Loader2,
   Menu,
@@ -26,12 +24,8 @@ import { AutomationImportDialog } from '@/components/panels/AutomationImportDial
 import { AutomationSaveDialog } from '@/components/panels/AutomationSaveDialog';
 import { HassSettings } from '@/components/panels/HassSettings';
 import { ImportYamlDialog } from '@/components/panels/ImportYamlDialog';
-import { NodePalette } from '@/components/panels/NodePalette';
-import { PropertyPanel } from '@/components/panels/PropertyPanel';
-import { YamlPreview } from '@/components/panels/YamlPreview';
-import { AutomationTraceViewer } from '@/components/simulator/AutomationTraceViewer';
-import { SpeedControl } from '@/components/simulator/SpeedControl';
-import { TraceSimulator } from '@/components/simulator/TraceSimulator';
+import { NodePaletteSidebar } from '@/components/panels/NodePaletteSidebar';
+import { RightSidebar } from '@/components/panels/RightSidebar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -47,17 +41,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { ResizablePanel } from '@/components/ui/resizable-panel';
+import { COMPACT_NODE_PALETTE_COLLAPSED_WIDTH } from './components/panels/layout';
 import { Separator } from '@/components/ui/separator';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
-import { version } from '../../../custom_components/cafe/manifest.json';
 import { useHass } from './contexts/HassContext';
 import { useDarkMode } from './hooks/useDarkMode';
 import { useLanguage } from './hooks/useLanguage';
 import { useFlowStore } from './store/flow-store';
-
-type RightPanelTab = 'properties' | 'yaml' | 'simulator';
 
 function App() {
   const { t } = useTranslation(['common', 'errors', 'dialogs']);
@@ -83,26 +73,25 @@ function App() {
 
   const {
     flowName,
-    fromFlowGraph,
     reset,
     automationId,
     hasUnsavedChanges,
     isSaving,
-    simulationSpeed,
-    setSimulationSpeed,
     hasRealChanges,
   } = useFlowStore();
-  const [rightTab, setRightTab] = useState<RightPanelTab>('properties');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [importYamlOpen, setImportYamlOpen] = useState(false);
   const [automationImportOpen, setAutomationImportOpen] = useState(false);
   const [importDropdownOpen, setImportDropdownOpen] = useState(false);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
+  const [mobilePaletteExpanded, setMobilePaletteExpanded] = useState(false);
+  const [desktopPaletteExpanded, setDesktopPaletteExpanded] = useState(true);
   const [parentWidth, setParentWidth] = useState(() => {
     const win = window.parent ?? window;
     return win.innerWidth;
   });
+  const isCompactLayout = parentWidth >= 1024 ? false : true;
   const forceSettingsOpen = actualIsRemote && (config.url === '' || config.token === '');
   const isDark = useDarkMode();
 
@@ -122,37 +111,6 @@ function App() {
     win.addEventListener('resize', handleResize);
     return () => win.removeEventListener('resize', handleResize);
   }, []);
-
-  const handleImport = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json';
-    input.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
-
-      try {
-        const text = await file.text();
-        const graph = JSON.parse(text);
-        fromFlowGraph(graph);
-      } catch (error) {
-        console.error('Failed to import:', error);
-        alert(t('errors:import.fileReadFailed'));
-      }
-    };
-    input.click();
-  };
-
-  const handleExport = () => {
-    const graph = useFlowStore.getState().toFlowGraph();
-    const blob = new Blob([JSON.stringify(graph, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${flowName || 'automation'}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
 
   // Determine connection status display
   const getConnectionStatus = () => {
@@ -185,6 +143,18 @@ function App() {
 
   const status = getConnectionStatus();
 
+  const handlePaletteToggle = () => {
+    if (isCompactLayout) {
+      setMobilePaletteExpanded((previous) => !previous);
+      return;
+    }
+
+    setDesktopPaletteExpanded((previous) => !previous);
+  };
+
+  const paletteExpanded = isCompactLayout ? mobilePaletteExpanded : desktopPaletteExpanded;
+  const paletteLayout = isCompactLayout ? 'compact' : 'desktop';
+
   const reloadApp = () => {
     window.location.reload();
   };
@@ -216,8 +186,18 @@ function App() {
       <ReactFlowProvider>
         <div className="flex h-screen flex-col bg-background">
           {/* Header */}
-          <header className="flex h-14 items-center justify-between gap-4 border-border border-b bg-card px-4 shadow-sm">
-            <div className="flex flex-1 items-center gap-4">
+          <header
+            className={cn(
+              'flex h-14 min-w-0 items-center justify-between border-border border-b bg-card px-4 shadow-sm',
+              isCompactLayout ? 'gap-2 overflow-hidden' : 'gap-4'
+            )}
+          >
+            <div
+              className={cn(
+                'flex min-w-0 flex-1 items-center',
+                isCompactLayout ? 'gap-2' : 'gap-4'
+              )}
+            >
               {/* Back to HA button — only in panel mode (not remote) */}
               {!actualIsRemote && (
                 <Button
@@ -232,13 +212,13 @@ function App() {
                 </Button>
               )}
               {/* Sidebar toggle button, only visible when parent window width <= 870px */}
-              {parentWidth <= 870 ? (
+              {isCompactLayout ? (
                 <Button
                   variant="ghost"
                   size="icon"
                   className="inline-flex items-center justify-center rounded-md p-2 text-muted-foreground hover:bg-accent focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                   onClick={handleSidebarToggle}
-                  aria-label="Toggle sidebar"
+                  aria-label={t('buttons.toggleSidebar')}
                 >
                   <Menu className="h-5 w-5" />
                 </Button>
@@ -252,7 +232,12 @@ function App() {
                 </h1>
               )}
               <span className="mx-1 h-5 w-px bg-border" />
-              <span className="min-w-32 max-w-96 flex-1 truncate font-semibold text-foreground">
+              <span
+                className={cn(
+                  'max-w-96 flex-1 truncate font-semibold text-foreground',
+                  isCompactLayout ? 'hidden' : 'min-w-32'
+                )}
+              >
                 {flowName || (
                   <span className="font-normal text-muted-foreground">
                     {t('placeholders.automationName')}
@@ -261,8 +246,8 @@ function App() {
               </span>
             </div>
 
-            <div className="flex items-center gap-2">
-              {status && (
+            <div className={cn('flex items-center', isCompactLayout ? 'gap-1' : 'gap-2')}>
+              {!isCompactLayout && status && (
                 <Badge
                   onClick={() => setSettingsOpen(true)}
                   className={cn(
@@ -288,7 +273,7 @@ function App() {
                 </Button>
               )}
 
-              <Separator orientation="vertical" className="h-6" />
+              {!isCompactLayout && <Separator orientation="vertical" className="h-6" />}
 
               {/* Open Automation Button with Import Dropdown */}
               <div className="flex">
@@ -299,8 +284,8 @@ function App() {
                   }}
                   className="rounded-r-none"
                 >
-                  <FolderOpenDotIcon className="mr-2 h-4 w-4" />
-                  {t('buttons.openAutomation')}
+                  <FolderOpenDotIcon className={cn('h-4 w-4', !isCompactLayout && 'mr-2')} />
+                  {!isCompactLayout && t('buttons.openAutomation')}
                 </Button>
 
                 {/* Dropdown Toggle */}
@@ -352,119 +337,27 @@ function App() {
           </header>
 
           {/* Main content */}
-          <div className="flex flex-1 overflow-hidden">
-            {/* Left sidebar - Node palette */}
-            <aside className="flex h-full min-h-0 w-72 flex-col border-border border-r bg-card">
-              <div className="min-h-0 flex-1 overflow-auto">
-                <NodePalette />
-                <div className="border-t p-4">
-                  <h4 className="mb-2 font-medium text-muted-foreground text-xs">
-                    {t('labels.quickHelp')}
-                  </h4>
-                  <ul className="space-y-1 text-muted-foreground text-xs">
-                    <li>{t('help.clickNodesToAdd')}</li>
-                    <li>{t('help.dragToConnect')}</li>
-                    <li>{t('help.deleteToRemove')}</li>
-                    <li>{t('help.backspaceDeleteKey')}</li>
-                  </ul>
-                </div>
-              </div>
-              <div className="flex flex-col gap-2 border-t p-4">
-                <div className="flex items-center gap-4">
-                  {actualIsRemote && config.url && (
-                    <span className="text-green-600 text-xs">
-                      {t('status.connectedTo', { hostname: new URL(config.url).hostname })}
-                    </span>
-                  )}
-                  {actualConnectionError && (
-                    <span className="text-red-600 text-xs">{actualConnectionError}</span>
-                  )}
-                </div>
-                <div className="text-muted-foreground text-xs">
-                  <span>
-                    {t('titles.appName')} {`v${version}`}
-                  </span>
-                </div>
-              </div>
-            </aside>
+          <div className="relative flex flex-1 overflow-hidden">
+            <NodePaletteSidebar
+              expanded={paletteExpanded}
+              onToggle={handlePaletteToggle}
+              layout={paletteLayout}
+              isRemote={actualIsRemote}
+              configUrl={config.url}
+              connectionError={actualConnectionError}
+            />
 
             {/* Canvas */}
-            <main className="flex min-h-0 flex-1 flex-col">
+            <main
+              className={cn(
+                'flex min-h-0 flex-1 flex-col transition-[margin] duration-300',
+              )}
+              style={isCompactLayout ? { marginLeft: COMPACT_NODE_PALETTE_COLLAPSED_WIDTH } : undefined}
+            >
               <FlowCanvas />
             </main>
 
-            {/* Right sidebar - Properties/YAML/Simulator */}
-            <ResizablePanel
-              defaultWidth={320}
-              minWidth={280}
-              maxWidth={600}
-              side="right"
-              className="border-border border-l bg-card"
-            >
-              <Tabs
-                value={rightTab}
-                onValueChange={(value) => setRightTab(value as RightPanelTab)}
-                className="flex min-h-0 flex-1 flex-col"
-              >
-                <TabsList className="grid w-full grid-cols-3 rounded-none border-b">
-                  <TabsTrigger value="properties">{t('labels.properties')}</TabsTrigger>
-                  <TabsTrigger value="yaml">{t('labels.yaml')}</TabsTrigger>
-                  <TabsTrigger value="simulator">{t('labels.debug')}</TabsTrigger>
-                </TabsList>
-
-                <div className="flex flex-1 flex-col overflow-hidden">
-                  <TabsContent value="properties" className="mt-0 flex-1 overflow-hidden">
-                    <PropertyPanel />
-                  </TabsContent>
-                  <TabsContent value="yaml" className="mt-0 flex-1 overflow-hidden">
-                    <YamlPreview />
-                  </TabsContent>
-                  <TabsContent value="simulator" className="mt-0 flex-1 overflow-hidden">
-                    <div className="flex h-full flex-col">
-                      {/* Shared Speed Control */}
-                      <div className="border-b p-4">
-                        <div className="mb-2 flex items-center justify-between">
-                          <h4 className="font-medium text-muted-foreground text-xs">
-                            {t('labels.debugControls')}
-                          </h4>
-                          <div className="flex gap-1">
-                            <Button
-                              onClick={handleImport}
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              title={t('buttons.importJson')}
-                            >
-                              <FileUp className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button
-                              onClick={handleExport}
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              title={t('titles.exportJson')}
-                            >
-                              <FileDown className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
-                        </div>
-                        <SpeedControl speed={simulationSpeed} onSpeedChange={setSimulationSpeed} />
-                      </div>
-
-                      {/* Simulation Section */}
-                      <div className="flex-1 border-b">
-                        <TraceSimulator />
-                      </div>
-
-                      {/* Trace Section */}
-                      <div className="flex-1">
-                        <AutomationTraceViewer />
-                      </div>
-                    </div>
-                  </TabsContent>
-                </div>
-              </Tabs>
-            </ResizablePanel>
+            <RightSidebar isCompactLayout={isCompactLayout} />
           </div>
         </div>
 

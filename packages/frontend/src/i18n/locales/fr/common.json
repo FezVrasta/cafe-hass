@@ -16,7 +16,11 @@
     "importJson": "Importer depuis JSON",
     "importYaml": "Importer depuis YAML",
     "testConnection": "Tester la connexion",
-    "disconnect": "Déconnecter"
+    "disconnect": "Déconnecter",
+    "collapseMenu": "Réduire le menu",
+    "expandMenu": "Développer le menu",
+    "toggleSidebar": "Basculer la barre latérale",
+    "deleteConnection": "Supprimer la connexion"
   },
   "labels": {
     "automationName": "Nom de l'automatisation",

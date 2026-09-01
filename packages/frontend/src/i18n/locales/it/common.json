@@ -16,7 +16,11 @@
     "importJson": "Importa da JSON",
     "importYaml": "Importa da YAML",
     "testConnection": "Testa Connessione",
-    "disconnect": "Disconnetti"
+    "disconnect": "Disconnetti",
+    "collapseMenu": "Comprimi menu",
+    "expandMenu": "Espandi menu",
+    "toggleSidebar": "Attiva/disattiva barra laterale",
+    "deleteConnection": "Elimina connessione"
   },
   "labels": {
     "automationName": "Nome automazione",

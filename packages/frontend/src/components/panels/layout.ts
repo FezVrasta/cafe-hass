@@ -1,0 +1,1 @@
+export const COMPACT_NODE_PALETTE_COLLAPSED_WIDTH = '4rem';

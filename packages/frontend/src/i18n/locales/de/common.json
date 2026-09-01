@@ -16,7 +16,14 @@
     "importJson": "Aus JSON importieren",
     "importYaml": "Aus YAML importieren",
     "testConnection": "Verbindung testen",
-    "disconnect": "Trennen"
+    "disconnect": "Trennen",
+    "collapseMenu": "Menü einklappen",
+    "expandMenu": "Menü ausklappen",
+    "toggleSidebar": "Seitenleiste umschalten",
+    "expandPropertiesPanel": "Eigenschaftenfenster ausklappen",
+    "collapsePropertiesPanel": "Eigenschaftenfenster einklappen",
+    "selectNodeToOpenPropertiesPanel": "Wählen Sie einen Knoten aus, um das Eigenschaftenfenster zu öffnen",
+    "deleteConnection": "Verbindung löschen"
   },
   "labels": {
     "automationName": "Automatisierungsname",

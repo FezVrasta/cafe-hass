@@ -73,7 +73,11 @@ export const nodeTypes = [
   },
 ] as const satisfies readonly NodeTypeConfig[];
 
-export function NodePalette() {
+interface NodePaletteProps {
+  iconOnly?: boolean;
+}
+
+export function NodePalette({ iconOnly = false }: NodePaletteProps) {
   const { t } = useTranslation(['common', 'nodes']);
   const addNode = useFlowStore((s) => s.addNode);
   const nodes = useFlowStore((s) => s.nodes);
@@ -107,9 +111,8 @@ export function NodePalette() {
   }, []);
 
   return (
-    <div className="space-y-2 p-4">
-      <h3 className="mb-3 font-semibold text-muted-foreground text-sm">{t('labels.addNode')}</h3>
-      <div className="space-y-2">
+    <div className={cn('space-y-2 p-4', iconOnly && 'p-2')}>
+      <div className={cn('space-y-2', iconOnly && 'flex flex-col items-center')}>
         {nodeTypes.map((config) => (
           <Button
             key={config.type}
@@ -118,13 +121,13 @@ export function NodePalette() {
             onDragStart={(e) => onDragStart(e, config)}
             draggable
             className={cn(
-              'h-auto w-full justify-start gap-3 py-3',
+              iconOnly ? 'h-12 w-12 justify-center p-0' : 'h-auto w-full justify-start gap-3 py-3',
               'cursor-grab transition-colors active:cursor-grabbing',
               config.color
             )}
           >
             <config.icon className="h-4 w-4" />
-            <span className="font-medium text-sm">{t(config.labelKey)}</span>
+            {!iconOnly && <span className="font-medium text-sm">{t(config.labelKey)}</span>}
           </Button>
         ))}
       </div>

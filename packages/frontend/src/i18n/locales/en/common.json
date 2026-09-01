@@ -16,7 +16,14 @@
     "importJson": "Import from JSON",
     "importYaml": "Import from YAML",
     "testConnection": "Test Connection",
-    "disconnect": "Disconnect"
+    "disconnect": "Disconnect",
+    "collapseMenu": "Collapse menu",
+    "expandMenu": "Expand menu",
+    "toggleSidebar": "Toggle sidebar",
+    "expandPropertiesPanel": "Expand properties panel",
+    "collapsePropertiesPanel": "Collapse properties panel",
+    "selectNodeToOpenPropertiesPanel": "Select a node to open the properties panel",
+    "deleteConnection": "Delete connection"
   },
   "labels": {
     "automationName": "Automation name",
