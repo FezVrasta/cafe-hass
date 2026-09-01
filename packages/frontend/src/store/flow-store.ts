@@ -267,6 +267,75 @@ function normalizeNodeData(type: string, data: Record<string, unknown>): Record<
  * `validateNodeData`'s per-node schema check, which never sees the rest of the
  * graph.
  */
+/**
+ * Drop validation errors belonging to nodes that no longer exist.
+ *
+ * `nodeErrors` is keyed by node ID, so deleting a node would otherwise leave its
+ * errors behind forever: the canvas reports a non-zero error count that no
+ * visible node accounts for, and nothing can clear it because the node is gone.
+ * Returns the same Map instance when nothing changed, so subscribers don't
+ * re-render needlessly.
+ */
+function pruneNodeErrors(
+  nodeErrors: Map<string, NodeValidationError[]>,
+  nodes: Node<FlowNodeData>[]
+): Map<string, NodeValidationError[]> {
+  if (nodeErrors.size === 0) return nodeErrors;
+
+  const liveIds = new Set(nodes.map((n) => n.id));
+  const stale = [...nodeErrors.keys()].filter((id) => !liveIds.has(id));
+  if (stale.length === 0) return nodeErrors;
+
+  const pruned = new Map(nodeErrors);
+  for (const id of stale) {
+    pruned.delete(id);
+  }
+  return pruned;
+}
+
+/**
+ * A short human-readable name for a node, for error messages that need to point
+ * the user at a specific node on the canvas.
+ */
+function describeNode(node: Node<FlowNodeData>): string {
+  const data = node.data as Record<string, unknown>;
+  const candidates = [data.alias, data.service, data.event, data.trigger, data.condition];
+  const label = candidates.find((v): v is string => typeof v === 'string' && v.trim() !== '');
+  return label ? `${label} (${node.id})` : node.id;
+}
+
+/**
+ * Throw a save-blocking error naming the invalid nodes, and select the first one
+ * so the user can actually find it.
+ *
+ * "Fix the highlighted nodes" is useless on its own when the offending node sits
+ * outside the viewport — the original report for this was a flow whose two bad
+ * nodes were at x=3000 while everything else was under x=1185.
+ */
+function assertNodesAreValid(
+  nodes: Node<FlowNodeData>[],
+  nodeErrors: Map<string, NodeValidationError[]>,
+  selectNode: (nodeId: string) => void
+): void {
+  if (nodeErrors.size === 0) return;
+
+  const invalid = nodes.filter((n) => nodeErrors.has(n.id));
+  const firstInvalid = invalid[0];
+  if (firstInvalid) {
+    selectNode(firstInvalid.id);
+  }
+
+  const names = invalid.map(describeNode);
+  const shown = names.slice(0, 3).join(', ');
+  const remaining = names.length > 3 ? `, and ${names.length - 3} more` : '';
+  const named = names.length > 0 ? `: ${shown}${remaining}` : '';
+
+  throw new Error(
+    `Cannot save: ${nodeErrors.size} node(s) have validation errors${named}. ` +
+      `They are highlighted in red — the first one is now selected, and "fit view" will bring it into sight if it is off-screen.`
+  );
+}
+
 function findDuplicateIdErrors(nodes: Node<FlowNodeData>[]): Map<string, NodeValidationError> {
   const idToNodeIds = new Map<string, string[]>();
   for (const node of nodes) {
@@ -406,10 +475,16 @@ export const useFlowStore = create<FlowState>()(
         setEdges: (edges) => set({ edges }),
 
         onNodesChange: (changes) =>
-          set((state) => ({
-            nodes: applyNodeChanges(changes, state.nodes),
-            hasUnsavedChanges: true,
-          })),
+          set((state) => {
+            const nodes = applyNodeChanges(changes, state.nodes);
+            return {
+              nodes,
+              // Deleting a node here (e.g. the Delete key) must take its
+              // validation errors with it
+              nodeErrors: pruneNodeErrors(state.nodeErrors, nodes),
+              hasUnsavedChanges: true,
+            };
+          }),
 
         onEdgesChange: (changes) =>
           set((state) => ({
@@ -468,12 +543,16 @@ export const useFlowStore = create<FlowState>()(
         },
 
         removeNode: (nodeId) =>
-          set((state) => ({
-            nodes: state.nodes.filter((n) => n.id !== nodeId),
-            edges: state.edges.filter((e) => e.source !== nodeId && e.target !== nodeId),
-            selectedNodeId: state.selectedNodeId === nodeId ? null : state.selectedNodeId,
-            hasUnsavedChanges: true,
-          })),
+          set((state) => {
+            const nodes = state.nodes.filter((n) => n.id !== nodeId);
+            return {
+              nodes,
+              edges: state.edges.filter((e) => e.source !== nodeId && e.target !== nodeId),
+              selectedNodeId: state.selectedNodeId === nodeId ? null : state.selectedNodeId,
+              nodeErrors: pruneNodeErrors(state.nodeErrors, nodes),
+              hasUnsavedChanges: true,
+            };
+          }),
 
         // Inserts a template Condition node right after a Wait node so the user
         // can branch on `wait.trigger is not none` / `wait.completed` — i.e.
@@ -588,12 +667,9 @@ export const useFlowStore = create<FlowState>()(
 
             // Check for validation errors
             const currentState = get();
-            if (currentState.nodeErrors.size > 0) {
-              const errorCount = currentState.nodeErrors.size;
-              throw new Error(
-                `Cannot save: ${errorCount} node(s) have validation errors. Fix the highlighted nodes before saving.`
-              );
-            }
+            assertNodesAreValid(currentState.nodes, currentState.nodeErrors, (nodeId) =>
+              set({ selectedNodeId: nodeId })
+            );
 
             // Convert flow to graph
             const graph = state.toFlowGraph();
@@ -699,12 +775,9 @@ export const useFlowStore = create<FlowState>()(
 
             // Check for validation errors
             const currentState = get();
-            if (currentState.nodeErrors.size > 0) {
-              const errorCount = currentState.nodeErrors.size;
-              throw new Error(
-                `Cannot save: ${errorCount} node(s) have validation errors. Fix the highlighted nodes before saving.`
-              );
-            }
+            assertNodesAreValid(currentState.nodes, currentState.nodeErrors, (nodeId) =>
+              set({ selectedNodeId: nodeId })
+            );
 
             // Convert flow to graph
             const graph = state.toFlowGraph();
