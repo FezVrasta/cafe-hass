@@ -101,7 +101,7 @@ function buildTemplatedDelayString(duration: Record<string, unknown>): string {
   const secondsExpression = `((${totalMillisecondsExpression}) % 60000) // 1000`;
   const millisecondsExpression = `(${totalMillisecondsExpression}) % 1000`;
 
-  return Object.prototype.hasOwnProperty.call(duration, 'milliseconds')
+  return Object.hasOwn(duration, 'milliseconds')
     ? `{{ '%02d:%02d:%02d.%03d' | format(${hoursExpression}, ${minutesExpression}, ${secondsExpression}, ${millisecondsExpression}) }}`
     : `{{ '%02d:%02d:%02d' | format(${hoursExpression}, ${minutesExpression}, ${secondsExpression}) }}`;
 }
@@ -489,12 +489,14 @@ export class YamlParser {
             if (e.path[0] === 'nodes' && typeof e.path[1] === 'number') {
               const idx = e.path[1];
               const node = graph.nodes[idx];
-              nodeInfo = `Node index ${idx} (id: ${node?.id}, type: ${node?.type
-                })\nData: ${JSON.stringify(node?.data, null, 2)}`;
+              nodeInfo = `Node index ${idx} (id: ${node?.id}, type: ${
+                node?.type
+              })\nData: ${JSON.stringify(node?.data, null, 2)}`;
             }
           }
-          return `Schema path: ${e.path.join('.')}\nMessage: ${e.message}${nodeInfo ? `\n${nodeInfo}` : ''
-            }`;
+          return `Schema path: ${e.path.join('.')}\nMessage: ${e.message}${
+            nodeInfo ? `\n${nodeInfo}` : ''
+          }`;
         });
         // Also log to console for debugging
         console.error('Zod validation error details:', errorDetails);
@@ -941,7 +943,8 @@ export class YamlParser {
     for (let i = 0; i < actions.length; i++) {
       const action = actions[i];
       const { nodeId: embeddedId } = this.extractCafeNodeId(action.alias as string | undefined);
-      const nodeId = i === 0 ? firstNodeId : (embeddedId ?? generateId(this.inferInlineNodeType(action)));
+      const nodeId =
+        i === 0 ? firstNodeId : (embeddedId ?? generateId(this.inferInlineNodeType(action)));
 
       // Chain previous non-condition node to this one
       if (prevNodeId) {
@@ -983,7 +986,9 @@ export class YamlParser {
 
       const thenActions = item.then as Record<string, unknown>[] | undefined;
       if (thenActions && thenActions.length > 0) {
-        const { nodeId: thenEmbeddedId } = this.extractCafeNodeId(thenActions[0].alias as string | undefined);
+        const { nodeId: thenEmbeddedId } = this.extractCafeNodeId(
+          thenActions[0].alias as string | undefined
+        );
         const thenNodeId = thenEmbeddedId ?? generateId(this.inferInlineNodeType(thenActions[0]));
         trueTarget = thenNodeId;
         this.parseInlineActionList(thenActions, thenNodeId, nodeInfoMap, generateId);
@@ -991,7 +996,9 @@ export class YamlParser {
 
       const elseActions = item.else as Record<string, unknown>[] | undefined;
       if (elseActions && elseActions.length > 0) {
-        const { nodeId: elseEmbeddedId } = this.extractCafeNodeId(elseActions[0].alias as string | undefined);
+        const { nodeId: elseEmbeddedId } = this.extractCafeNodeId(
+          elseActions[0].alias as string | undefined
+        );
         const elseNodeId = elseEmbeddedId ?? generateId(this.inferInlineNodeType(elseActions[0]));
         falseTarget = elseNodeId;
         this.parseInlineActionList(elseActions, elseNodeId, nodeInfoMap, generateId);
@@ -1006,23 +1013,42 @@ export class YamlParser {
       if (item.data) data.data = item.data;
       if (alias) data.alias = alias;
 
-      nodeInfoMap.set(nodeId, { nodeId, nodeType: 'action', data, trueTarget: null, falseTarget: null });
+      nodeInfoMap.set(nodeId, {
+        nodeId,
+        nodeType: 'action',
+        data,
+        trueTarget: null,
+        falseTarget: null,
+      });
     } else if (item.delay !== undefined) {
       // Delay node
       const data: Record<string, unknown> = { delay: item.delay };
       if (alias) data.alias = alias;
 
-      nodeInfoMap.set(nodeId, { nodeId, nodeType: 'delay', data, trueTarget: null, falseTarget: null });
+      nodeInfoMap.set(nodeId, {
+        nodeId,
+        nodeType: 'delay',
+        data,
+        trueTarget: null,
+        falseTarget: null,
+      });
     } else if (item.wait_template !== undefined || item.wait_for_trigger !== undefined) {
       // Wait node
       const data: Record<string, unknown> = {};
       if (item.wait_template) data.wait_template = item.wait_template;
       if (item.wait_for_trigger) data.wait_for_trigger = item.wait_for_trigger;
       if (item.timeout) data.timeout = item.timeout;
-      if (item.continue_on_timeout !== undefined) data.continue_on_timeout = item.continue_on_timeout;
+      if (item.continue_on_timeout !== undefined)
+        data.continue_on_timeout = item.continue_on_timeout;
       if (alias) data.alias = alias;
 
-      nodeInfoMap.set(nodeId, { nodeId, nodeType: 'wait', data, trueTarget: null, falseTarget: null });
+      nodeInfoMap.set(nodeId, {
+        nodeId,
+        nodeType: 'wait',
+        data,
+        trueTarget: null,
+        falseTarget: null,
+      });
     }
   }
 
@@ -1150,11 +1176,46 @@ export class YamlParser {
   }
 
   /**
-   * Parse Jinja condition expression to extract condition data
+   * Parse Jinja condition expression to extract condition data.
+   * Recognizes top-level `and`/`or`/`not` groupings before attempting to match a
+   * single leaf condition, so a compound expression (e.g. an OR node with several
+   * conditions) doesn't get collapsed into just the first leaf that happens to
+   * match somewhere inside it (see #209).
    */
   private parseJinjaCondition(expr: string): Record<string, unknown> {
+    const trimmed = this.stripOuterParens(expr.trim());
+
+    // `or` has the lowest precedence, so split on it first: each side may still
+    // contain `and`-joined sub-expressions, which the recursive call handles.
+    const orParts = this.splitTopLevelJinja(trimmed, ' or ');
+    if (orParts.length > 1) {
+      return {
+        condition: 'or',
+        conditions: orParts.map((part) => this.parseJinjaCondition(part)),
+      };
+    }
+
+    const andParts = this.splitTopLevelJinja(trimmed, ' and ');
+    if (andParts.length > 1) {
+      return {
+        condition: 'and',
+        conditions: andParts.map((part) => this.parseJinjaCondition(part)),
+      };
+    }
+
+    const notMatch = trimmed.match(/^not\s*\((.*)\)$/s);
+    if (notMatch) {
+      const innerParts = this.splitTopLevelJinja(notMatch[1].trim(), ' and ');
+      return {
+        condition: 'not',
+        conditions: innerParts.map((part) => this.parseJinjaCondition(part)),
+      };
+    }
+
     // is_state('entity', 'state')
-    const isStateMatch = expr.match(/is_state\s*\(\s*['"]([^'"]+)['"]\s*,\s*['"]([^'"]+)['"]\s*\)/);
+    const isStateMatch = trimmed.match(
+      /^is_state\s*\(\s*['"]([^'"]+)['"]\s*,\s*['"]([^'"]+)['"]\s*\)$/
+    );
     if (isStateMatch) {
       const entityId = isStateMatch[1];
       const state = isStateMatch[2];
@@ -1171,9 +1232,22 @@ export class YamlParser {
       return { condition: 'state', entity_id: entityId, state };
     }
 
+    // state_attr('entity', 'attribute') == 'value'
+    const stateAttrMatch = trimmed.match(
+      /^state_attr\s*\(\s*['"]([^'"]+)['"]\s*,\s*['"]([^'"]+)['"]\s*\)\s*==\s*['"]([^'"]*)['"]$/
+    );
+    if (stateAttrMatch) {
+      return {
+        condition: 'state',
+        entity_id: stateAttrMatch[1],
+        attribute: stateAttrMatch[2],
+        state: stateAttrMatch[3],
+      };
+    }
+
     // states('entity') | float > number
-    const numericMatch = expr.match(
-      /states\s*\(\s*['"]([^'"]+)['"]\s*\)\s*\|\s*float\s*([<>=]+)\s*(\d+(?:\.\d+)?)/
+    const numericMatch = trimmed.match(
+      /^states\s*\(\s*['"]([^'"]+)['"]\s*\)\s*\|\s*float\s*([<>=]+)\s*(\d+(?:\.\d+)?)$/
     );
     if (numericMatch) {
       const entityId = numericMatch[1];
@@ -1190,7 +1264,82 @@ export class YamlParser {
     }
 
     // Fallback to template condition
-    return { condition: 'template', value_template: `{{ ${expr} }}` };
+    return { condition: 'template', value_template: `{{ ${trimmed} }}` };
+  }
+
+  /**
+   * Remove a single redundant pair of wrapping parentheses, e.g. `(a or b)` -> `a or b`.
+   * Only strips when the opening paren's matching close is the expression's final
+   * character - `(a) or (b)` is left untouched.
+   */
+  private stripOuterParens(expr: string): string {
+    let result = expr.trim();
+    while (result.startsWith('(') && result.endsWith(')')) {
+      let depth = 0;
+      let matchesToEnd = true;
+      for (let i = 0; i < result.length; i++) {
+        if (result[i] === '(') depth++;
+        else if (result[i] === ')') {
+          depth--;
+          if (depth === 0 && i !== result.length - 1) {
+            matchesToEnd = false;
+            break;
+          }
+        }
+      }
+      if (!matchesToEnd) break;
+      result = result.slice(1, -1).trim();
+    }
+    return result;
+  }
+
+  /**
+   * Split a Jinja expression on a logical operator (` and `/` or `), ignoring
+   * occurrences inside parentheses or quoted string literals.
+   */
+  private splitTopLevelJinja(expr: string, separator: string): string[] {
+    const parts: string[] = [];
+    let depth = 0;
+    let quote: string | null = null;
+    let current = '';
+    let i = 0;
+    while (i < expr.length) {
+      const ch = expr[i];
+      if (quote) {
+        current += ch;
+        if (ch === quote && expr[i - 1] !== '\\') quote = null;
+        i++;
+        continue;
+      }
+      if (ch === "'" || ch === '"') {
+        quote = ch;
+        current += ch;
+        i++;
+        continue;
+      }
+      if (ch === '(') {
+        depth++;
+        current += ch;
+        i++;
+        continue;
+      }
+      if (ch === ')') {
+        depth--;
+        current += ch;
+        i++;
+        continue;
+      }
+      if (depth === 0 && expr.slice(i, i + separator.length) === separator) {
+        parts.push(current.trim());
+        current = '';
+        i += separator.length;
+        continue;
+      }
+      current += ch;
+      i++;
+    }
+    parts.push(current.trim());
+    return parts;
   }
 
   /**
@@ -2243,10 +2392,10 @@ export class YamlParser {
               target:
                 typeof target === 'object' && target !== null
                   ? (target as {
-                    entity_id?: string | string[];
-                    area_id?: string | string[];
-                    device_id?: string | string[];
-                  })
+                      entity_id?: string | string[];
+                      area_id?: string | string[];
+                      device_id?: string | string[];
+                    })
                   : undefined,
               data:
                 typeof data === 'object' && data !== null
@@ -2831,10 +2980,10 @@ export class YamlParser {
     const unconsumedPreviousIds =
       triggerConditionIds !== null && triggerNodeMap
         ? previousNodeIds.filter((id) => {
-          const triggerId = triggerNodeMap.get(id);
-          // Keep: trigger nodes whose id is not in this condition's id list, OR non-trigger nodes
-          return triggerId === undefined || !triggerConditionIds.includes(triggerId);
-        })
+            const triggerId = triggerNodeMap.get(id);
+            // Keep: trigger nodes whose id is not in this condition's id list, OR non-trigger nodes
+            return triggerId === undefined || !triggerConditionIds.includes(triggerId);
+          })
         : [];
 
     return { nodes, edges, outputNodeIds, falsePathOutputIds, unconsumedPreviousIds };

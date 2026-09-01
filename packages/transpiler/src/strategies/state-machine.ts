@@ -343,9 +343,7 @@ export class StateMachineStrategy extends BaseStrategy {
    */
   private encodeNodeIdInAlias(action: Record<string, unknown>, nodeId: string): void {
     const existingAlias = action.alias as string | undefined;
-    action.alias = existingAlias
-      ? `cafe_node:${nodeId}:${existingAlias}`
-      : `cafe_node:${nodeId}`;
+    action.alias = existingAlias ? `cafe_node:${nodeId}:${existingAlias}` : `cafe_node:${nodeId}`;
   }
 
   /**
