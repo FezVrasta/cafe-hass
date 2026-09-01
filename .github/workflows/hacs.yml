@@ -146,9 +146,12 @@ jobs:
     if: github.event_name == 'release'
 
     steps:
+      # Check out the default branch, not the tag. A release event leaves the
+      # workspace on a detached HEAD, so the push below had nowhere to go.
       - name: Checkout code
         uses: actions/checkout@v4
         with:
+          ref: main
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Update version in manifest.json
@@ -157,25 +160,45 @@ jobs:
           # Remove 'v' prefix if present
           VERSION=${VERSION#v}
 
-          # Update manifest.json version
-          python3 -c "
-          import json
+          # Rewrite only the version value. Re-serializing the whole file with
+          # json.dump reflows it and drops the trailing newline, which then
+          # fails the repository's format check.
+          python3 - "$VERSION" <<'PY'
+          import re
+          import sys
 
-          with open('custom_components/cafe/manifest.json', 'r') as f:
-              manifest = json.load(f)
+          version = sys.argv[1]
+          path = 'custom_components/cafe/manifest.json'
 
-          manifest['version'] = '${VERSION}'
+          with open(path) as f:
+              content = f.read()
 
-          with open('custom_components/cafe/manifest.json', 'w') as f:
-              json.dump(manifest, f, indent=2)
+          updated, count = re.subn(
+              r'("version"\s*:\s*)"[^"]*"',
+              lambda m: f'{m.group(1)}"{version}"',
+              content,
+              count=1,
+          )
 
-          print(f'✅ Updated manifest.json version to ${VERSION}')
-          "
+          if count == 0:
+              sys.exit('❌ No "version" field found in manifest.json')
+
+          if updated != content:
+              with open(path, 'w') as f:
+                  f.write(updated)
+              print(f'✅ Updated manifest.json version to {version}')
+          else:
+              print(f'✅ manifest.json already at {version}')
+          PY
 
       - name: Commit version update
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add custom_components/cafe/manifest.json
-          git diff --staged --quiet || git commit -m "Update version to ${{ github.event.release.tag_name }}"
-          git push
+          if git diff --staged --quiet; then
+            echo "Nothing to commit — manifest already matches the release tag"
+            exit 0
+          fi
+          git commit -m "Update version to ${{ github.event.release.tag_name }}"
+          git push origin HEAD:main
