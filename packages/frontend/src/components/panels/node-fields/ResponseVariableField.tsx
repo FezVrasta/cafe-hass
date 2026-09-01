@@ -1,3 +1,4 @@
+import { isReservedVariableName } from '@cafe/shared';
 import type React from 'react';
 import { useTranslation } from 'react-i18next';
 import { FormField } from '@/components/forms/FormField';
@@ -31,7 +32,7 @@ export function ResponseVariableField({
         onChange={handleResponseVariableChange}
         placeholder={t('nodes:responseVariableField.placeholder')}
       />
-      {responseVariable?.trim() === 'current_node' && (
+      {responseVariable !== undefined && isReservedVariableName(responseVariable) && (
         <Alert variant="destructive" className="mt-2 border-0 px-0">
           <AlertTitle>{t('labels.warning')}</AlertTitle>
           <AlertDescription>{t('nodes:responseVariableField.currentNodeWarning')}</AlertDescription>

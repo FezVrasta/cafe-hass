@@ -14,6 +14,14 @@ import type { TopologyAnalysis } from '../analyzer/topology';
 import { BaseStrategy, type HAYamlOutput } from './base';
 
 /**
+ * Outcome of planning a fan-out: either the set of branch nodes whose standalone
+ * dispatcher entries can be dropped, or why the branches cannot be inlined.
+ */
+type FanOutPlan =
+  | { ok: true; owned: Set<string> }
+  | { ok: false; reason: 'cycle' | 'join'; nodes: string[] };
+
+/**
  * State Machine strategy for complex flows with cycles, cross-links, or converging paths
  *
  * Implements the "Virtual CPU" pattern:
@@ -74,33 +82,36 @@ export class StateMachineStrategy extends BaseStrategy {
       };
     }
 
-    // Generate parallel entry blocks for triggers with multiple targets
-    const parallelEntryBlocks = this.generateParallelEntryBlocks(flow, triggerRouting);
-
-    // Collect node IDs consumed by parallel branches so they aren't
-    // duplicated as standalone state-machine choose entries
+    // Plan trigger fan-out with the same rules as node fan-out, so a target that
+    // another trigger also routes to keeps its dispatcher entry instead of
+    // silently becoming unreachable.
+    const triggerNodes = flow.nodes.filter((n): n is TriggerNode => n.type === 'trigger');
     const parallelConsumedNodeIds = new Set<string>();
-    for (const [, targets] of triggerRouting) {
-      if (targets.length > 1) {
-        for (const targetId of targets) {
-          this.collectSubgraphNodeIds(flow, targetId, parallelConsumedNodeIds);
+    const approvedTriggerFanOut = new Map<number, string[]>();
+
+    for (const [idx, targets] of triggerRouting) {
+      if (targets.length <= 1) continue;
+
+      const triggerId = triggerNodes[idx]?.id;
+      const plan = triggerId ? this.planFanOut(flow, triggerId, targets) : null;
+      if (!plan?.ok) {
+        if (plan) {
+          warnings.push(this.describeFanOutRejection(`Trigger ${idx + 1}`, targets, plan));
         }
+        continue;
+      }
+
+      approvedTriggerFanOut.set(idx, targets);
+      for (const id of plan.owned) {
+        parallelConsumedNodeIds.add(id);
       }
     }
 
-    for (const [, targets] of triggerRouting) {
-      if (targets.length > 1) {
-        const joinWarning = this.detectParallelBranchJoin(flow, targets);
-        if (joinWarning) {
-          warnings.push(joinWarning);
-        }
-      }
-    }
+    const parallelEntryBlocks = this.generateParallelEntryBlocks(flow, approvedTriggerFanOut);
 
     // Nodes that fan out to several successors inline those successors into a
-    // parallel block, so their subgraphs are consumed the same way. This is only
-    // safe when the branches are exclusively owned by this fan-out — otherwise
-    // consuming them would delete dispatcher entries other nodes still jump to.
+    // parallel block, so their subgraphs lose their standalone entries — but only
+    // the parts nothing outside the branch set can reach (see planFanOut).
     // Walk outward from the entry points so an outer fan-out always claims its
     // subgraph before any nested one does. Iterating flow.nodes in array order
     // would let a nested node claim first, which strands the outer node's other
@@ -118,27 +129,61 @@ export class StateMachineStrategy extends BaseStrategy {
       const targets = this.getFanOutTargets(flow, node.id);
       if (targets.length <= 1) continue;
 
-      const owned = this.planExclusiveFanOut(flow, node.id, targets, parallelConsumedNodeIds);
-      if (!owned) {
-        warnings.push(
-          `Node "${node.id}" fans out to [${targets.join(', ')}], but those branches are also reachable from elsewhere in the flow (or lead back to "${node.id}"). Parallel execution needs self-contained branches, so only the first branch will run. Give each branch its own downstream nodes to run them in parallel.`
-        );
+      const plan = this.planFanOut(flow, node.id, targets);
+      if (!plan.ok) {
+        warnings.push(this.describeFanOutRejection(`Node "${node.id}"`, targets, plan));
         continue;
       }
 
       fanOutPlans.set(node.id, targets);
-      for (const id of owned) {
+      for (const id of plan.owned) {
         parallelConsumedNodeIds.add(id);
       }
 
-      // Report joins for this fan-out and for every nested fan-out inside it,
-      // since those nodes are inlined and never planned on their own.
-      for (const branchNodeId of [node.id, ...owned]) {
+      // Nested fan-outs inside this one are inlined and never planned on their
+      // own, so report their rejections here instead of losing them silently.
+      for (const branchNodeId of plan.owned) {
         const branchTargets = this.getFanOutTargets(flow, branchNodeId);
         if (branchTargets.length <= 1) continue;
-        const joinWarning = this.detectParallelBranchJoin(flow, branchTargets);
-        if (joinWarning) {
-          warnings.push(joinWarning);
+        const branchPlan = this.planFanOut(flow, branchNodeId, branchTargets);
+        if (!branchPlan.ok) {
+          warnings.push(
+            this.describeFanOutRejection(`Node "${branchNodeId}"`, branchTargets, branchPlan)
+          );
+        }
+      }
+    }
+
+    // A condition handle may also lead to several nodes. Route those through a
+    // synthetic parallel entry rather than keeping only the first edge.
+    const conditionHandleEntries: Record<string, unknown>[] = [];
+    const conditionHandleTargets = new Map<string, string>();
+
+    for (const node of this.orderNodesFromEntry(flow)) {
+      if (node.type !== 'condition' || parallelConsumedNodeIds.has(node.id)) continue;
+
+      for (const handle of ['true', 'false'] as const) {
+        const targets = this.getConditionHandleTargets(flow, node.id, handle);
+        if (targets.length <= 1) continue;
+
+        const plan = this.planFanOut(flow, node.id, targets);
+        if (!plan.ok) {
+          warnings.push(
+            this.describeFanOutRejection(
+              `The "${handle}" branch of condition "${node.id}"`,
+              targets,
+              plan
+            )
+          );
+          continue;
+        }
+
+        const entryId = `__parallel_cond_${node.id}__${handle}`;
+        conditionHandleTargets.set(`${node.id}:${handle}`, entryId);
+        conditionHandleEntries.push(this.buildParallelEntryBlock(flow, entryId, targets));
+
+        for (const id of plan.owned) {
+          parallelConsumedNodeIds.add(id);
         }
       }
     }
@@ -146,10 +191,10 @@ export class StateMachineStrategy extends BaseStrategy {
     // Build choose blocks for each non-trigger node not already inlined in a parallel branch
     const nodeBlocks = flow.nodes
       .filter((n) => n.type !== 'trigger' && !parallelConsumedNodeIds.has(n.id))
-      .map((node) => this.generateNodeBlock(flow, node, fanOutPlans));
+      .map((node) => this.generateNodeBlock(flow, node, fanOutPlans, conditionHandleTargets));
 
     // Combine parallel entry blocks and remaining node blocks
-    const chooseBlocks = [...parallelEntryBlocks, ...nodeBlocks];
+    const chooseBlocks = [...parallelEntryBlocks, ...conditionHandleEntries, ...nodeBlocks];
 
     // Warn about potential infinite loops
     if (analysis.hasCycles) {
@@ -165,7 +210,7 @@ export class StateMachineStrategy extends BaseStrategy {
     // Generate the initial node expression
     // If all triggers lead to the same node, use that directly
     // Otherwise, use a Jinja2 template to route based on trigger.idx
-    const entryNodeExpr = this.generateEntryNodeExpression(triggerRouting);
+    const entryNodeExpr = this.generateEntryNodeExpression(triggerRouting, approvedTriggerFanOut);
 
     // Build the action sequence for the state machine
     // In HA automations, actions are a flat list - we use:
@@ -264,11 +309,16 @@ export class StateMachineStrategy extends BaseStrategy {
    * If trigger has single target, return that target ID
    * If trigger has multiple targets (parallel), return synthetic parallel entry ID
    */
-  private getEffectiveEntryPoint(triggerIndex: number, targets: string[]): string {
-    if (targets.length === 1) {
+  private getEffectiveEntryPoint(
+    triggerIndex: number,
+    targets: string[],
+    approvedTriggerFanOut: Map<number, string[]>
+  ): string {
+    // Only triggers whose fan-out was approved get a synthetic parallel entry;
+    // the rest fall back to their first target.
+    if (targets.length === 1 || !approvedTriggerFanOut.has(triggerIndex)) {
       return targets[0];
     }
-    // Multiple targets - use synthetic parallel entry point
     return `__parallel_trigger_${triggerIndex}`;
   }
 
@@ -277,11 +327,14 @@ export class StateMachineStrategy extends BaseStrategy {
    * If all triggers lead to the same node, return that node ID
    * Otherwise, return a Jinja2 template that routes based on trigger.idx
    */
-  private generateEntryNodeExpression(triggerRouting: Map<number, string[]>): string {
+  private generateEntryNodeExpression(
+    triggerRouting: Map<number, string[]>,
+    approvedTriggerFanOut: Map<number, string[]>
+  ): string {
     // Convert to effective entry points (handling parallel branches)
     const effectiveEntries = new Map<number, string>();
     for (const [idx, targets] of triggerRouting) {
-      effectiveEntries.set(idx, this.getEffectiveEntryPoint(idx, targets));
+      effectiveEntries.set(idx, this.getEffectiveEntryPoint(idx, targets, approvedTriggerFanOut));
     }
 
     const uniqueTargets = new Set(effectiveEntries.values());
@@ -334,31 +387,36 @@ export class StateMachineStrategy extends BaseStrategy {
         continue;
       }
 
-      const parallelEntryId = `__parallel_trigger_${idx}`;
-
-      const parallelBranches = this.buildParallelBranches(flow, [...new Set(targets)]);
-
-      parallelBlocks.push({
-        conditions: [
-          {
-            condition: 'template',
-            value_template: `{{ current_node == "${parallelEntryId}" }}`,
-          },
-        ],
-        sequence: [
-          {
-            parallel: parallelBranches,
-          },
-          {
-            variables: {
-              current_node: 'END',
-            },
-          },
-        ],
-      });
+      parallelBlocks.push(
+        this.buildParallelEntryBlock(flow, `__parallel_trigger_${idx}`, [...new Set(targets)])
+      );
     }
 
     return parallelBlocks;
+  }
+
+  /**
+   * Build a synthetic dispatcher entry that runs several branches in parallel
+   * and then ends the flow. Used for trigger fan-out and for condition handles
+   * that lead to more than one node.
+   */
+  private buildParallelEntryBlock(
+    flow: FlowGraph,
+    entryId: string,
+    targets: string[]
+  ): Record<string, unknown> {
+    return {
+      conditions: [
+        {
+          condition: 'template',
+          value_template: `{{ current_node == "${entryId}" }}`,
+        },
+      ],
+      sequence: [
+        { parallel: this.buildParallelBranches(flow, targets) },
+        { variables: { current_node: 'END' } },
+      ],
+    };
   }
 
   /**
@@ -414,6 +472,20 @@ export class StateMachineStrategy extends BaseStrategy {
   }
 
   /**
+   * Distinct targets on one handle of a condition node.
+   */
+  private getConditionHandleTargets(
+    flow: FlowGraph,
+    nodeId: string,
+    handle: 'true' | 'false'
+  ): string[] {
+    const targets = this.getOutgoingEdges(flow, nodeId)
+      .filter((e) => e.sourceHandle === handle)
+      .map((e) => e.target);
+    return [...new Set(targets)].filter((t) => t !== 'END');
+  }
+
+  /**
    * Distinct fan-out targets for a node. Duplicate edges to the same target
    * would otherwise produce duplicate branches that run the target twice.
    */
@@ -424,48 +496,70 @@ export class StateMachineStrategy extends BaseStrategy {
   }
 
   /**
-   * Decide whether a node's fan-out branches can be safely inlined.
+   * Plan a fan-out: which branch nodes may lose their standalone dispatcher entry.
    *
-   * Inlining a branch removes its nodes' standalone dispatcher entries, so it is
-   * only sound when nothing outside the branch set jumps into it. Returns the set
-   * of nodes to consume, or null when the fan-out must be left alone — for
-   * example when a branch loops back to the source, or a branch node is also
-   * reached from a trigger or from another part of the flow.
+   * Branches are always inlined so every one of them runs. Inlining additionally
+   * *removes* a node's dispatcher entry, which is only safe when nothing outside
+   * the branch set jumps to it — a node reachable from another trigger or an
+   * unrelated predecessor keeps its entry and is simply emitted in both places.
+   * The two executions belong to different runs, so that is correct, not duplication.
+   *
+   * Returns the set of nodes safe to consume, or null when the fan-out cannot be
+   * inlined at all because a branch loops back to the source — an inline branch
+   * has no way to re-enter the dispatcher.
    */
-  private planExclusiveFanOut(
-    flow: FlowGraph,
-    sourceId: string,
-    targets: string[],
-    alreadyConsumed: Set<string>
-  ): Set<string> | null {
+  private planFanOut(flow: FlowGraph, sourceId: string, targets: string[]): FanOutPlan {
     const reachable = new Set<string>();
     for (const target of targets) {
       this.collectSubgraphNodeIds(flow, target, reachable);
     }
 
-    // A branch that loops back to the source would delete the source's own entry
-    if (reachable.has(sourceId)) return null;
+    // A branch that loops back to the source cannot be expressed inline
+    if (reachable.has(sourceId)) {
+      return { ok: false, reason: 'cycle', nodes: [sourceId] };
+    }
 
+    // Branches are inlined independently, so anything two of them share would be
+    // emitted — and executed — once per branch. Leave those flows sequential
+    // rather than silently doubling the work.
+    const joined = this.findJoinNodes(flow, targets);
+    if (joined.length > 0) {
+      return { ok: false, reason: 'join', nodes: joined };
+    }
+
+    const owned = new Set<string>();
     for (const id of reachable) {
-      // Another fan-out already owns this node; inlining it twice would duplicate it
-      if (alreadyConsumed.has(id)) return null;
-
-      for (const edge of flow.edges) {
-        if (edge.target !== id) continue;
-        // Every way into a consumed node must come from the fan-out itself
-        if (edge.source !== sourceId && !reachable.has(edge.source)) return null;
+      const reachableFromOutside = flow.edges.some(
+        (edge) => edge.target === id && edge.source !== sourceId && !reachable.has(edge.source)
+      );
+      if (!reachableFromOutside) {
+        owned.add(id);
       }
     }
 
-    return reachable;
+    return { ok: true, owned };
   }
 
   /**
-   * Parallel branches are inlined independently, so a node reachable from more
-   * than one branch is emitted — and therefore executed — once per branch.
-   * Warn rather than silently duplicating it.
+   * Explain, in the user's terms, why a set of branches could not be run in
+   * parallel and what will happen instead.
    */
-  private detectParallelBranchJoin(flow: FlowGraph, targets: string[]): string | null {
+  private describeFanOutRejection(
+    subject: string,
+    targets: string[],
+    plan: { reason: 'cycle' | 'join'; nodes: string[] }
+  ): string {
+    if (plan.reason === 'cycle') {
+      return `${subject} branches to [${targets.join(', ')}], but one of those leads back into the same path. A parallel branch cannot loop back, so only the first branch will run.`;
+    }
+    return `${subject} branches to [${targets.join(', ')}], but those branches re-join at [${plan.nodes.join(', ')}]. Parallel branches cannot re-join, so only the first branch will run. Give each branch its own downstream nodes to run them in parallel.`;
+  }
+
+  /**
+   * Nodes reachable from more than one of the given branches. Parallel branches
+   * are inlined independently, so anything they share would run once per branch.
+   */
+  private findJoinNodes(flow: FlowGraph, targets: string[]): string[] {
     const seen = new Set<string>();
     const duplicated = new Set<string>();
 
@@ -480,9 +574,7 @@ export class StateMachineStrategy extends BaseStrategy {
       }
     }
 
-    if (duplicated.size === 0) return null;
-
-    return `Nodes [${[...duplicated].join(', ')}] are reachable from more than one parallel branch and will run once per branch. Parallel branches cannot re-join in the state-machine strategy.`;
+    return [...duplicated];
   }
 
   /**
@@ -678,13 +770,14 @@ export class StateMachineStrategy extends BaseStrategy {
   private generateNodeBlock(
     flow: FlowGraph,
     node: FlowNode,
-    fanOutPlans: Map<string, string[]>
+    fanOutPlans: Map<string, string[]>,
+    conditionHandleTargets: Map<string, string>
   ): Record<string, unknown> {
     const outgoingEdges = this.getOutgoingEdges(flow, node.id);
 
     switch (node.type) {
       case 'condition':
-        return this.generateConditionBlock(node, outgoingEdges);
+        return this.generateConditionBlock(node, outgoingEdges, conditionHandleTargets);
       case 'action':
         return this.generateActionBlock(flow, node, outgoingEdges, fanOutPlans);
       case 'delay':
@@ -847,12 +940,18 @@ export class StateMachineStrategy extends BaseStrategy {
    * Generate block for condition node
    * Evaluates the condition and sets current_node based on result
    */
-  private generateConditionBlock(node: ConditionNode, edges: FlowEdge[]): Record<string, unknown> {
+  private generateConditionBlock(
+    node: ConditionNode,
+    edges: FlowEdge[],
+    conditionHandleTargets: Map<string, string>
+  ): Record<string, unknown> {
     const trueEdge = edges.find((e) => e.sourceHandle === 'true');
     const falseEdge = edges.find((e) => e.sourceHandle === 'false');
 
-    const trueTargetId = trueEdge?.target ?? 'END';
-    const falseTargetId = falseEdge?.target ?? 'END';
+    // A handle leading to several nodes routes through a synthetic parallel entry
+    const trueTargetId = conditionHandleTargets.get(`${node.id}:true`) ?? trueEdge?.target ?? 'END';
+    const falseTargetId =
+      conditionHandleTargets.get(`${node.id}:false`) ?? falseEdge?.target ?? 'END';
     const trueTarget = trueTargetId === 'END' ? 'END' : trueTargetId;
     const falseTarget = falseTargetId === 'END' ? 'END' : falseTargetId;
     const currentNodeId = node.id;

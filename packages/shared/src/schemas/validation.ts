@@ -346,7 +346,24 @@ export const ConditionNodeValidationSchema = z
   });
 
 /**
- * SetVariables node validation - requires at least one variable.
+ * Variable names the transpiler uses internally. The state-machine strategy
+ * stores its program counter in `current_node` and its scratch state in
+ * `flow_context`, so a user variable of the same name would be indistinguishable
+ * from the machinery in the generated YAML.
+ */
+export const RESERVED_VARIABLE_NAMES = ['current_node', 'flow_context'] as const;
+
+/**
+ * True when a variable name collides with one the transpiler uses internally.
+ */
+export function isReservedVariableName(name: string): boolean {
+  const reserved: readonly string[] = RESERVED_VARIABLE_NAMES;
+  return reserved.includes(name.trim());
+}
+
+/**
+ * SetVariables node validation - requires at least one variable, and no variable
+ * may shadow a name the transpiler reserves for itself.
  */
 export const SetVariablesNodeValidationSchema = z
   .object({
@@ -362,7 +379,11 @@ export const SetVariablesNodeValidationSchema = z
       message: 'At least one variable must be defined',
       path: ['variables'],
     }
-  );
+  )
+  .refine((data) => !Object.keys(data.variables ?? {}).some(isReservedVariableName), {
+    message: `These names are reserved by the transpiler and cannot be used as variables: ${RESERVED_VARIABLE_NAMES.join(', ')}`,
+    path: ['variables'],
+  });
 
 /**
  * Map node types to their validation schemas.

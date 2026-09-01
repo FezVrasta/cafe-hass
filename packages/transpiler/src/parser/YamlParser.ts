@@ -697,12 +697,13 @@ export class YamlParser {
       }
     }
 
-    // Resolve __parallel_trigger_* synthetic entries.
-    // The transpiler generates these for triggers with multiple targets.
-    // Expand them back into direct trigger→target edges instead of phantom nodes.
+    // Resolve synthetic __parallel_* entries. The transpiler generates these for
+    // a trigger with multiple targets (__parallel_trigger_N) and for a condition
+    // handle leading to several nodes (__parallel_cond_<id>__<handle>). Expand
+    // them back into direct edges instead of leaving phantom nodes behind.
     const parallelTriggerTargets = new Map<string, string[]>();
     for (const [nodeId, info] of nodeInfoMap) {
-      if (!/^__parallel_trigger_\d+$/.test(nodeId)) continue;
+      if (!nodeId.startsWith('__parallel_')) continue;
 
       const targetIds = this.parseInlineParallelBranches(info.parallelItems ?? [], nodeInfoMap);
       if (targetIds.length > 0) {
@@ -833,30 +834,55 @@ export class YamlParser {
 
     // Create edges between nodes based on transitions
     for (const [nodeId, info] of nodeInfoMap) {
-      if (info.trueTarget && info.trueTarget !== 'END') {
-        edges.push({
-          id: `edge-${nodeId}-${info.trueTarget}`,
-          source: nodeId,
-          target: info.trueTarget,
-          sourceHandle: info.nodeType === 'condition' || info.falseTarget ? 'true' : undefined,
-        });
-      }
-      if (info.falseTarget && info.falseTarget !== 'END') {
-        edges.push({
-          id: `edge-${nodeId}-${info.falseTarget}`,
-          source: nodeId,
-          target: info.falseTarget,
-          sourceHandle: 'false',
-        });
-      }
-
-      // Fan-out: one edge per inlined parallel branch
-      for (const target of parallelFanOutTargets.get(nodeId) ?? []) {
-        edges.push(this.createEdge(nodeId, target));
-      }
+      edges.push(
+        ...this.buildTransitionEdges(nodeId, info, parallelTriggerTargets, parallelFanOutTargets)
+      );
     }
 
     return { nodes, edges };
+  }
+
+  /**
+   * Build the outgoing edges for one parsed state-machine node.
+   *
+   * A target may be a synthetic __parallel_* entry, which stands for several
+   * branches; those expand into one edge per branch, all keeping the handle of
+   * the transition they came from.
+   */
+  private buildTransitionEdges(
+    nodeId: string,
+    info: StateMachineNodeInfo,
+    syntheticParallelTargets: Map<string, string[]>,
+    fanOutTargets: Map<string, string[]>
+  ): FlowEdge[] {
+    const edges: FlowEdge[] = [];
+
+    const pushTransition = (target: string, sourceHandle: 'true' | 'false' | undefined): void => {
+      for (const actual of syntheticParallelTargets.get(target) ?? [target]) {
+        edges.push({
+          id: `edge-${nodeId}-${actual}`,
+          source: nodeId,
+          target: actual,
+          sourceHandle,
+        });
+      }
+    };
+
+    if (info.trueTarget && info.trueTarget !== 'END') {
+      const isBranch = info.nodeType === 'condition' || info.falseTarget;
+      pushTransition(info.trueTarget, isBranch ? 'true' : undefined);
+    }
+
+    if (info.falseTarget && info.falseTarget !== 'END') {
+      pushTransition(info.falseTarget, 'false');
+    }
+
+    // Fan-out: one edge per inlined parallel branch
+    for (const target of fanOutTargets.get(nodeId) ?? []) {
+      edges.push(this.createEdge(nodeId, target));
+    }
+
+    return edges;
   }
 
   /**
@@ -1199,12 +1225,20 @@ export class YamlParser {
       const seqItem = item as Record<string, unknown>;
 
       // Check for variables action. Two distinct shapes share this key:
-      // - the state-machine transition, which always carries `current_node`
+      // - the state-machine transition, which carries only `current_node`
+      //   (and sometimes `flow_context`)
       // - a user set_variables node, which carries arbitrary user variables
+      //
+      // Requiring the transition to hold nothing else means a user variable that
+      // merely happens to be named `current_node` alongside others is still read
+      // back as a set_variables node.
       if (seqItem.variables) {
         const vars = seqItem.variables as Record<string, unknown>;
+        const isTransition =
+          'current_node' in vars &&
+          Object.keys(vars).every((key) => key === 'current_node' || key === 'flow_context');
 
-        if (!('current_node' in vars)) {
+        if (!isTransition) {
           // User-defined variables: this block represents a set_variables node
           nodeType = 'set_variables';
           data.variables = vars;
