@@ -614,3 +614,193 @@ describe('fan-out safety: never delete a dispatcher entry something still jumps 
     expect(warnings.some((w) => w.includes('Z'))).toBe(true);
   });
 });
+
+/**
+ * A fan-out claims its subgraph, so planning order decides who wins. These
+ * guard the diagnostics and determinism of that planning.
+ */
+describe('fan-out planning is deterministic and honestly reported', () => {
+  const transpile = (flow: FlowGraph) =>
+    new FlowTranspiler().transpile(flow, { forceStrategy: 'state-machine' });
+
+  /** A → B, A → C, B → D, B → E — a two-level fan-out. */
+  const twoLevelNodes: FlowGraph['nodes'] = [
+    ...TRIGGERS,
+    { id: 'A', type: 'action', position: { x: 300, y: 100 }, data: { service: 'scene.create' } },
+    { id: 'B', type: 'action', position: { x: 600, y: 0 }, data: { service: 'light.turn_on' } },
+    { id: 'C', type: 'action', position: { x: 600, y: 300 }, data: { service: 'light.turn_off' } },
+    { id: 'D', type: 'action', position: { x: 900, y: -100 }, data: { service: 'switch.turn_on' } },
+    { id: 'E', type: 'action', position: { x: 900, y: 100 }, data: { service: 'switch.turn_off' } },
+  ];
+  const twoLevelEdges: FlowGraph['edges'] = [
+    { id: 'e0', source: 'trigger_0', target: 'A' },
+    { id: 'e1', source: 'trigger_1', target: 'A' },
+    { id: 'e2', source: 'A', target: 'B' },
+    { id: 'e3', source: 'A', target: 'C' },
+    { id: 'e4', source: 'B', target: 'D' },
+    { id: 'e5', source: 'B', target: 'E' },
+  ];
+
+  it('produces identical output regardless of node array order', async () => {
+    const inOrder: FlowGraph = {
+      id: 'cccccccc-dddd-4eee-8fff-000000000001',
+      version: 1,
+      name: 'Two level',
+      nodes: twoLevelNodes,
+      edges: twoLevelEdges,
+    };
+    // Nested node B declared before its ancestor A
+    const reordered: FlowGraph = {
+      ...inOrder,
+      nodes: [
+        ...TRIGGERS,
+        ...['B', 'A', 'C', 'D', 'E'].map(
+          (id) => twoLevelNodes.find((n) => n.id === id) as FlowGraph['nodes'][number]
+        ),
+      ],
+    };
+
+    const a = transpile(inOrder);
+    const b = transpile(reordered);
+    if (!a.yaml || !b.yaml) throw new Error('expected generated yaml');
+
+    // Node order is a UI detail and must not change the generated automation
+    expect(b.yaml).toBe(a.yaml);
+
+    // and no edge may be lost in either ordering
+    for (const yaml of [a.yaml, b.yaml]) {
+      const parsed = await new YamlParser().parse(yaml);
+      const pairs = (parsed.graph?.edges ?? [])
+        .filter((e) => !e.source.startsWith('trigger'))
+        .map((e) => `${e.source}->${e.target}`)
+        .sort();
+      expect(pairs).toEqual(['A->B', 'A->C', 'B->D', 'B->E']);
+    }
+  });
+
+  it('does not warn about a nested fan-out that works correctly', () => {
+    const flow: FlowGraph = {
+      id: 'cccccccc-dddd-4eee-8fff-000000000002',
+      version: 1,
+      name: 'Nested no warning',
+      nodes: twoLevelNodes,
+      edges: twoLevelEdges,
+    };
+
+    const { warnings } = transpile(flow);
+    // B's branches are not shared and both do run — claiming otherwise is a lie
+    expect(warnings.filter((w) => w.includes('only the first branch will run'))).toEqual([]);
+  });
+
+  it('still warns when a nested fan-out re-joins', () => {
+    // A → B,C ; B → D,E ; D → J ; E → J : J is inlined into both D and E
+    const flow: FlowGraph = {
+      id: 'cccccccc-dddd-4eee-8fff-000000000003',
+      version: 1,
+      name: 'Nested join',
+      nodes: [
+        ...twoLevelNodes,
+        {
+          id: 'J',
+          type: 'action',
+          position: { x: 1200, y: 0 },
+          data: { service: 'notify.notify' },
+        },
+      ],
+      edges: [
+        ...twoLevelEdges,
+        { id: 'e6', source: 'D', target: 'J' },
+        { id: 'e7', source: 'E', target: 'J' },
+      ],
+    };
+
+    const { warnings } = transpile(flow);
+    expect(warnings.some((w) => w.includes('Nodes [J]'))).toBe(true);
+  });
+
+  it('de-dupes duplicate edges inside a nested branch', async () => {
+    const flow: FlowGraph = {
+      id: 'cccccccc-dddd-4eee-8fff-000000000004',
+      version: 1,
+      name: 'Nested duplicate edges',
+      nodes: [
+        ...TRIGGERS,
+        {
+          id: 'A',
+          type: 'action',
+          position: { x: 300, y: 100 },
+          data: { service: 'scene.create' },
+        },
+        { id: 'B', type: 'action', position: { x: 600, y: 0 }, data: { service: 'light.turn_on' } },
+        {
+          id: 'C',
+          type: 'action',
+          position: { x: 600, y: 300 },
+          data: { service: 'light.turn_off' },
+        },
+        {
+          id: 'D',
+          type: 'action',
+          position: { x: 900, y: 0 },
+          data: { service: 'switch.turn_on' },
+        },
+      ],
+      edges: [
+        { id: 'e0', source: 'trigger_0', target: 'A' },
+        { id: 'e1', source: 'trigger_1', target: 'A' },
+        { id: 'e2', source: 'A', target: 'B' },
+        { id: 'e3', source: 'A', target: 'C' },
+        { id: 'e4', source: 'B', target: 'D' },
+        { id: 'e5', source: 'B', target: 'D' },
+      ],
+    };
+
+    const { yaml } = transpile(flow);
+    if (!yaml) throw new Error('expected generated yaml');
+
+    // D must be emitted once, not once per duplicate edge
+    expect(yaml.match(/parallel_branch:D/g) ?? []).toHaveLength(0);
+    expect(yaml.match(/cafe_node:D/g) ?? []).toHaveLength(1);
+
+    const result = await new YamlParser().parse(yaml);
+    expect(result.success).toBe(true);
+  });
+
+  it('round-trips a single trigger that fans out', async () => {
+    // One trigger with several targets yields a bare __parallel_trigger_0 entry
+    // rather than a routing template.
+    const flow: FlowGraph = {
+      id: 'cccccccc-dddd-4eee-8fff-000000000005',
+      version: 1,
+      name: 'Single trigger fan-out',
+      nodes: [
+        TRIGGERS[0],
+        { id: 'X', type: 'action', position: { x: 300, y: 0 }, data: { service: 'light.turn_on' } },
+        {
+          id: 'Y',
+          type: 'action',
+          position: { x: 300, y: 200 },
+          data: { service: 'light.turn_off' },
+        },
+      ],
+      edges: [
+        { id: 'e0', source: 'trigger_0', target: 'X' },
+        { id: 'e1', source: 'trigger_0', target: 'Y' },
+      ],
+    };
+
+    const { yaml } = transpile(flow);
+    if (!yaml) throw new Error('expected generated yaml');
+
+    const result = await new YamlParser().parse(yaml);
+    // Previously the trigger edge pointed at the deleted synthetic entry
+    expect(result.errors ?? []).toEqual([]);
+    expect(result.success).toBe(true);
+
+    const targets = (result.graph?.edges ?? [])
+      .filter((e) => e.source === 'trigger_0')
+      .map((e) => e.target)
+      .sort();
+    expect(targets).toEqual(['X', 'Y']);
+  });
+});

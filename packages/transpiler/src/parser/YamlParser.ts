@@ -814,9 +814,19 @@ export class YamlParser {
           }
         }
       } else {
-        // All triggers route to same node (simple case)
+        // All triggers route to same node (simple case). That node may still be
+        // a synthetic __parallel_trigger_* entry — a single trigger fanning out
+        // produces a bare id rather than a routing template — so expand it here
+        // too, otherwise the edge points at a node that no longer exists.
+        const expandedTargets = parallelTriggerTargets.get(entryNodeId);
         for (const trigger of triggerNodes) {
-          edges.push(this.createEdge(trigger.id, entryNodeId));
+          if (expandedTargets) {
+            for (const actualTarget of expandedTargets) {
+              edges.push(this.createEdge(trigger.id, actualTarget));
+            }
+          } else {
+            edges.push(this.createEdge(trigger.id, entryNodeId));
+          }
         }
       }
     }

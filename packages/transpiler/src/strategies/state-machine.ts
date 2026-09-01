@@ -101,11 +101,20 @@ export class StateMachineStrategy extends BaseStrategy {
     // parallel block, so their subgraphs are consumed the same way. This is only
     // safe when the branches are exclusively owned by this fan-out — otherwise
     // consuming them would delete dispatcher entries other nodes still jump to.
+    // Walk outward from the entry points so an outer fan-out always claims its
+    // subgraph before any nested one does. Iterating flow.nodes in array order
+    // would let a nested node claim first, which strands the outer node's other
+    // branches and drops their edges.
     const fanOutPlans = new Map<string, string[]>();
-    for (const node of flow.nodes) {
+    for (const node of this.orderNodesFromEntry(flow)) {
       // Conditions branch through their own true/false path and never build a
       // fan-out tail, so their targets must keep their standalone entries.
       if (node.type === 'trigger' || node.type === 'condition') continue;
+
+      // Already inlined into an ancestor's parallel branch. Its own fan-out is
+      // emitted by continueInlineBranch, so there is nothing to plan or warn about.
+      if (parallelConsumedNodeIds.has(node.id)) continue;
+
       const targets = this.getFanOutTargets(flow, node.id);
       if (targets.length <= 1) continue;
 
@@ -122,9 +131,15 @@ export class StateMachineStrategy extends BaseStrategy {
         parallelConsumedNodeIds.add(id);
       }
 
-      const joinWarning = this.detectParallelBranchJoin(flow, targets);
-      if (joinWarning) {
-        warnings.push(joinWarning);
+      // Report joins for this fan-out and for every nested fan-out inside it,
+      // since those nodes are inlined and never planned on their own.
+      for (const branchNodeId of [node.id, ...owned]) {
+        const branchTargets = this.getFanOutTargets(flow, branchNodeId);
+        if (branchTargets.length <= 1) continue;
+        const joinWarning = this.detectParallelBranchJoin(flow, branchTargets);
+        if (joinWarning) {
+          warnings.push(joinWarning);
+        }
       }
     }
 
@@ -321,7 +336,7 @@ export class StateMachineStrategy extends BaseStrategy {
 
       const parallelEntryId = `__parallel_trigger_${idx}`;
 
-      const parallelBranches = this.buildParallelBranches(flow, targets);
+      const parallelBranches = this.buildParallelBranches(flow, [...new Set(targets)]);
 
       parallelBlocks.push({
         conditions: [
@@ -355,6 +370,47 @@ export class StateMachineStrategy extends BaseStrategy {
     return this.getOutgoingEdges(flow, nodeId).filter(
       (e) => e.sourceHandle !== 'true' && e.sourceHandle !== 'false'
     );
+  }
+
+  /**
+   * Nodes ordered by distance from the trigger entry points (breadth-first),
+   * with any unreachable nodes appended in declaration order.
+   *
+   * Fan-out planning must be deterministic and outermost-first: whichever node
+   * claims a subgraph first owns it, so processing a nested node before its
+   * ancestor would strand the ancestor's remaining branches.
+   */
+  private orderNodesFromEntry(flow: FlowGraph): FlowNode[] {
+    const byId = new Map(flow.nodes.map((n) => [n.id, n]));
+    const ordered: FlowNode[] = [];
+    const seen = new Set<string>();
+
+    const queue = flow.nodes
+      .filter((n) => n.type === 'trigger')
+      .flatMap((trigger) => this.getOutgoingEdges(flow, trigger.id).map((e) => e.target));
+
+    while (queue.length > 0) {
+      const nodeId = queue.shift();
+      if (nodeId === undefined || nodeId === 'END' || seen.has(nodeId)) continue;
+      seen.add(nodeId);
+
+      const node = byId.get(nodeId);
+      if (!node) continue;
+      ordered.push(node);
+
+      for (const edge of this.getOutgoingEdges(flow, nodeId)) {
+        queue.push(edge.target);
+      }
+    }
+
+    // Nodes not reachable from any trigger still need blocks generated
+    for (const node of flow.nodes) {
+      if (node.type !== 'trigger' && !seen.has(node.id)) {
+        ordered.push(node);
+      }
+    }
+
+    return ordered;
   }
 
   /**
@@ -516,26 +572,19 @@ export class StateMachineStrategy extends BaseStrategy {
    */
   private continueInlineBranch(
     flow: FlowGraph,
+    nodeId: string,
     edges: FlowEdge[],
     visited: Set<string>
   ): Record<string, unknown>[] {
-    const fanOutEdges = edges.filter(
-      (e) => e.sourceHandle !== 'true' && e.sourceHandle !== 'false'
-    );
+    // Same de-duping as the top-level path, so duplicate edges to one target
+    // don't produce duplicate branches that run it twice.
+    const targets = this.getFanOutTargets(flow, nodeId);
 
-    if (fanOutEdges.length > 1) {
-      return [
-        {
-          parallel: this.buildParallelBranches(
-            flow,
-            fanOutEdges.map((e) => e.target),
-            visited
-          ),
-        },
-      ];
+    if (targets.length > 1) {
+      return [{ parallel: this.buildParallelBranches(flow, targets, visited) }];
     }
 
-    return this.generateInlineBranch(flow, edges[0]?.target ?? 'END', visited);
+    return this.generateInlineBranch(flow, targets[0] ?? edges[0]?.target ?? 'END', visited);
   }
 
   private generateInlineBranch(
@@ -557,7 +606,7 @@ export class StateMachineStrategy extends BaseStrategy {
       case 'action': {
         const actionCall = this.buildActionCall(node as ActionNode);
         this.encodeNodeIdInAlias(actionCall, node.id);
-        return [actionCall, ...this.continueInlineBranch(flow, edges, visited)];
+        return [actionCall, ...this.continueInlineBranch(flow, node.id, edges, visited)];
       }
 
       case 'condition': {
@@ -586,24 +635,24 @@ export class StateMachineStrategy extends BaseStrategy {
       case 'delay': {
         const delayAction = this.buildDelayAction(node as DelayNode);
         this.encodeNodeIdInAlias(delayAction, node.id);
-        return [delayAction, ...this.continueInlineBranch(flow, edges, visited)];
+        return [delayAction, ...this.continueInlineBranch(flow, node.id, edges, visited)];
       }
 
       case 'wait': {
         const waitAction = this.buildWaitAction(node as WaitNode);
         this.encodeNodeIdInAlias(waitAction, node.id);
-        return [waitAction, ...this.continueInlineBranch(flow, edges, visited)];
+        return [waitAction, ...this.continueInlineBranch(flow, node.id, edges, visited)];
       }
 
       case 'set_variables': {
         const setVarsAction = this.buildSetVariablesAction(node as SetVariablesNode);
         this.encodeNodeIdInAlias(setVarsAction, node.id);
-        return [setVarsAction, ...this.continueInlineBranch(flow, edges, visited)];
+        return [setVarsAction, ...this.continueInlineBranch(flow, node.id, edges, visited)];
       }
 
       default: {
         // Unknown node type — skip it and continue to the next node
-        return this.continueInlineBranch(flow, edges, visited);
+        return this.continueInlineBranch(flow, node.id, edges, visited);
       }
     }
   }
