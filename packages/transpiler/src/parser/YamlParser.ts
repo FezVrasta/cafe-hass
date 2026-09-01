@@ -263,7 +263,7 @@ function isEventAction(action: unknown): action is Record<string, unknown> {
  */
 interface StateMachineNodeInfo {
   nodeId: string;
-  nodeType: 'action' | 'condition' | 'delay' | 'wait';
+  nodeType: 'action' | 'condition' | 'delay' | 'wait' | 'set_variables';
   data: Record<string, unknown>;
   trueTarget: string | null;
   falseTarget: string | null;
@@ -711,6 +711,8 @@ export class YamlParser {
       nodeInfoMap.delete(nodeId);
     }
 
+    const parallelFanOutTargets = this.resolveParallelFanOuts(nodeInfoMap);
+
     // In state-machine strategy, action/condition/delay/wait node IDs are extracted
     // directly from the Jinja2 templates in the YAML choose blocks. Only trigger
     // node IDs need to be allocated via getNextNodeId, so we filter out IDs that
@@ -778,6 +780,14 @@ export class YamlParser {
             data: info.data as WaitNode['data'],
           });
           break;
+        case 'set_variables':
+          nodes.push({
+            id: nodeId,
+            type: 'set_variables',
+            position: { x: 0, y: 0 },
+            data: info.data as SetVariablesNode['data'],
+          });
+          break;
       }
     }
 
@@ -829,6 +839,11 @@ export class YamlParser {
           sourceHandle: 'false',
         });
       }
+
+      // Fan-out: one edge per inlined parallel branch
+      for (const target of parallelFanOutTargets.get(nodeId) ?? []) {
+        edges.push(this.createEdge(nodeId, target));
+      }
     }
 
     return { nodes, edges };
@@ -871,6 +886,41 @@ export class YamlParser {
     }
 
     return routing.size > 0 ? routing : null;
+  }
+
+  /**
+   * Resolve parallel fan-out on regular nodes. When a node has more than one
+   * outgoing edge the transpiler emits its downstream branches inline inside a
+   * parallel block, so expand those back into direct node→target edges.
+   *
+   * Repeats to a fixpoint because a branch may itself contain a nested fan-out,
+   * which only becomes visible once that branch has been parsed.
+   */
+  private resolveParallelFanOuts(
+    nodeInfoMap: Map<string, StateMachineNodeInfo>
+  ): Map<string, string[]> {
+    const fanOutTargets = new Map<string, string[]>();
+    const resolved = new Set<string>();
+
+    let foundMore = true;
+    while (foundMore) {
+      foundMore = false;
+      // Snapshot: parseInlineParallelBranches inserts nodes into nodeInfoMap as it goes
+      for (const [nodeId, info] of [...nodeInfoMap]) {
+        if (!info.parallelItems || info.parallelItems.length === 0) continue;
+        if (resolved.has(nodeId)) continue;
+
+        resolved.add(nodeId);
+        foundMore = true;
+
+        const targetIds = this.parseInlineParallelBranches(info.parallelItems, nodeInfoMap);
+        if (targetIds.length > 0) {
+          fanOutTargets.set(nodeId, targetIds);
+        }
+      }
+    }
+
+    return fanOutTargets;
   }
 
   /**
@@ -942,6 +992,17 @@ export class YamlParser {
 
     for (let i = 0; i < actions.length; i++) {
       const action = actions[i];
+
+      // A bare parallel block is the previous node's fan-out, not a node of its
+      // own. Attach it so the fan-out pass can rebuild those edges.
+      if (Array.isArray(action.parallel) && action.alias === undefined) {
+        const prevInfo = prevNodeId ? nodeInfoMap.get(prevNodeId) : undefined;
+        if (prevInfo) {
+          prevInfo.parallelItems = action.parallel;
+        }
+        continue;
+      }
+
       const { nodeId: embeddedId } = this.extractCafeNodeId(action.alias as string | undefined);
       const nodeId =
         i === 0 ? firstNodeId : (embeddedId ?? generateId(this.inferInlineNodeType(action)));
@@ -1049,6 +1110,19 @@ export class YamlParser {
         trueTarget: null,
         falseTarget: null,
       });
+    } else if (item.variables !== undefined) {
+      // Set variables node
+      const data: Record<string, unknown> = { variables: item.variables };
+      if (alias) data.alias = alias;
+      if (item.id) data.id = item.id;
+
+      nodeInfoMap.set(nodeId, {
+        nodeId,
+        nodeType: 'set_variables',
+        data,
+        trueTarget: null,
+        falseTarget: null,
+      });
     }
   }
 
@@ -1075,6 +1149,7 @@ export class YamlParser {
     if (item.if) return 'condition';
     if (item.delay !== undefined) return 'delay';
     if (item.wait_template !== undefined || item.wait_for_trigger !== undefined) return 'wait';
+    if (item.variables !== undefined) return 'set_variables';
     return 'action';
   }
 
@@ -1104,7 +1179,7 @@ export class YamlParser {
     }
 
     // Parse sequence to determine node type and data
-    let nodeType: 'action' | 'condition' | 'delay' | 'wait' = 'action';
+    let nodeType: StateMachineNodeInfo['nodeType'] = 'action';
     const data: Record<string, unknown> = {};
     let trueTarget: string | null = null;
     let falseTarget: string | null = null;
@@ -1113,9 +1188,21 @@ export class YamlParser {
     for (const item of sequence) {
       const seqItem = item as Record<string, unknown>;
 
-      // Check for variables action (sets next node / edge)
+      // Check for variables action. Two distinct shapes share this key:
+      // - the state-machine transition, which always carries `current_node`
+      // - a user set_variables node, which carries arbitrary user variables
       if (seqItem.variables) {
         const vars = seqItem.variables as Record<string, unknown>;
+
+        if (!('current_node' in vars)) {
+          // User-defined variables: this block represents a set_variables node
+          nodeType = 'set_variables';
+          data.variables = vars;
+          if (seqItem.alias) data.alias = seqItem.alias;
+          if (seqItem.id) data.id = seqItem.id;
+          continue;
+        }
+
         const currentNodeValue = vars.current_node;
 
         if (typeof currentNodeValue === 'string') {
