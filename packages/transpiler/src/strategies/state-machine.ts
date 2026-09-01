@@ -17,9 +17,13 @@ import { BaseStrategy, type HAYamlOutput } from './base';
  * Outcome of planning a fan-out: either the set of branch nodes whose standalone
  * dispatcher entries can be dropped, or why the branches cannot be inlined.
  */
-type FanOutPlan =
-  | { ok: true; owned: Set<string> }
-  | { ok: false; reason: 'cycle' | 'join'; nodes: string[] };
+type FanOutRejection = {
+  ok: false;
+  reason: 'cycle' | 'join' | 'nested-condition';
+  nodes: string[];
+};
+
+type FanOutPlan = { ok: true; owned: Set<string>; reachable: Set<string> } | FanOutRejection;
 
 /**
  * State Machine strategy for complex flows with cycles, cross-links, or converging paths
@@ -89,15 +93,17 @@ export class StateMachineStrategy extends BaseStrategy {
     const parallelConsumedNodeIds = new Set<string>();
     const approvedTriggerFanOut = new Map<number, string[]>();
 
-    for (const [idx, targets] of triggerRouting) {
+    for (const [idx, routedTargets] of triggerRouting) {
+      const triggerId = triggerNodes[idx]?.id;
+      if (!triggerId) continue;
+
+      // Duplicate edges to one target are a single branch, not a fan-out
+      const targets = [...new Set(routedTargets)].filter((t) => t !== 'END');
       if (targets.length <= 1) continue;
 
-      const triggerId = triggerNodes[idx]?.id;
-      const plan = triggerId ? this.planFanOut(flow, triggerId, targets) : null;
-      if (!plan?.ok) {
-        if (plan) {
-          warnings.push(this.describeFanOutRejection(`Trigger ${idx + 1}`, targets, plan));
-        }
+      const plan = this.planFanOut(flow, this.getOutgoingEdges(flow, triggerId));
+      if (!plan.ok) {
+        warnings.push(this.describeFanOutRejection(`Trigger ${idx + 1}`, targets, plan));
         continue;
       }
 
@@ -129,7 +135,7 @@ export class StateMachineStrategy extends BaseStrategy {
       const targets = this.getFanOutTargets(flow, node.id);
       if (targets.length <= 1) continue;
 
-      const plan = this.planFanOut(flow, node.id, targets);
+      const plan = this.planFanOut(flow, this.getFanOutEdges(flow, node.id));
       if (!plan.ok) {
         warnings.push(this.describeFanOutRejection(`Node "${node.id}"`, targets, plan));
         continue;
@@ -140,15 +146,16 @@ export class StateMachineStrategy extends BaseStrategy {
         parallelConsumedNodeIds.add(id);
       }
 
-      // Nested fan-outs inside this one are inlined and never planned on their
-      // own, so report their rejections here instead of losing them silently.
-      for (const branchNodeId of plan.owned) {
+      // Nested fan-outs are inlined by continueInlineBranch regardless of their
+      // own plan, so report their rejections here — across everything inlined,
+      // not just what this fan-out owns.
+      for (const branchNodeId of plan.reachable) {
         const branchTargets = this.getFanOutTargets(flow, branchNodeId);
         if (branchTargets.length <= 1) continue;
-        const branchPlan = this.planFanOut(flow, branchNodeId, branchTargets);
+        const branchPlan = this.planFanOut(flow, this.getFanOutEdges(flow, branchNodeId));
         if (!branchPlan.ok) {
           warnings.push(
-            this.describeFanOutRejection(`Node "${branchNodeId}"`, branchTargets, branchPlan)
+            this.describeFanOutRejection(`Node "${branchNodeId}"`, branchTargets, branchPlan, true)
           );
         }
       }
@@ -166,7 +173,10 @@ export class StateMachineStrategy extends BaseStrategy {
         const targets = this.getConditionHandleTargets(flow, node.id, handle);
         if (targets.length <= 1) continue;
 
-        const plan = this.planFanOut(flow, node.id, targets);
+        const handleEdges = this.getOutgoingEdges(flow, node.id).filter(
+          (e) => e.sourceHandle === handle
+        );
+        const plan = this.planFanOut(flow, handleEdges);
         if (!plan.ok) {
           warnings.push(
             this.describeFanOutRejection(
@@ -508,7 +518,11 @@ export class StateMachineStrategy extends BaseStrategy {
    * inlined at all because a branch loops back to the source — an inline branch
    * has no way to re-enter the dispatcher.
    */
-  private planFanOut(flow: FlowGraph, sourceId: string, targets: string[]): FanOutPlan {
+  private planFanOut(flow: FlowGraph, fanOutEdges: FlowEdge[]): FanOutPlan {
+    const sourceId = fanOutEdges[0]?.source;
+    if (!sourceId) return { ok: false, reason: 'cycle', nodes: [] };
+
+    const targets = [...new Set(fanOutEdges.map((e) => e.target))];
     const reachable = new Set<string>();
     for (const target of targets) {
       this.collectSubgraphNodeIds(flow, target, reachable);
@@ -527,17 +541,48 @@ export class StateMachineStrategy extends BaseStrategy {
       return { ok: false, reason: 'join', nodes: joined };
     }
 
-    const owned = new Set<string>();
-    for (const id of reachable) {
-      const reachableFromOutside = flow.edges.some(
-        (edge) => edge.target === id && edge.source !== sourceId && !reachable.has(edge.source)
-      );
-      if (!reachableFromOutside) {
-        owned.add(id);
+    // generateInlineBranch resolves a condition's handles with a single lookup,
+    // so a condition whose handle has several targets cannot be represented
+    // inline without losing edges. Keep those on the dispatcher path instead.
+    const lossyCondition = [...reachable].find((id) => this.hasMultiTargetHandle(flow, id));
+    if (lossyCondition) {
+      return { ok: false, reason: 'nested-condition', nodes: [lossyCondition] };
+    }
+
+    // A node's entry may only be dropped when *every* path into it is inlined.
+    // Checking against `reachable` alone is not enough: a branch root with an
+    // outside predecessor keeps its entry, and everything downstream of it is
+    // then only reachable through a node that still dispatches. Shrink to a
+    // fixpoint so no surviving entry ever transitions to a deleted one.
+    const fanOutEdgeIds = new Set(fanOutEdges.map((e) => e.id));
+    const owned = new Set(reachable);
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const id of [...owned]) {
+        const hasOutsideEntry = flow.edges.some(
+          (edge) => edge.target === id && !fanOutEdgeIds.has(edge.id) && !owned.has(edge.source)
+        );
+        if (hasOutsideEntry) {
+          owned.delete(id);
+          changed = true;
+        }
       }
     }
 
-    return { ok: true, owned };
+    return { ok: true, owned, reachable };
+  }
+
+  /**
+   * True when the node is a condition with more than one target on a handle.
+   */
+  private hasMultiTargetHandle(flow: FlowGraph, nodeId: string): boolean {
+    const node = flow.nodes.find((n) => n.id === nodeId);
+    if (node?.type !== 'condition') return false;
+    return (
+      this.getConditionHandleTargets(flow, nodeId, 'true').length > 1 ||
+      this.getConditionHandleTargets(flow, nodeId, 'false').length > 1
+    );
   }
 
   /**
@@ -547,10 +592,20 @@ export class StateMachineStrategy extends BaseStrategy {
   private describeFanOutRejection(
     subject: string,
     targets: string[],
-    plan: { reason: 'cycle' | 'join'; nodes: string[] }
+    plan: FanOutRejection,
+    /** Nested fan-outs are inlined regardless, so the consequence differs. */
+    inlined = false
   ): string {
+    if (plan.reason === 'nested-condition') {
+      return `${subject} branches to [${targets.join(', ')}], but condition "${plan.nodes.join(', ')}" downstream sends one of its branches to several nodes, which cannot be nested inside a parallel block. Only the first branch will run. Move that condition out of the parallel section to run these in parallel.`;
+    }
     if (plan.reason === 'cycle') {
-      return `${subject} branches to [${targets.join(', ')}], but one of those leads back into the same path. A parallel branch cannot loop back, so only the first branch will run.`;
+      return inlined
+        ? `${subject} branches to [${targets.join(', ')}] inside a parallel section, but one of those loops back. The loop cannot be expressed there and will stop after one pass.`
+        : `${subject} branches to [${targets.join(', ')}], but one of those leads back into the same path. A parallel branch cannot loop back, so only the first branch will run.`;
+    }
+    if (inlined) {
+      return `${subject} branches to [${targets.join(', ')}] inside a parallel section, and those branches re-join at [${plan.nodes.join(', ')}]. Nested parallel branches cannot re-join, so [${plan.nodes.join(', ')}] will run once per branch.`;
     }
     return `${subject} branches to [${targets.join(', ')}], but those branches re-join at [${plan.nodes.join(', ')}]. Parallel branches cannot re-join, so only the first branch will run. Give each branch its own downstream nodes to run them in parallel.`;
   }

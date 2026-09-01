@@ -346,12 +346,15 @@ export const ConditionNodeValidationSchema = z
   });
 
 /**
- * Variable names the transpiler uses internally. The state-machine strategy
- * stores its program counter in `current_node` and its scratch state in
- * `flow_context`, so a user variable of the same name would be indistinguishable
- * from the machinery in the generated YAML.
+ * Variable names the transpiler cannot share with user code.
+ *
+ * The state-machine strategy stores its program counter in `current_node`, and
+ * that name is how the parser tells its own transitions apart from a user
+ * "Set Variables" node — so a user variable of the same name is genuinely
+ * ambiguous. (`flow_context` is also written by the strategy, but only ever
+ * alongside `current_node`, so it stays unambiguous and is not reserved.)
  */
-export const RESERVED_VARIABLE_NAMES = ['current_node', 'flow_context'] as const;
+export const RESERVED_VARIABLE_NAMES = ['current_node'] as const;
 
 /**
  * True when a variable name collides with one the transpiler uses internally.

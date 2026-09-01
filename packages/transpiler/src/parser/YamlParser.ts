@@ -701,9 +701,13 @@ export class YamlParser {
     // a trigger with multiple targets (__parallel_trigger_N) and for a condition
     // handle leading to several nodes (__parallel_cond_<id>__<handle>). Expand
     // them back into direct edges instead of leaving phantom nodes behind.
+    // Matched strictly: a user node whose ID merely starts with __parallel_ must
+    // not be deleted, or every edge pointing at it dangles and the automation
+    // stops importing altogether.
+    const SYNTHETIC_ENTRY_ID = /^__parallel_(trigger_\d+|cond_.+__(?:true|false))$/;
     const parallelTriggerTargets = new Map<string, string[]>();
     for (const [nodeId, info] of nodeInfoMap) {
-      if (!nodeId.startsWith('__parallel_')) continue;
+      if (!SYNTHETIC_ENTRY_ID.test(nodeId)) continue;
 
       const targetIds = this.parseInlineParallelBranches(info.parallelItems ?? [], nodeInfoMap);
       if (targetIds.length > 0) {

@@ -8,12 +8,15 @@ import { YamlParser } from '../parser/YamlParser';
  * the parser tells a transition apart from a user "Set Variables" node.
  */
 describe('Issue #243 - reserved transpiler variable names', () => {
-  it('flags the names the transpiler uses internally', () => {
+  it('flags only the name the parser actually disambiguates on', () => {
     expect(isReservedVariableName('current_node')).toBe(true);
-    expect(isReservedVariableName('flow_context')).toBe(true);
     expect(isReservedVariableName('  current_node  ')).toBe(true);
     expect(isReservedVariableName('my_variable')).toBe(false);
     expect(isReservedVariableName('current_node_2')).toBe(false);
+    // flow_context is written by the strategy but only ever alongside
+    // current_node, so it stays unambiguous and must not be reserved —
+    // reserving it would flag existing flows that use the name legitimately.
+    expect(isReservedVariableName('flow_context')).toBe(false);
   });
 
   it('rejects a set_variables node that shadows a reserved name', () => {

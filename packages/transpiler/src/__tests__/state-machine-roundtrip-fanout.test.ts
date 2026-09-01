@@ -966,3 +966,251 @@ describe('Issue #242 - a condition handle leading to several nodes', () => {
     expect(synthetic).toEqual([]);
   });
 });
+
+/**
+ * Inlining a branch removes its dispatcher entries, so an entry may only be
+ * dropped when EVERY path into it is inlined too. These cover the cases where
+ * a surviving entry would otherwise transition to a deleted one.
+ */
+describe('fan-out ownership must hold for whole paths, not single nodes', () => {
+  const transpile = (flow: FlowGraph) =>
+    new FlowTranspiler().transpile(flow, { forceStrategy: 'state-machine' });
+
+  /** Every `current_node: X` a block sets must have a matching dispatcher entry. */
+  const expectNoDanglingStates = (yaml: string) => {
+    const referenced = [...yaml.matchAll(/current_node:\s*([A-Za-z_][\w]*)\s*$/gm)]
+      .map((m) => m[1])
+      .filter((id) => id !== 'END');
+    for (const id of new Set(referenced)) {
+      expect(yaml, `state "${id}" is set but has no dispatcher entry`).toContain(
+        `current_node == \\"${id}\\"`
+      );
+    }
+  };
+
+  it('does not orphan a descendant when the branch root keeps its entry', () => {
+    // node_O fans out to node_A and node_Z, but node_P also reaches node_A.
+    // node_A keeps its entry, so node_B behind it must keep one too.
+    const flow: FlowGraph = {
+      id: '00000000-1111-4222-8333-000000000001',
+      version: 1,
+      name: 'Descendant of a shared branch root',
+      nodes: [
+        ...TRIGGERS,
+        {
+          id: 'cond_gate',
+          type: 'condition',
+          position: { x: 200, y: 100 },
+          data: { condition: 'state', entity_id: 'binary_sensor.g', state: 'on' },
+        },
+        { id: 'node_O', type: 'action', position: { x: 400, y: 0 }, data: { service: 'switch.o' } },
+        {
+          id: 'node_P',
+          type: 'action',
+          position: { x: 400, y: 300 },
+          data: { service: 'switch.p' },
+        },
+        { id: 'node_A', type: 'action', position: { x: 700, y: 0 }, data: { service: 'scene.a' } },
+        { id: 'node_B', type: 'action', position: { x: 900, y: 0 }, data: { service: 'notify.b' } },
+        {
+          id: 'node_Z',
+          type: 'action',
+          position: { x: 700, y: 200 },
+          data: { service: 'light.z' },
+        },
+      ],
+      edges: [
+        { id: 'e0', source: 'trigger_0', target: 'cond_gate' },
+        { id: 'e1', source: 'trigger_1', target: 'cond_gate' },
+        { id: 'e2', source: 'cond_gate', target: 'node_O', sourceHandle: 'true' },
+        { id: 'e3', source: 'cond_gate', target: 'node_P', sourceHandle: 'false' },
+        { id: 'e4', source: 'node_O', target: 'node_A' },
+        { id: 'e5', source: 'node_O', target: 'node_Z' },
+        { id: 'e6', source: 'node_P', target: 'node_A' },
+        { id: 'e7', source: 'node_A', target: 'node_B' },
+      ],
+    };
+
+    const { yaml } = transpile(flow);
+    if (!yaml) throw new Error('expected generated yaml');
+
+    // node_P -> node_A -> node_B must all remain dispatchable
+    expect(yaml).toContain('current_node == \\"node_A\\"');
+    expect(yaml).toContain('current_node == \\"node_B\\"');
+    expect(yaml).toContain('notify.b');
+    expectNoDanglingStates(yaml);
+  });
+
+  it('does not orphan a descendant of a trigger fan-out target', () => {
+    // trigger_0 fans out to A and Z; trigger_1 reaches A through P.
+    const flow: FlowGraph = {
+      id: '00000000-1111-4222-8333-000000000002',
+      version: 1,
+      name: 'Trigger fan-out with shared descendant',
+      nodes: [
+        ...TRIGGERS,
+        { id: 'A', type: 'action', position: { x: 400, y: 0 }, data: { service: 'scene.a' } },
+        { id: 'B', type: 'action', position: { x: 700, y: 0 }, data: { service: 'notify.b' } },
+        { id: 'Z', type: 'action', position: { x: 400, y: 200 }, data: { service: 'light.z' } },
+        { id: 'P', type: 'action', position: { x: 200, y: 400 }, data: { service: 'switch.p' } },
+      ],
+      edges: [
+        { id: 'e0', source: 'trigger_0', target: 'A' },
+        { id: 'e1', source: 'trigger_0', target: 'Z' },
+        { id: 'e2', source: 'trigger_1', target: 'P' },
+        { id: 'e3', source: 'P', target: 'A' },
+        { id: 'e4', source: 'A', target: 'B' },
+      ],
+    };
+
+    const { yaml } = transpile(flow);
+    if (!yaml) throw new Error('expected generated yaml');
+
+    expect(yaml).toContain('current_node == \\"A\\"');
+    expect(yaml).toContain('current_node == \\"B\\"');
+    expectNoDanglingStates(yaml);
+  });
+
+  it("keeps a target reachable from the condition's other handle dispatchable", () => {
+    // X -true-> B, X -true-> C, X -false-> B.
+    // The false edge is an outside path into B even though it starts at X.
+    const flow: FlowGraph = {
+      id: '00000000-1111-4222-8333-000000000003',
+      version: 1,
+      name: 'Handle fan-out sharing a target with the other handle',
+      nodes: [
+        ...TRIGGERS,
+        {
+          id: 'X',
+          type: 'condition',
+          position: { x: 300, y: 100 },
+          data: { condition: 'state', entity_id: 'binary_sensor.x', state: 'on' },
+        },
+        { id: 'B', type: 'action', position: { x: 600, y: 0 }, data: { service: 'light.bbb' } },
+        { id: 'C', type: 'action', position: { x: 600, y: 200 }, data: { service: 'light.ccc' } },
+      ],
+      edges: [
+        { id: 'e0', source: 'trigger_0', target: 'X' },
+        { id: 'e1', source: 'trigger_1', target: 'X' },
+        { id: 'e2', source: 'X', target: 'B', sourceHandle: 'true' },
+        { id: 'e3', source: 'X', target: 'C', sourceHandle: 'true' },
+        { id: 'e4', source: 'X', target: 'B', sourceHandle: 'false' },
+      ],
+    };
+
+    const { yaml } = transpile(flow);
+    if (!yaml) throw new Error('expected generated yaml');
+
+    // The false branch sets current_node: B, so B needs an entry
+    expect(yaml).toContain('current_node == \\"B\\"');
+    expect(yaml).toContain('light.ccc');
+    expectNoDanglingStates(yaml);
+  });
+
+  it('treats duplicate trigger edges as one branch instead of a false re-join', () => {
+    const flow: FlowGraph = {
+      id: '00000000-1111-4222-8333-000000000004',
+      version: 1,
+      name: 'Duplicate trigger edges',
+      nodes: [
+        TRIGGERS[0],
+        { id: 'A', type: 'action', position: { x: 300, y: 0 }, data: { service: 'light.aaa' } },
+        { id: 'B', type: 'action', position: { x: 300, y: 200 }, data: { service: 'light.bbb' } },
+      ],
+      edges: [
+        { id: 'e0', source: 'trigger_0', target: 'A' },
+        { id: 'e1', source: 'trigger_0', target: 'A' },
+        { id: 'e2', source: 'trigger_0', target: 'B' },
+      ],
+    };
+
+    const { yaml, warnings } = transpile(flow);
+    if (!yaml) throw new Error('expected generated yaml');
+
+    // Both targets must still run; the duplicate edge is not a re-join
+    expect(yaml).toContain('light.aaa');
+    expect(yaml).toContain('light.bbb');
+    expect(warnings.some((w) => w.includes('re-join'))).toBe(false);
+    expectNoDanglingStates(yaml);
+  });
+
+  it('keeps a condition with a multi-target handle out of an inlined branch', () => {
+    // A fans out to X and Y, but X is a condition whose true handle has two
+    // targets — that cannot be represented inline without losing an edge.
+    const flow: FlowGraph = {
+      id: '00000000-1111-4222-8333-000000000005',
+      version: 1,
+      name: 'Condition fan-out inside a branch',
+      nodes: [
+        ...TRIGGERS,
+        { id: 'A', type: 'action', position: { x: 200, y: 100 }, data: { service: 'scene.a' } },
+        {
+          id: 'X',
+          type: 'condition',
+          position: { x: 500, y: 0 },
+          data: { condition: 'state', entity_id: 'binary_sensor.x', state: 'on' },
+        },
+        { id: 'B', type: 'action', position: { x: 800, y: -100 }, data: { service: 'light.bbb' } },
+        { id: 'C', type: 'action', position: { x: 800, y: 100 }, data: { service: 'light.ccc' } },
+        { id: 'Y', type: 'action', position: { x: 500, y: 300 }, data: { service: 'light.yyy' } },
+      ],
+      edges: [
+        { id: 'e0', source: 'trigger_0', target: 'A' },
+        { id: 'e1', source: 'trigger_1', target: 'A' },
+        { id: 'e2', source: 'A', target: 'X' },
+        { id: 'e3', source: 'A', target: 'Y' },
+        { id: 'e4', source: 'X', target: 'B', sourceHandle: 'true' },
+        { id: 'e5', source: 'X', target: 'C', sourceHandle: 'true' },
+      ],
+    };
+
+    const { yaml, warnings } = transpile(flow);
+    if (!yaml) throw new Error('expected generated yaml');
+
+    // Neither branch of the condition may silently vanish
+    expect(yaml).toContain('light.bbb');
+    expect(yaml).toContain('light.ccc');
+    // and the user is told why A could not be parallelized
+    expect(warnings.some((w) => w.includes('X'))).toBe(true);
+    expectNoDanglingStates(yaml);
+  });
+
+  it('describes a nested re-join as duplication rather than a dropped branch', () => {
+    // A -> X,Y ; X -> J1,J2 ; both J -> K. The nested fan-out is inlined anyway,
+    // so K really does run once per branch.
+    const flow: FlowGraph = {
+      id: '00000000-1111-4222-8333-000000000006',
+      version: 1,
+      name: 'Nested re-join',
+      nodes: [
+        ...TRIGGERS,
+        { id: 'A', type: 'action', position: { x: 200, y: 100 }, data: { service: 'scene.a' } },
+        { id: 'X', type: 'action', position: { x: 500, y: 0 }, data: { service: 'switch.x' } },
+        { id: 'Y', type: 'action', position: { x: 500, y: 300 }, data: { service: 'switch.y' } },
+        { id: 'J1', type: 'action', position: { x: 800, y: -100 }, data: { service: 'light.j1' } },
+        { id: 'J2', type: 'action', position: { x: 800, y: 100 }, data: { service: 'light.j2' } },
+        { id: 'K', type: 'action', position: { x: 1100, y: 0 }, data: { service: 'notify.kkk' } },
+      ],
+      edges: [
+        { id: 'e0', source: 'trigger_0', target: 'A' },
+        { id: 'e1', source: 'trigger_1', target: 'A' },
+        { id: 'e2', source: 'A', target: 'X' },
+        { id: 'e3', source: 'A', target: 'Y' },
+        { id: 'e4', source: 'X', target: 'J1' },
+        { id: 'e5', source: 'X', target: 'J2' },
+        { id: 'e6', source: 'J1', target: 'K' },
+        { id: 'e7', source: 'J2', target: 'K' },
+      ],
+    };
+
+    const { yaml, warnings } = transpile(flow);
+    if (!yaml) throw new Error('expected generated yaml');
+
+    const nested = warnings.find((w) => w.includes('X'));
+    expect(nested).toBeDefined();
+    // The old message claimed "only the first branch will run", which was the
+    // opposite of what happens: the join node is emitted once per branch.
+    expect(nested).toContain('once per branch');
+    expect(nested).not.toContain('only the first branch will run');
+  });
+});
