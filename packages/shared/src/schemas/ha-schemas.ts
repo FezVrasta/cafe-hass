@@ -86,7 +86,13 @@ export const HATriggerSchema = z
     alias: z.string().optional(),
     platform: z.string().optional(),
     trigger: z.string().optional(),
-    target: z.looseObject({ entity_id: z.union([z.string(), z.array(z.string())]) }).optional(),
+    target: z
+      .union([
+        z.looseObject({ entity_id: z.union([z.string(), z.array(z.string())]) }),
+        z.looseObject({ device_id: z.union([z.string(), z.array(z.string())]) }),
+        z.looseObject({ label_id: z.union([z.string(), z.array(z.string())]) }),
+      ])
+      .optional(),
     options: z.looseObject({}).optional(),
     entity_id: z.union([z.string(), z.array(z.string())]).optional(),
     // Home Assistant supports both string, array, and null for from/to fields
