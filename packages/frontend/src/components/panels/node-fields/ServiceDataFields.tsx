@@ -174,8 +174,45 @@ export function ServiceDataFields({
             </FormField>
           );
         }
+        
+        // Specific handler for RGB color values
+        if (selectorType === 'color_rgb' || fieldName === 'rgb_color') {
+          return (
+            <FormField
+              key={fieldName}
+              label={fieldLabel}
+              required={field.required}
+              description={field.description}
+            >
+              <Input
+                type="text"
+                value={Array.isArray(currentValue) ? currentValue.join(',') : (currentValue as string) ?? ''}
+                placeholder={
+                  field.example !== undefined
+                    ? String(field.example).replace(/[\[\]]/g, '')
+                    : '255, 255, 255'
+                }
+                onChange={(e) => {
+                  const val = e.target.value;
+                  // Keep raw string while typing trailing commas/spaces, convert to array when numbers exist
+                  const parts = val.split(',').map((s) => s.trim());
+                  const hasNumbers = parts.some((p) => p !== '' && !isNaN(Number(p)));
 
-        // Default: text input (for text, color_rgb, etc.)
+                  if (!hasNumbers) {
+                    onChange(fieldName, val);
+                    return;
+                  }
+
+                  // If valid numbers are present, parse them into array, keeping trailing empty values as empty strings
+                  const parsed = parts.map((p) => (p !== '' && !isNaN(Number(p)) ? Number(p) : p));
+                  onChange(fieldName, parsed);
+                }}
+              />
+            </FormField>
+          );
+        }
+        
+        // Default: text input (for text, etc.)
         return (
           <FormField
             key={fieldName}
