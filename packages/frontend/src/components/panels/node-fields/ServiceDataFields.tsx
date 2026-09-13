@@ -174,7 +174,7 @@ export function ServiceDataFields({
             </FormField>
           );
         }
-        
+
         // Specific handler for RGB color values
         if (selectorType === 'color_rgb' || fieldName === 'rgb_color') {
           return (
@@ -186,7 +186,11 @@ export function ServiceDataFields({
             >
               <Input
                 type="text"
-                value={Array.isArray(currentValue) ? currentValue.join(',') : (currentValue as string) ?? ''}
+                value={
+                  Array.isArray(currentValue)
+                    ? currentValue.join(',')
+                    : ((currentValue as string) ?? '')
+                }
                 placeholder={
                   field.example !== undefined
                     ? String(field.example).replace(/[\[\]]/g, '')
@@ -211,7 +215,7 @@ export function ServiceDataFields({
             </FormField>
           );
         }
-        
+
         // Default: text input (for text, etc.)
         return (
           <FormField
