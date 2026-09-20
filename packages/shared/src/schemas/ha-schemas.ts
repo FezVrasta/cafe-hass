@@ -77,6 +77,26 @@ export const HAPlatformEnum = z.enum([
 export type HAPlatform = z.infer<typeof HAPlatformEnum>;
 
 /**
+ * One id or a list of them, which is how Home Assistant writes every target key.
+ */
+export const HAIdOrIdsSchema = z.union([z.string(), z.array(z.string())]);
+
+/**
+ * Zod schema for a Home Assistant target selector.
+ * Every key is optional: a target may name entities, devices, labels, areas or
+ * floors, in any combination, and triggers that take a target accept the same
+ * shape as actions do.
+ */
+export const HATargetSchema = z.looseObject({
+  entity_id: HAIdOrIdsSchema.optional(),
+  device_id: HAIdOrIdsSchema.optional(),
+  label_id: HAIdOrIdsSchema.optional(),
+  area_id: HAIdOrIdsSchema.optional(),
+  floor_id: HAIdOrIdsSchema.optional(),
+});
+export type HATarget = z.infer<typeof HATargetSchema>;
+
+/**
  * Zod schema for Home Assistant trigger objects.
  * Normalizes both legacy 'platform' and modern 'trigger' fields to a single 'trigger' property.
  * Supports both legacy format (platform: state) and modern format (trigger: state).
@@ -86,9 +106,9 @@ export const HATriggerSchema = z
     alias: z.string().optional(),
     platform: z.string().optional(),
     trigger: z.string().optional(),
-    target: z.looseObject({ entity_id: z.union([z.string(), z.array(z.string())]) }).optional(),
+    target: HATargetSchema.optional(),
     options: z.looseObject({}).optional(),
-    entity_id: z.union([z.string(), z.array(z.string())]).optional(),
+    entity_id: HAIdOrIdsSchema.optional(),
     // Home Assistant supports both string, array, and null for from/to fields
     from: z.union([z.string(), z.array(z.string()), z.null()]).optional(),
     to: z.union([z.string(), z.array(z.string()), z.null()]).optional(),
@@ -140,7 +160,7 @@ export interface HATriggerInput {
   alias?: string;
   platform?: string;
   trigger?: string;
-  target?: { entity_id?: string | string[] };
+  target?: HATarget;
   options?: Record<string, unknown>;
   entity_id?: string | string[];
   from?: string | string[] | null;
