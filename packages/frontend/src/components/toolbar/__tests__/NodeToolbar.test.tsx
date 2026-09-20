@@ -13,6 +13,10 @@ vi.mock('zustand/react/shallow', () => ({
   useShallow: <T,>(selector: T) => selector,
 }));
 
+vi.mock('@/contexts/HassContext', () => ({
+  useHass: () => ({ hass: undefined, config: { url: '', token: '' } }),
+}));
+
 vi.mock('@/hooks/useUndoRedo', () => ({
   useUndoRedo: () => ({ undo: vi.fn(), redo: vi.fn(), canUndo: false, canRedo: false }),
 }));
@@ -55,6 +59,7 @@ vi.mock('../../actions', () => {
     getDuplicateAction: action('duplicate'),
     getPasteAction: action('paste'),
     getRedoAction: action('redo'),
+    getRunAction: action('run'),
     getSelectAllAction: action('select-all'),
     getToggleEnabledAction: action('toggle-enabled'),
     getUndoAction: action('undo'),
