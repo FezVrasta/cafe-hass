@@ -202,9 +202,9 @@ export class HomeAssistantAPI {
   ): Promise<unknown> {
     if (this.hass?.callService) {
       // Use built-in service calling (custom panel mode)
-      // Combine serviceData and target into data object for the interface
-      const data = { ...serviceData, ...(target && { target }) };
-      return await this.hass.callService(domain, service, data);
+      // Pass serviceData and target as separate arguments so Home Assistant
+      // receives `target` in the proper place (not nested inside service data).
+      return await this.hass.callService(domain, service, serviceData, target);
     }
 
     if (this.hass?.connection) {

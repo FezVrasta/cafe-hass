@@ -133,6 +133,8 @@
   },
   "toolbar": {
     "runAction": "Aktion ausführen",
+    "runActionSuccess": "{{service}} ausgeführt",
+    "runActionFailed": "{{service}} fehlgeschlagen: {{message}}",
     "cut": "Ausschneiden",
     "copy": "Kopieren",
     "paste": "Einfügen",
