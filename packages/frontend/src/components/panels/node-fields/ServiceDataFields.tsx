@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { RgbColorInput } from './RgbColorInput';
 
 interface ServiceField {
   name?: string;
@@ -175,7 +176,24 @@ export function ServiceDataFields({
           );
         }
 
-        // Default: text input (for text, color_rgb, etc.)
+        if (selectorType === 'color_rgb' || fieldName === 'rgb_color') {
+          return (
+            <FormField
+              key={fieldName}
+              label={fieldLabel}
+              required={field.required}
+              description={field.description}
+            >
+              <RgbColorInput
+                value={currentData[fieldName]}
+                example={field.example}
+                onChange={(value) => onChange(fieldName, value)}
+              />
+            </FormField>
+          );
+        }
+
+        // Default: text input (for text, etc.)
         return (
           <FormField
             key={fieldName}

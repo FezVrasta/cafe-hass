@@ -148,6 +148,7 @@ export interface FlowState {
 
   // Selection state
   selectedNodeId: string | null;
+  rightPanelExpanded: boolean;
 
   // Save state
   automationId: string | null;
@@ -187,6 +188,9 @@ export interface FlowState {
   addWaitTimeoutBranch: (waitNodeId: string) => void;
 
   selectNode: (nodeId: string | null) => void;
+  clearCanvasSelection: () => void;
+  setRightPanelExpanded: (expanded: boolean) => void;
+  toggleRightPanelExpanded: () => void;
 
   setFlowName: (name: string) => void;
   setFlowDescription: (description: string) => void;
@@ -369,6 +373,7 @@ const initialState = {
   nodes: [],
   edges: [],
   selectedNodeId: null,
+  rightPanelExpanded: false,
   automationId: null,
   isSaving: false,
   lastSaved: null,
@@ -609,6 +614,29 @@ export const useFlowStore = create<FlowState>()(
         },
 
         selectNode: (nodeId) => set({ selectedNodeId: nodeId }),
+
+        clearCanvasSelection: () =>
+          set((state) => {
+            const hasSelection =
+              state.selectedNodeId !== null ||
+              state.nodes.some((node) => node.selected) ||
+              state.edges.some((edge) => edge.selected);
+
+            if (!hasSelection) {
+              return state;
+            }
+
+            return {
+              selectedNodeId: null,
+              nodes: state.nodes.map((node) => ({ ...node, selected: false })),
+              edges: state.edges.map((edge) => ({ ...edge, selected: false })),
+            };
+          }),
+
+        setRightPanelExpanded: (expanded) => set({ rightPanelExpanded: expanded }),
+
+        toggleRightPanelExpanded: () =>
+          set((state) => ({ rightPanelExpanded: !state.rightPanelExpanded })),
 
         setClipboard: (data: string | null) => set({ clipboard: data }),
         setPasteCount: (count: number) => set({ pasteCount: count }),
