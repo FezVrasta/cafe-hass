@@ -351,7 +351,10 @@ function App() {
               <FlowCanvas />
             </main>
 
-            <RightSidebar isCompactLayout={isCompactLayout} />
+            <RightSidebar
+              isCompactLayout={isCompactLayout}
+              canvasCovered={isCompactLayout && paletteExpanded}
+            />
           </div>
         </div>
 

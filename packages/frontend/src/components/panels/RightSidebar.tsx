@@ -15,6 +15,12 @@ import { useFlowStore } from '@/store/flow-store';
 
 interface RightSidebarProps {
   isCompactLayout: boolean;
+  /**
+   * Whether something else already covers the canvas — the compact node palette,
+   * which is full-screen. The handle is pinned to the right edge above everything,
+   * so without this it sits on top of whatever is open.
+   */
+  canvasCovered?: boolean;
 }
 
 type RightPanelTab = 'properties' | 'yaml' | 'simulator';
@@ -24,7 +30,7 @@ function isRightPanelTab(value: string): value is RightPanelTab {
   return RIGHT_PANEL_TABS.some((tab) => tab === value);
 }
 
-export function RightSidebar({ isCompactLayout }: RightSidebarProps) {
+export function RightSidebar({ isCompactLayout, canvasCovered = false }: RightSidebarProps) {
   const { t } = useTranslation(['common', 'errors']);
   const {
     selectedNodeId,
@@ -176,7 +182,9 @@ export function RightSidebar({ isCompactLayout }: RightSidebarProps) {
         className={cn(
           'absolute right-0 z-40 transition-opacity',
           isCompactLayout ? 'top-1/2 -translate-y-1/2' : 'top-3',
-          rightPanelExpanded ? 'pointer-events-none opacity-0' : 'pointer-events-auto opacity-100'
+          rightPanelExpanded || canvasCovered
+            ? 'pointer-events-none opacity-0'
+            : 'pointer-events-auto opacity-100'
         )}
       >
         <Button

@@ -96,6 +96,13 @@ describe('RightSidebar', () => {
     expect(html).not.toContain('role="tablist"');
   });
 
+  it('hides the handle while the compact palette covers the canvas', () => {
+    const html = renderToStaticMarkup(<RightSidebar isCompactLayout={true} canvasCovered={true} />);
+
+    expect(html).toContain('pointer-events-none opacity-0');
+    expect(html).not.toContain('pointer-events-auto opacity-100');
+  });
+
   it('labels the expand button according to its action without a selection', () => {
     const html = renderToStaticMarkup(<RightSidebar isCompactLayout={false} />);
 
