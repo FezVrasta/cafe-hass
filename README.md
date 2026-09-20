@@ -1,25 +1,37 @@
+<p align="center">
+  <img src="custom_components/cafe/brand/icon.png" width="128" alt="">
+</p>
+
+<h1 align="center">C.A.F.E.</h1>
+
+<p align="center">
+  <strong>C</strong>omplex <strong>A</strong>utomation <strong>F</strong>low <strong>E</strong>ditor<br>
+  Visual logic for Home Assistant, with 0% overhead.
+</p>
+
+<p align="center">
+  <a href="https://my.home-assistant.io/redirect/hacs_repository/?owner=FezVrasta&repository=cafe-hass&category=integration">
+    <img src="https://my.home-assistant.io/badges/hacs_repository.svg" alt="Open this repository in HACS">
+  </a>
+</p>
+
+<p align="center">
+  <img src="https://github.com/FezVrasta/cafe-hass/actions/workflows/ci.yml/badge.svg" alt="CI">
+  <img src="https://img.shields.io/badge/HACS-custom-41BDF5.svg" alt="HACS custom repository">
+  <img src="https://img.shields.io/badge/Home%20Assistant-2024.1%2B-41BDF5" alt="Home Assistant 2024.1+">
+  <img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT">
+  <a href="https://github.com/FezVrasta/cafe-hass/stargazers"><img src="https://img.shields.io/github/stars/FezVrasta/cafe-hass?style=flat&color=gold" alt="Stars"></a>
+</p>
+
+---
+
+**C.A.F.E.** is a visual flow editor that brings Node-RED-style power to Home Assistant **without the external engine**. It transpiles your visual diagrams into 100% compliant, native Home Assistant logic stored directly in the core system.
+
 > [!WARNING]
 > The project is still in beta. While it is designed to be non-destructive, please make sure to backup your automations before editing them with C.A.F.E.!
 
 > [!TIP]
 > Looking for a Role Based Access Control system for HA? [ha-rbac](https://github.com/fezvrasta/ha-rbac) is now available!
-
-<h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="custom_components/cafe/brand/dark_logo@2x.png">
-    <img alt="C.A.F.E." src="custom_components/cafe/brand/logo@2x.png" width="360">
-  </picture>
-</h1>
-
-### **C**omplex **A**utomation **F**low **E**ditor
-
-**The "Third Way" for Home Assistant: Visual Logic with 0% Overhead.**
-
-[![HACS Badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Stars](https://img.shields.io/github/stars/FezVrasta/cafe-hass?style=flat&color=gold)](https://github.com/FezVrasta/cafe-hass)
-
-**C.A.F.E.** is a visual flow editor that brings Node-RED-style power to Home Assistant **without the external engine**. It transpiles your visual diagrams into 100% compliant, native Home Assistant logic stored directly in the core system.
 
 ---
 
