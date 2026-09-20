@@ -14,6 +14,7 @@ import { IdList } from '@/components/ui/IdList';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { MultiEntitySelector } from '@/components/ui/MultiEntitySelector';
+import { NumberOrTemplateInput } from '@/components/ui/NumberOrTemplateInput';
 import {
   Select,
   SelectContent,
@@ -25,6 +26,7 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import type { FieldConfig } from '@/config/triggerFields';
 import type { TriggerField } from '@/hooks/useDeviceAutomation';
+import { normalizeSelectorOptions } from '@/lib/selector-options';
 import type { HassEntity } from '@/types/hass';
 
 interface DynamicFieldRendererProps {
@@ -143,7 +145,6 @@ export function DynamicFieldRenderer({
 
   // Helper to get string value safely
   const stringValue = typeof value === 'string' ? value : String(value ?? '');
-  const numberValue = typeof value === 'number' ? value : Number(value) || undefined;
   const booleanValue = typeof value === 'boolean' ? value : Boolean(value);
 
   // Render based on selector type
@@ -185,12 +186,11 @@ export function DynamicFieldRenderer({
       // Number input
       case 'number':
         return (
-          <Input
-            type="number"
-            value={numberValue ?? ''}
-            onChange={(e) => onChange(e.target.value ? Number(e.target.value) : undefined)}
+          <NumberOrTemplateInput
+            value={value}
             placeholder={placeholder}
             required={required}
+            onChange={onChange}
           />
         );
 
@@ -207,28 +207,11 @@ export function DynamicFieldRenderer({
 
       // Select dropdown
       case 'select': {
-        // Get options from static config or API config
-        let options: Array<{ value: string; label: string }> = [];
-
-        if ('options' in field && field.options) {
-          // Options can be tuple format [value, label][] from HA API or object format from static config
-          const rawOptions = field.options;
-          if (rawOptions.length > 0) {
-            // Check if it's tuple format (HA API returns [["value", "label"], ...])
-            if (Array.isArray(rawOptions[0])) {
-              options = (rawOptions as [string, string][]).map(([value, label]) => ({
-                value,
-                label,
-              }));
-            } else {
-              // Object format from static config
-              options = rawOptions as Array<{ value: string; label: string }>;
-            }
-          }
-        } else if (selectorConfig.options && Array.isArray(selectorConfig.options)) {
-          // API config options
-          options = selectorConfig.options as Array<{ value: string; label: string }>;
-        }
+        // Options reach us as plain strings, [value, label] tuples or {value, label}
+        // objects depending on where the field came from.
+        const options = normalizeSelectorOptions(
+          'options' in field && field.options ? field.options : selectorConfig.options
+        );
 
         const multiple =
           ('multiple' in field && field.multiple) || selectorConfig.multiple === true;
