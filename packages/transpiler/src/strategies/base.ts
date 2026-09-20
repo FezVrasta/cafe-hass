@@ -1,4 +1,4 @@
-import type { FlowGraph } from '@cafe/shared';
+import type { FlowGraph, TriggerNode } from '@cafe/shared';
 import type { TopologyAnalysis } from '../analyzer/topology';
 
 /**
@@ -84,5 +84,27 @@ export abstract class BaseStrategy implements TranspilerStrategy {
    */
   protected getNode(flow: FlowGraph, nodeId: string) {
     return flow.nodes.find((n) => n.id === nodeId);
+  }
+
+  /**
+   * Build a Home Assistant trigger from a trigger node.
+   *
+   * Empty values are dropped, and a device trigger's `entity_id` is written as a
+   * single entity: Home Assistant validates that one with `cv.entity_id` and
+   * refuses a list, so a one-entity list makes the automation unsaveable. A list
+   * of several is left alone — Home Assistant's own error is better than
+   * silently dropping the rest.
+   */
+  protected buildTrigger(node: TriggerNode): Record<string, unknown> {
+    const trigger: Record<string, unknown> = { ...node.data };
+
+    const isDeviceTrigger = trigger.trigger === 'device' || trigger.platform === 'device';
+    if (isDeviceTrigger && Array.isArray(trigger.entity_id) && trigger.entity_id.length === 1) {
+      trigger.entity_id = trigger.entity_id[0];
+    }
+
+    return Object.fromEntries(
+      Object.entries(trigger).filter(([, v]) => v !== undefined && v !== '' && v !== null)
+    );
   }
 }
