@@ -69,7 +69,9 @@ describe('addWaitTimeoutBranch', () => {
     expect(conditionNode?.data.condition).toBe('template');
     expect(conditionNode?.data.value_template).toBe('{{ wait.trigger is not none }}');
 
-    const linkEdge = state.edges.find((e) => e.source === 'wait1' && e.target === conditionNode?.id);
+    const linkEdge = state.edges.find(
+      (e) => e.source === 'wait1' && e.target === conditionNode?.id
+    );
     expect(linkEdge).toBeDefined();
     expect(linkEdge?.sourceHandle).toBeUndefined();
   });

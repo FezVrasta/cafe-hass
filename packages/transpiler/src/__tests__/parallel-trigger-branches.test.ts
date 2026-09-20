@@ -196,10 +196,10 @@ describe('Parallel Trigger Branches', () => {
   });
 
   it('should parse legacy system_log.write parallel blocks without phantom nodes', async () => {
-      // YAML produced by an older transpiler version where non-action parallel
-      // targets were emitted as system_log.write placeholders instead of
-      // parallel_branch: aliases.
-      const legacyYaml = `
+    // YAML produced by an older transpiler version where non-action parallel
+    // targets were emitted as system_log.write placeholders instead of
+    // parallel_branch: aliases.
+    const legacyYaml = `
 alias: Legacy Parallel
 description: ""
 triggers:
@@ -285,34 +285,34 @@ variables:
       action_C: { x: 300, "y": 300 }
 `;
 
-      const parser = new YamlParser();
-      const result = await parser.parse(legacyYaml);
+    const parser = new YamlParser();
+    const result = await parser.parse(legacyYaml);
 
-      expect(result.success).toBe(true);
-      expect(result.graph).toBeDefined();
+    expect(result.success).toBe(true);
+    expect(result.graph).toBeDefined();
 
-      const parsed = result.graph!;
+    const parsed = result.graph!;
 
-      // No phantom __parallel_trigger_* nodes
-      const phantomNodes = parsed.nodes.filter((n) => n.id.startsWith('__parallel_trigger_'));
-      expect(phantomNodes).toHaveLength(0);
+    // No phantom __parallel_trigger_* nodes
+    const phantomNodes = parsed.nodes.filter((n) => n.id.startsWith('__parallel_trigger_'));
+    expect(phantomNodes).toHaveLength(0);
 
-      // Find triggers by type
-      const triggerNodes = parsed.nodes.filter(isTriggerNode);
-      expect(triggerNodes).toHaveLength(2);
+    // Find triggers by type
+    const triggerNodes = parsed.nodes.filter(isTriggerNode);
+    expect(triggerNodes).toHaveLength(2);
 
-      // The first trigger (09:00) should have edges to both condition_X and condition_Y
-      const trigger0 = triggerNodes[0];
-      const trigger0Edges = parsed.edges.filter((e) => e.source === trigger0.id);
-      expect(trigger0Edges).toHaveLength(2);
-      expect(trigger0Edges.map((e) => e.target).sort()).toEqual(['condition_X', 'condition_Y']);
+    // The first trigger (09:00) should have edges to both condition_X and condition_Y
+    const trigger0 = triggerNodes[0];
+    const trigger0Edges = parsed.edges.filter((e) => e.source === trigger0.id);
+    expect(trigger0Edges).toHaveLength(2);
+    expect(trigger0Edges.map((e) => e.target).sort()).toEqual(['condition_X', 'condition_Y']);
 
-      // The second trigger (21:00) should have an edge to action_C
-      const trigger1 = triggerNodes[1];
-      const trigger1Edges = parsed.edges.filter((e) => e.source === trigger1.id);
-      expect(trigger1Edges).toHaveLength(1);
-      expect(trigger1Edges[0].target).toBe('action_C');
-    });
+    // The second trigger (21:00) should have an edge to action_C
+    const trigger1 = triggerNodes[1];
+    const trigger1Edges = parsed.edges.filter((e) => e.source === trigger1.id);
+    expect(trigger1Edges).toHaveLength(1);
+    expect(trigger1Edges[0].target).toBe('action_C');
+  });
 
   describe('round-trip (transpile → parse)', () => {
     it('should not create phantom nodes for __parallel_trigger_* entries', async () => {

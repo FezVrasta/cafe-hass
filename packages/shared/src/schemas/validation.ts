@@ -346,7 +346,27 @@ export const ConditionNodeValidationSchema = z
   });
 
 /**
- * SetVariables node validation - requires at least one variable.
+ * Variable names the transpiler cannot share with user code.
+ *
+ * The state-machine strategy stores its program counter in `current_node`, and
+ * that name is how the parser tells its own transitions apart from a user
+ * "Set Variables" node — so a user variable of the same name is genuinely
+ * ambiguous. (`flow_context` is also written by the strategy, but only ever
+ * alongside `current_node`, so it stays unambiguous and is not reserved.)
+ */
+export const RESERVED_VARIABLE_NAMES = ['current_node'] as const;
+
+/**
+ * True when a variable name collides with one the transpiler uses internally.
+ */
+export function isReservedVariableName(name: string): boolean {
+  const reserved: readonly string[] = RESERVED_VARIABLE_NAMES;
+  return reserved.includes(name.trim());
+}
+
+/**
+ * SetVariables node validation - requires at least one variable, and no variable
+ * may shadow a name the transpiler reserves for itself.
  */
 export const SetVariablesNodeValidationSchema = z
   .object({
@@ -362,7 +382,11 @@ export const SetVariablesNodeValidationSchema = z
       message: 'At least one variable must be defined',
       path: ['variables'],
     }
-  );
+  )
+  .refine((data) => !Object.keys(data.variables ?? {}).some(isReservedVariableName), {
+    message: `These names are reserved by the transpiler and cannot be used as variables: ${RESERVED_VARIABLE_NAMES.join(', ')}`,
+    path: ['variables'],
+  });
 
 /**
  * Map node types to their validation schemas.
