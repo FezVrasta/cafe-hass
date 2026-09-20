@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { useHass } from '@/contexts/HassContext';
 import { useUndoRedo } from '@/hooks/useUndoRedo';
 import { cn } from '@/lib/utils';
 import { useFlowStore } from '@/store/flow-store';
@@ -23,7 +24,7 @@ import {
   getDuplicateAction,
   getPasteAction,
   getRedoAction,
-  //getRunAction,
+  getRunAction,
   getSelectAllAction,
   getToggleEnabledAction,
   getUndoAction,
@@ -58,6 +59,7 @@ const groupOrder: Array<
 
 export function NodeToolbar() {
   const { t } = useTranslation();
+  const { hass, config: hassConfig } = useHass();
   const {
     nodes,
     edges,
@@ -95,6 +97,8 @@ export function NodeToolbar() {
       edges,
       clipboard,
       pasteCount,
+      hass,
+      hassConfig,
       addNode,
       removeNode,
       updateNodeData,
@@ -112,6 +116,8 @@ export function NodeToolbar() {
       edges,
       clipboard,
       pasteCount,
+      hass,
+      hassConfig,
       addNode,
       removeNode,
       updateNodeData,
@@ -132,7 +138,7 @@ export function NodeToolbar() {
     () => [
       getUndoAction(t),
       getRedoAction(t),
-      //getRunAction(t),
+      getRunAction(t),
       getDuplicateAction(t),
       getCopyAction(t),
       getCutAction(t),

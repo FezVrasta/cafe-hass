@@ -139,6 +139,8 @@
   },
   "toolbar": {
     "runAction": "Exécuter l'action",
+    "runActionSuccess": "{{service}} exécuté",
+    "runActionFailed": "Échec de {{service}} : {{message}}",
     "cut": "Couper",
     "copy": "Copier",
     "paste": "Coller",

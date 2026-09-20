@@ -166,6 +166,8 @@
   },
   "toolbar": {
     "runAction": "Run Action",
+    "runActionSuccess": "Ran {{service}}",
+    "runActionFailed": "{{service}} failed: {{message}}",
     "cut": "Cut",
     "copy": "Copy",
     "paste": "Paste",

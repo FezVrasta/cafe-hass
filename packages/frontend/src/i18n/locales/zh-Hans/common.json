@@ -139,6 +139,8 @@
   },
   "toolbar": {
     "runAction": "运行操作",
+    "runActionSuccess": "已运行 {{service}}",
+    "runActionFailed": "{{service}} 失败：{{message}}",
     "cut": "剪切",
     "copy": "复制",
     "paste": "粘贴",
