@@ -94,6 +94,45 @@ export interface TraceListItem {
  * Home Assistant API abstraction layer
  * Works in both custom panel mode (with hass object) and standalone mode
  */
+/**
+ * Pull out what Home Assistant actually said.
+ *
+ * Its own `callApi` rejects with a plain object rather than an Error — the
+ * websocket layer with `{code, message}`, the REST layer with a parsed `body` —
+ * so `error instanceof Error` is false and the interesting half ("Message
+ * malformed: required key not provided @ data['entity_id']") was being replaced
+ * with the word "Unknown".
+ */
+export function describeHassError(error: unknown): string {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  if (typeof error === 'string' && error.trim() !== '') {
+    return error;
+  }
+
+  if (error && typeof error === 'object') {
+    const candidate = error as {
+      message?: unknown;
+      error?: unknown;
+      body?: { message?: unknown };
+    };
+
+    if (typeof candidate.message === 'string' && candidate.message.trim() !== '') {
+      return candidate.message;
+    }
+    if (typeof candidate.body?.message === 'string' && candidate.body.message.trim() !== '') {
+      return candidate.body.message;
+    }
+    if (typeof candidate.error === 'string' && candidate.error.trim() !== '') {
+      return candidate.error;
+    }
+  }
+
+  return 'Unknown error';
+}
+
 export class HomeAssistantAPI {
   public hass: HomeAssistant | null = null;
   private baseUrl?: string;
@@ -299,7 +338,21 @@ export class HomeAssistantAPI {
     if (!response.ok) {
       const errorText = await response.text();
       console.error('C.A.F.E.: REST API error response:', errorText);
-      throw new Error(`REST API error: ${response.status} ${response.statusText}`);
+      // Home Assistant answers with {"message": "..."} and that sentence is the
+      // only part worth showing anyone.
+      let detail = errorText.trim();
+      try {
+        const parsed: unknown = JSON.parse(errorText);
+        if (parsed && typeof parsed === 'object' && 'message' in parsed) {
+          detail = String((parsed as { message: unknown }).message);
+        }
+      } catch {
+        // Not JSON; the raw text is what there is.
+      }
+      const status = `${response.status} ${response.statusText}`;
+      throw new Error(
+        detail ? `REST API error: ${status} (${detail})` : `REST API error: ${status}`
+      );
     }
 
     return await response.json();
@@ -461,9 +514,9 @@ export class HomeAssistantAPI {
         await this.fetchRestAPI(`config/automation/config/${automationId}`, 'POST', configWithId);
       } catch (saveError) {
         console.error('C.A.F.E.: Failed to save automation config:', saveError);
-        throw new Error(
-          `Failed to save automation config: ${saveError instanceof Error ? saveError.message : 'Unknown error'}`
-        );
+        // Rethrow what Home Assistant said, nothing else: the caller prefixes this
+        // with "Failed to create automation", and two prefixes read as a stutter.
+        throw new Error(describeHassError(saveError));
       }
 
       // Step 2: Reload automations to make it active
@@ -484,9 +537,7 @@ export class HomeAssistantAPI {
       throw new Error('No working Home Assistant connection method found');
     } catch (error) {
       console.error('C.A.F.E.: Failed to create automation:', error);
-      throw new Error(
-        `Failed to create automation: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
+      throw new Error(`Failed to create automation: ${describeHassError(error)}`);
     }
   }
 
@@ -521,9 +572,7 @@ export class HomeAssistantAPI {
       console.log('C.A.F.E.: Successfully updated automation:', automationId);
     } catch (error) {
       console.error('C.A.F.E.: Failed to update automation:', error);
-      throw new Error(
-        `Failed to update automation: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
+      throw new Error(`Failed to update automation: ${describeHassError(error)}`);
     }
   }
 
@@ -536,9 +585,7 @@ export class HomeAssistantAPI {
       await this.fetchRestAPI(`config/automation/config/${automationId}`, 'DELETE');
     } catch (error) {
       console.error('C.A.F.E.: Failed to delete automation:', error);
-      throw new Error(
-        `Failed to delete automation: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
+      throw new Error(`Failed to delete automation: ${describeHassError(error)}`);
     }
   }
 

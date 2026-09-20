@@ -810,13 +810,7 @@ export class StateMachineStrategy extends BaseStrategy {
   private extractTriggers(flow: FlowGraph): unknown[] {
     return flow.nodes
       .filter((n): n is TriggerNode => n.type === 'trigger')
-      .map((node) => {
-        const trigger: Record<string, unknown> = { ...node.data };
-
-        return Object.fromEntries(
-          Object.entries(trigger).filter(([, v]) => v !== undefined && v !== '' && v !== null)
-        );
-      });
+      .map((node) => this.buildTrigger(node));
   }
 
   /**

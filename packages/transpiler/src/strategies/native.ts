@@ -726,15 +726,6 @@ export class NativeStrategy extends BaseStrategy {
   /**
    * Build a single trigger configuration
    */
-  private buildTrigger(node: TriggerNode): Record<string, unknown> {
-    const trigger: Record<string, unknown> = { ...node.data };
-
-    // Clean up undefined/empty values
-    return Object.fromEntries(
-      Object.entries(trigger).filter(([, v]) => v !== undefined && v !== '' && v !== null)
-    );
-  }
-
   /**
    * Find condition nodes whose specified handle (true/false) points to a given target node
    * Returns the condition sources if there are multiple (OR pattern), empty array otherwise
