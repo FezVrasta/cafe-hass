@@ -4,6 +4,7 @@ import { EntitySelector } from '@/components/ui/EntitySelector';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { MultiEntitySelector } from '@/components/ui/MultiEntitySelector';
+import { NumberOrTemplateInput } from '@/components/ui/NumberOrTemplateInput';
 import {
   Select,
   SelectContent,
@@ -11,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { normalizeSelectorOptions } from '@/lib/selector-options';
 import { RgbColorInput } from './RgbColorInput';
 
 interface ServiceField {
@@ -59,8 +61,6 @@ export function ServiceDataFields({
         // Render input based on selector type
         if (selectorType === 'number') {
           const config = selectorConfig as {
-            min?: number;
-            max?: number;
             unit_of_measurement?: string;
           };
 
@@ -71,20 +71,20 @@ export function ServiceDataFields({
               required={field.required}
               description={field.description}
             >
-              <Input
-                type="number"
-                value={(currentValue as number) ?? ''}
-                onChange={(e) => onChange(fieldName, e.target.value ? Number(e.target.value) : '')}
-                min={config.min}
-                max={config.max}
+              <NumberOrTemplateInput
+                value={currentData[fieldName]}
+                required={field.required}
                 placeholder={field.example !== undefined ? String(field.example) : ''}
+                onChange={(value) => onChange(fieldName, value ?? '')}
               />
             </FormField>
           );
         }
 
         if (selectorType === 'select') {
-          const config = selectorConfig as { options?: string[] };
+          const options = normalizeSelectorOptions(
+            (selectorConfig as { options?: unknown }).options
+          );
 
           return (
             <FormField
@@ -102,9 +102,9 @@ export function ServiceDataFields({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__NONE__">{t('placeholders.none')}</SelectItem>
-                  {config.options?.map((opt) => (
-                    <SelectItem key={opt} value={opt}>
-                      {opt}
+                  {options.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
