@@ -8,7 +8,7 @@ import type {
   TriggerNode,
   WaitNode,
 } from '@cafe/shared';
-import { isDeviceAction } from '@cafe/shared';
+import { isConditionInSequence, isDeviceAction, stripCafeNodeData } from '@cafe/shared';
 import type { TopologyAnalysis } from '../analyzer/topology';
 import { findBackEdges } from '../analyzer/topology';
 import { BaseStrategy, type HAYamlOutput } from './base';
@@ -677,6 +677,11 @@ export class NativeStrategy extends BaseStrategy {
       // Don't promote conditions that are part of a repeat pattern
       if (this.repeatPatterns.has(currentId) || this.repeatInternalNodeIds.has(currentId)) break;
 
+      // Don't promote a condition that came from inside the action sequence. The
+      // root conditions block is not equivalent: automation.trigger skips it by
+      // default, so an automation another one calls would stop checking (#248).
+      if (isConditionInSequence(node.data as Record<string, unknown>)) break;
+
       const allOutgoing = this.getOutgoingEdges(flow, currentId);
       const outgoing = allOutgoing.filter((e) => !this.backEdgeIds.has(e.id));
       const truePaths = outgoing.filter((edge) => edge.sourceHandle === 'true');
@@ -1261,7 +1266,7 @@ export class NativeStrategy extends BaseStrategy {
    * Map a single condition object (used for individual conditions in an array)
    */
   private mapSingleCondition(data: Record<string, unknown>): Record<string, unknown> {
-    const { condition, conditions, alias, template, ...rest } = data;
+    const { condition, conditions, alias, template, ...rest } = stripCafeNodeData(data);
     const out: Record<string, unknown> = {
       condition: condition,
       ...rest,
@@ -1289,7 +1294,7 @@ export class NativeStrategy extends BaseStrategy {
     function mapCondition(data: Record<string, unknown>): Record<string, unknown> {
       if (!data || typeof data !== 'object') return data;
       // Destructure and exclude 'template' - HA uses 'value_template' for template conditions
-      const { condition, conditions, alias, template, ...rest } = data;
+      const { condition, conditions, alias, template, ...rest } = stripCafeNodeData(data);
       const out: Record<string, unknown> = {
         condition: condition,
         ...rest,

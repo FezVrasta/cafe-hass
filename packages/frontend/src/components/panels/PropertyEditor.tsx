@@ -1,4 +1,4 @@
-import type { FlowNode } from '@cafe/shared';
+import { type FlowNode, isCafeNodeDataKey } from '@cafe/shared';
 import { Plus, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { FormField } from '@/components/forms/FormField';
@@ -42,10 +42,15 @@ export function PropertyEditor({
 
   const data = node.data as Record<string, unknown>;
 
-  // Get unhandled properties
+  // Get unhandled properties. C.A.F.E.'s own bookkeeping keys are not the user's
+  // to edit and never reach the YAML, so they stay out of this list.
   const unhandledProperties = Object.entries(data).filter(
     ([key, value]) =>
-      !handledProperties.has(key) && value !== undefined && value !== null && value !== ''
+      !handledProperties.has(key) &&
+      !isCafeNodeDataKey(key) &&
+      value !== undefined &&
+      value !== null &&
+      value !== ''
   );
 
   // Don't render if no properties and not adding
