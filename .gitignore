@@ -38,3 +38,7 @@ yarn-error.log*
 
 # Home Assistant
 custom_components/cafe/www/
+
+# Python
+__pycache__/
+*.pyc

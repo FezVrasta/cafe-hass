@@ -4,7 +4,12 @@
 > [!TIP]
 > Looking for a Role Based Access Control system for HA? [ha-rbac](https://github.com/fezvrasta/ha-rbac) is now available!
 
-# ☕ C.A.F.E.
+<h1>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="custom_components/cafe/brand/dark_logo@2x.png">
+    <img alt="C.A.F.E." src="custom_components/cafe/brand/logo@2x.png" width="360">
+  </picture>
+</h1>
 
 ### **C**omplex **A**utomation **F**low **E**ditor
 
