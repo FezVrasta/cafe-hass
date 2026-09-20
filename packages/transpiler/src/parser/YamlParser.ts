@@ -22,6 +22,7 @@ import {
   HATriggerSchema,
   isDeviceAction,
   isHACondition,
+  markConditionInSequence,
   validateGraphStructure,
 } from '@cafe/shared';
 import { load as yamlLoad } from 'js-yaml';
@@ -1077,10 +1078,7 @@ export class YamlParser {
 
     if (item.if && Array.isArray(item.if)) {
       // Condition node (if/then/else)
-      const conditions = item.if as Record<string, unknown>[];
-      const condition = conditions[0] ?? {};
-      const data: Record<string, unknown> = { ...condition };
-      if (alias) data.alias = alias;
+      const data = this.conditionDataFromIfBlock(item, alias);
 
       let trueTarget: string | null = null;
       let falseTarget: string | null = null;
@@ -1277,6 +1275,17 @@ export class YamlParser {
           }
         }
       }
+      // A condition whose template can't be inlined into `{% if %}` is written as
+      // a real if/then/else block, each branch carrying that side's transition.
+      else if (Array.isArray(seqItem.if)) {
+        nodeType = 'condition';
+        const { cleanAlias } = this.extractCafeNodeId(
+          typeof seqItem.alias === 'string' ? seqItem.alias : undefined
+        );
+        Object.assign(data, this.conditionDataFromIfBlock(seqItem, cleanAlias));
+        trueTarget = this.parseTransitionTarget(seqItem.then);
+        falseTarget = this.parseTransitionTarget(seqItem.else);
+      }
       // Check for delay action
       else if (seqItem.delay !== undefined) {
         nodeType = 'delay';
@@ -1308,6 +1317,43 @@ export class YamlParser {
     }
 
     return { nodeId, nodeType, data, trueTarget, falseTarget, parallelItems };
+  }
+
+  /**
+   * The condition an `if:` block tests, with the block's alias when it carries one.
+   * Shared by the two places an `if:` block is read back: a dispatcher entry in the
+   * state machine, and an inline branch.
+   */
+  private conditionDataFromIfBlock(
+    item: Record<string, unknown>,
+    alias?: string
+  ): Record<string, unknown> {
+    const conditions = Array.isArray(item.if) ? (item.if as Record<string, unknown>[]) : [];
+    const data: Record<string, unknown> = { ...(conditions[0] ?? {}) };
+    if (alias) data.alias = alias;
+    return data;
+  }
+
+  /**
+   * The node a state-machine branch hands control to, from its
+   * `variables: {current_node: ...}` entry. `END` means the flow stops there.
+   */
+  private parseTransitionTarget(branch: unknown): string | null {
+    if (!Array.isArray(branch)) {
+      return null;
+    }
+
+    for (const entry of branch) {
+      const variables = (entry as Record<string, unknown> | null)?.variables as
+        | Record<string, unknown>
+        | undefined;
+      const target = variables?.current_node;
+      if (typeof target === 'string') {
+        return target === 'END' ? null : target;
+      }
+    }
+
+    return null;
   }
 
   /**
@@ -1865,7 +1911,8 @@ export class YamlParser {
           id: nodeId,
           type: 'condition',
           position: { x: 0, y: 0 },
-          data: parsedData,
+          // It guards the sequence; it is not one of the automation's root conditions.
+          data: markConditionInSequence(parsedData),
         };
 
         nodes.push(conditionNode);
@@ -2929,13 +2976,13 @@ export class YamlParser {
           id: conditionId,
           type: 'condition',
           position: { x: 0, y: 0 },
-          data: {
+          data: markConditionInSequence({
             // Only first condition gets the alias from ifAction
             alias: i === 0 ? ifAction.alias : undefined,
             condition: conditionType,
             conditions: transformConditions(condition.conditions),
             enabled: getNodeEnabled(),
-          },
+          }),
         };
       } else {
         // Simple condition - use its properties directly
@@ -2971,7 +3018,7 @@ export class YamlParser {
           id: conditionId,
           type: 'condition',
           position: { x: 0, y: 0 },
-          data,
+          data: markConditionInSequence(data),
         };
       }
 
