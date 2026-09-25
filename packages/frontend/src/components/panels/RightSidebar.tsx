@@ -86,68 +86,66 @@ export function RightSidebar({ isCompactLayout, canvasCovered = false }: RightSi
   const panelContent = (
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex items-center justify-end border-b px-4 py-3">{closeButton}</div>
-      <div className="min-h-0 flex-1 overflow-hidden">
-        <Tabs
-          value={rightTab}
-          onValueChange={handleRightTabChange}
-          className="flex min-h-0 flex-1 flex-col"
-        >
-          <TabsList className="grid w-full grid-cols-3 rounded-none border-b">
-            <TabsTrigger value="properties">{t('labels.properties')}</TabsTrigger>
-            <TabsTrigger value="yaml">{t('labels.yaml')}</TabsTrigger>
-            <TabsTrigger value="simulator">{t('labels.debug')}</TabsTrigger>
-          </TabsList>
+      <Tabs
+        value={rightTab}
+        onValueChange={handleRightTabChange}
+        className="flex min-h-0 flex-1 flex-col"
+      >
+        <TabsList className="grid w-full grid-cols-3 rounded-none border-b">
+          <TabsTrigger value="properties">{t('labels.properties')}</TabsTrigger>
+          <TabsTrigger value="yaml">{t('labels.yaml')}</TabsTrigger>
+          <TabsTrigger value="simulator">{t('labels.debug')}</TabsTrigger>
+        </TabsList>
 
-          <div className="flex flex-1 flex-col overflow-hidden">
-            <TabsContent value="properties" className="mt-0 flex-1 overflow-hidden">
-              <PropertyPanel />
-            </TabsContent>
-            <TabsContent value="yaml" className="mt-0 flex-1 overflow-hidden">
-              <YamlPreview />
-            </TabsContent>
-            <TabsContent value="simulator" className="mt-0 flex-1 overflow-hidden">
-              <div className="flex h-full flex-col">
-                <div className="border-b p-4">
-                  <div className="mb-2 flex items-center justify-between">
-                    <h4 className="font-medium text-muted-foreground text-xs">
-                      {t('labels.debugControls')}
-                    </h4>
-                    <div className="flex gap-1">
-                      <Button
-                        onClick={importFromJsonFile}
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6"
-                        title={t('buttons.importJson')}
-                      >
-                        <FileUp className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        onClick={exportToJsonFile}
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6"
-                        title={t('titles.exportJson')}
-                      >
-                        <FileDown className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
+        <div className="flex flex-1 flex-col overflow-hidden">
+          <TabsContent value="properties" className="mt-0 flex-1 overflow-hidden">
+            <PropertyPanel />
+          </TabsContent>
+          <TabsContent value="yaml" className="mt-0 flex-1 overflow-hidden">
+            <YamlPreview />
+          </TabsContent>
+          <TabsContent value="simulator" className="mt-0 flex-1 overflow-hidden">
+            <div className="flex h-full flex-col">
+              <div className="border-b p-4">
+                <div className="mb-2 flex items-center justify-between">
+                  <h4 className="font-medium text-muted-foreground text-xs">
+                    {t('labels.debugControls')}
+                  </h4>
+                  <div className="flex gap-1">
+                    <Button
+                      onClick={importFromJsonFile}
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      title={t('buttons.importJson')}
+                    >
+                      <FileUp className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      onClick={exportToJsonFile}
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      title={t('titles.exportJson')}
+                    >
+                      <FileDown className="h-3.5 w-3.5" />
+                    </Button>
                   </div>
-                  <SpeedControl speed={simulationSpeed} onSpeedChange={setSimulationSpeed} />
                 </div>
-
-                <div className="flex-1 border-b">
-                  <TraceSimulator />
-                </div>
-
-                <div className="flex-1">
-                  <AutomationTraceViewer />
-                </div>
+                <SpeedControl speed={simulationSpeed} onSpeedChange={setSimulationSpeed} />
               </div>
-            </TabsContent>
-          </div>
-        </Tabs>
-      </div>
+
+              <div className="flex-1 border-b">
+                <TraceSimulator />
+              </div>
+
+              <div className="flex-1">
+                <AutomationTraceViewer />
+              </div>
+            </div>
+          </TabsContent>
+        </div>
+      </Tabs>
     </div>
   );
 
