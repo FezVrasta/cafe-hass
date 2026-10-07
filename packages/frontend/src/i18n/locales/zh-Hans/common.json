@@ -137,6 +137,33 @@
     "enterId": "手动输入设备ID",
     "noDevices": "未找到设备。请手动输入设备ID或检查您的Home Assistant连接。"
   },
+  "automationSettings": {
+    "title": "自动化设置",
+    "description": "描述",
+    "mode": "模式",
+    "modeDescription": "控制自动化在已在运行时再次被触发时的行为。",
+    "modes": {
+      "single": "单一",
+      "restart": "重启",
+      "queued": "排队",
+      "parallel": "并行"
+    },
+    "modeDescriptions": {
+      "single": "若已在运行，则不启动新的运行",
+      "restart": "停止当前运行并开始新的运行",
+      "queued": "将新的运行排队，等当前运行结束后执行",
+      "parallel": "并行启动一个独立的新运行"
+    },
+    "max": "最大运行数",
+    "maxDescription": "并发或排队运行的最大数量。",
+    "maxExceeded": "超出上限时",
+    "maxExceededDescription": "运行次数超过最大值时的处理方式。",
+    "maxExceededOptions": {
+      "silent": "静默",
+      "warning": "警告",
+      "critical": "严重"
+    }
+  },
   "toolbar": {
     "runAction": "运行操作",
     "runActionSuccess": "已运行 {{service}}",

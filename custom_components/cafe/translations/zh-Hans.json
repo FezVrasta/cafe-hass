@@ -1,0 +1,14 @@
+{
+  "config": {
+    "title": "C.A.F.E.",
+    "step": {
+      "user": {
+        "title": "设置 C.A.F.E.",
+        "description": "C.A.F.E. 是 Home Assistant 的可视化自动化编辑器，可以让你用可视化流程图来创建和管理自动化。\n\n点击「提交」即可将 C.A.F.E. 添加到你的 Home Assistant。"
+      }
+    },
+    "abort": {
+      "already_configured": "C.A.F.E. 已配置"
+    }
+  }
+}
