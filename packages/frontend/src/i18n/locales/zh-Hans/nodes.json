@@ -3,11 +3,11 @@
     "trigger": "触发器",
     "condition": "条件",
     "action": "动作",
+    "stop": "停止",
     "delay": "延迟",
     "wait": "等待",
     "set_variables": "设置变量",
-    "node": "节点",
-    "stop": "停止"
+    "node": "节点"
   },
   "panel": {
     "selectNode": "选择节点以编辑其属性",
@@ -83,7 +83,31 @@
     "no": "否"
   },
   "actions": {
-    "serviceLabel": "服务"
+    "serviceLabel": "服务",
+    "actionTypeLabel": "动作类型",
+    "actionTypes": {
+      "service": "调用服务",
+      "event": "触发事件",
+      "stop": "停止执行"
+    },
+    "actionLabel": "动作",
+    "eventNameLabel": "事件名称",
+    "eventNamePlaceholder": "例如：pico_subscription",
+    "selectAction": "选择动作…",
+    "targetEntities": "目标实体",
+    "selectTargetEntities": "选择目标实体…",
+    "targetDevices": "目标设备",
+    "targetDevicesDescription": "要作用的设备 ID",
+    "addDeviceId": "添加设备 ID…",
+    "targetAreas": "目标区域",
+    "targetAreasDescription": "要作用的区域 ID",
+    "addAreaId": "添加区域 ID…",
+    "fireEvent": "触发事件",
+    "stopExecution": "停止执行",
+    "stopError": "标记为错误",
+    "stopMessageLabel": "停止消息",
+    "stopMessagePlaceholder": "例如：条件不满足",
+    "markAsError": "标记为错误"
   },
   "variables": {
     "variableCount_one": "{{count}} 个变量",
@@ -139,7 +163,10 @@
     "addTrigger": "添加触发器",
     "timeoutDescription": "继续前的最大等待时间。留空则无限等待。",
     "continueOnTimeout": "超时后继续",
-    "continueOnTimeoutDescription": "如果启用，超时后自动化继续。如果禁用，自动化停止。"
+    "continueOnTimeoutDescription": "如果启用，超时后自动化继续。如果禁用，自动化停止。",
+    "branchOnTimeout": "超时分支",
+    "branchOnTimeoutDescription": "在此「等待」节点后加一个条件节点，这样你可以分别在按时完成和超时两种情况执行不同的操作。",
+    "addTimeoutBranch": "添加超时分支"
   },
   "quickAdd": {
     "searchPlaceholder": "搜索节点…"
