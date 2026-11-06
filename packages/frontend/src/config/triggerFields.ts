@@ -1,4 +1,5 @@
 import type { TriggerPlatform } from '@cafe/shared';
+import { getForeignTriggerKeys } from '@cafe/shared';
 import type { SelectorType } from '@/hooks/useDeviceAutomation';
 
 /**
@@ -317,4 +318,22 @@ export function getTriggerDefaults(platform: TriggerPlatform): Record<string, un
  */
 export function usesDeviceAutomation(platform: TriggerPlatform): boolean {
   return platform === 'device';
+}
+
+/**
+ * Build the node-data patch for switching a trigger node to another platform.
+ *
+ * Home Assistant validates a trigger against the schema of its own platform and
+ * rejects keys that belong to another one, so the fields the previous platform
+ * left behind are cleared instead of riding along to the save.
+ */
+export function getTriggerPlatformSwitchPatch(
+  currentData: Record<string, unknown>,
+  newPlatform: TriggerPlatform
+): Record<string, unknown> {
+  const patch: Record<string, unknown> = { ...getTriggerDefaults(newPlatform) };
+  for (const key of getForeignTriggerKeys(newPlatform, { ...currentData, ...patch })) {
+    patch[key] = undefined;
+  }
+  return patch;
 }

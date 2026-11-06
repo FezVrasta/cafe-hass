@@ -125,7 +125,7 @@ export const HATriggerSchema = z
       ])
       .optional(),
     at: z.unknown().optional(),
-    offset: z.string().optional(),
+    offset: z.union([z.string(), z.number()]).optional(),
     event: z.string().optional(),
     event_type: z.union([z.string(), z.array(z.string())]).optional(),
     event_data: z.record(z.string(), z.unknown()).optional(),
@@ -167,7 +167,7 @@ export interface HATriggerInput {
   to?: string | string[] | null;
   for?: string | { hours?: number; minutes?: number; seconds?: number };
   at?: string | string[] | { entity_id: string; offset?: string };
-  offset?: string;
+  offset?: string | number;
   event?: string;
   event_type?: string;
   event_data?: Record<string, unknown>;

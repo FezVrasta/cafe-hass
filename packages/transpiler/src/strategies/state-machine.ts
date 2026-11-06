@@ -11,7 +11,7 @@ import type {
 } from '@cafe/shared';
 import { isDeviceAction } from '@cafe/shared';
 import type { TopologyAnalysis } from '../analyzer/topology';
-import { BaseStrategy, type HAYamlOutput } from './base';
+import { BaseStrategy, type HAYamlOutput, normalizeTriggerConfig } from './base';
 
 /**
  * Outcome of planning a fan-out: either the set of branch nodes whose standalone
@@ -1218,10 +1218,7 @@ export class StateMachineStrategy extends BaseStrategy {
     } else if (wait_for_trigger) {
       waitAction.wait_for_trigger = wait_for_trigger.map((triggerData) => {
         const { alias: _alias, ...rest } = triggerData;
-        const trigger: Record<string, unknown> = { ...rest };
-        return Object.fromEntries(
-          Object.entries(trigger).filter(([, v]) => v !== undefined && v !== '' && v !== null)
-        );
+        return normalizeTriggerConfig(rest);
       });
     }
 

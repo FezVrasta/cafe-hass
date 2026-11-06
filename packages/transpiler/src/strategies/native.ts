@@ -11,7 +11,7 @@ import type {
 import { isConditionInSequence, isDeviceAction, stripCafeNodeData } from '@cafe/shared';
 import type { TopologyAnalysis } from '../analyzer/topology';
 import { findBackEdges } from '../analyzer/topology';
-import { BaseStrategy, type HAYamlOutput } from './base';
+import { BaseStrategy, type HAYamlOutput, normalizeTriggerConfig } from './base';
 
 /**
  * Describes a detected repeat pattern in the flow graph
@@ -1484,12 +1484,9 @@ export class NativeStrategy extends BaseStrategy {
     if (wait_template) {
       wait.wait_template = wait_template;
     } else if (wait_for_trigger) {
-      wait.wait_for_trigger = wait_for_trigger.map((triggerData) => {
-        const trigger: Record<string, unknown> = { ...triggerData };
-        return Object.fromEntries(
-          Object.entries(trigger).filter(([, v]) => v !== undefined && v !== '' && v !== null)
-        );
-      });
+      wait.wait_for_trigger = wait_for_trigger.map((triggerData) =>
+        normalizeTriggerConfig(triggerData)
+      );
     }
 
     if (timeout) {

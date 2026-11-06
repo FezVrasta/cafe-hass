@@ -1,4 +1,5 @@
 import type { FlowGraph, TriggerNode } from '@cafe/shared';
+import { pickTriggerKeysForPlatform } from '@cafe/shared';
 import type { TopologyAnalysis } from '../analyzer/topology';
 
 /**
@@ -96,15 +97,22 @@ export abstract class BaseStrategy implements TranspilerStrategy {
    * silently dropping the rest.
    */
   protected buildTrigger(node: TriggerNode): Record<string, unknown> {
-    const trigger: Record<string, unknown> = { ...node.data };
+    const trigger = normalizeTriggerConfig(node.data);
 
     const isDeviceTrigger = trigger.trigger === 'device' || trigger.platform === 'device';
     if (isDeviceTrigger && Array.isArray(trigger.entity_id) && trigger.entity_id.length === 1) {
       trigger.entity_id = trigger.entity_id[0];
     }
 
-    return Object.fromEntries(
-      Object.entries(trigger).filter(([, v]) => v !== undefined && v !== '' && v !== null)
-    );
+    return trigger;
   }
+}
+
+export function normalizeTriggerConfig(
+  data: Readonly<Record<string, unknown>>
+): Record<string, unknown> {
+  const cleaned = pickTriggerKeysForPlatform(data.trigger ?? data.platform, { ...data });
+  return Object.fromEntries(
+    Object.entries(cleaned).filter(([, v]) => v !== undefined && v !== '' && v !== null)
+  );
 }
