@@ -98,6 +98,13 @@ export {
   type WaitNode,
   WaitNodeSchema,
 } from './nodes';
+// Trigger platform key compatibility (HA 2026.10 rejects keys of other platforms)
+export {
+  getForeignTriggerKeys,
+  isKnownTriggerPlatform,
+  pickTriggerKeysForPlatform,
+  TRIGGER_PLATFORM_KEYS,
+} from './trigger-keys';
 // Validation schemas for UI
 export {
   ActionNodeValidationSchema,
